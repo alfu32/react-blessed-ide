@@ -12,7 +12,7 @@ export default defineConfig({
         format: 'cjs',
         entryFileNames: 'app.js',   // => dist/cli.js
       },
-      external: ['react', 'blessed'],   // don’t bundle React or Ink
+      // external: ['react', 'blessed'],   // don’t bundle React or Blessed
     }
   }
 });

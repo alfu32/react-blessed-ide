@@ -12,6 +12,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "blessed-contrib": "^4.11.0",
+    "ignore": "^7.0.5",
+    "raf": "^3.4.1",
     "react-blessed": "^0.7.2"
   },
   "devDependencies": {
