@@ -6,17 +6,18 @@ import 'raf/polyfill';
 
 
 
-import { render } from 'react-blessed';
 import React from 'react';
-import {App} from './App';
 import blessed from 'blessed'
+import { render } from 'react-blessed';
+import {App} from './App';
 
 const screen = blessed.screen({
   smartCSR: true,
+  autoPadding: true,
   title: 'React-Blessed IDE'
 });
 
 // quit on Ctrl+C
-screen.key(['C-c'], () => process.exit(0));
+screen.key(["C-c", "C-q", 'f12'], () => process.exit(0));
 
 render(<App />, screen);

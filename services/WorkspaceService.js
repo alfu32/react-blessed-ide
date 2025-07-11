@@ -184,11 +184,11 @@ export class Workspace{
 
     // throw JSON.stringify(wk,null,' ')
     let fmap = this.rootNode.flatten()
-    fmap.sort((a,b) => {
-      const at = `${a.type}|${a.toText()}`
-      const bt = `${b.type}|${b.toText()}`
-      return at>bt?-1:((at===bt)?0:1)
-    })
+    // fmap.sort((a,b) => {
+    //   const at = `${a.type}|${a.toText()}`
+    //   const bt = `${b.type}|${b.toText()}`
+    //   return at>bt?-1:((at===bt)?0:1)
+    // })
     return fmap
   }
   // build a flat list of visible nodes
@@ -199,7 +199,7 @@ export class Workspace{
   copy(){
     let wks = new Workspace()
     wks.rootDir=this.rootDir
-    wks.rootNode=this.rootDir
+    wks.rootNode=this.rootNode
     wks.ig=this.ig
     return wks
   }
