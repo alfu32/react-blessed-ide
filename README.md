@@ -11,7 +11,7 @@ Repository: https://github.com/alfu32/react-blessed-ide
 
 ### project side panel
 
-```text
+```
 ┌─────────────────────────────────┐┌──────────────────────────────────────────────────┐
 │[*]Project     [ ]Git            ││                                                  │
 │  [-] term-blessed-react         ││                                                  │
@@ -38,7 +38,7 @@ Repository: https://github.com/alfu32/react-blessed-ide
 
 
 ### file tree can toggle - expand/contract nodes ( folders )
-```text
+```
 ┌────────────────────────────────┐┌───────────────────────────────────────────────────┐
 │[*]Project     [ ]Git           ││                                                   │
 │    Workspace.test.js           ││                                                   │
@@ -60,7 +60,7 @@ Repository: https://github.com/alfu32/react-blessed-ide
 
 ### git status --porcelain view
 
-```text
+```
 ┌────────────────────────────────┐┌──────────────────────────────────────────┐ 
 │[ ]Project     [*]Git           ││                                          │ 
 │AM README.md                    ││                                          │ 
