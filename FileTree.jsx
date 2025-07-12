@@ -31,8 +31,8 @@ export default function FileTree({workspace,treeData, onDirSelect, onFileSelect,
         //     <text>{JSON.stringify(items,null,' ')}</text>
         // </>
         <box label={label}>
-            <text>{label}</text>
             <list
+                scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                 top={0}
                 bottom={1}
                 items={lines}

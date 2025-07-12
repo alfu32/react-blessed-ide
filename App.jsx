@@ -93,6 +93,7 @@ export function App(props){
                       <list
                           items={Object.keys(openedFiles)}
                           keys mouse scroll style={{ selected: { bg: 'blue' } }}
+                          scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                           onSelect={(_,idx) =>{
                               const k = Object.keys(openedFiles)[idx]
                               const inode = openedFiles[k];
@@ -117,6 +118,7 @@ export function App(props){
               <Tab name='Git'>
                   <box key={3} label={'Git'}>
                       <list
+                          scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                           items={gitStatus}
                           keys mouse style={{selected: {bg: 'blue'}}}
                           onSelect={onFilePathSelect}
