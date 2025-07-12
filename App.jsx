@@ -8,6 +8,7 @@ import { BoxElement as box, TextElement as text,ListElement as list } from 'reac
 import { Grid,GridItem } from 'react-blessed-contrib-17'
 import FolderPickerDialog from "./FolderPickerDialog";
 import {Tab, VTabs} from "./VTabs";
+import {TextEditor} from "./TextEditor";
 
 
 export function App(props){
@@ -75,6 +76,12 @@ export function App(props){
       }
     // setMessage(`dir selected ${Object.keys(dir)}`)
   };
+  const onTextEditorSave = (a,b,c)=> {
+      setMessage(JSON.stringify({a,b,c}))
+  }
+  const onTextEditorCancel = (a,b,c)=> {
+      setMessage(JSON.stringify({a,b,c}))
+  }
   return (
       <>
       <Grid rows={8} cols={15} hideBorder>
@@ -119,17 +126,13 @@ export function App(props){
               </Tab>
           </VTabs>
           {/* Center panel */}
-          <box row={0} col={5} rowSpan={6} colSpan={10}
-              border={{ type: 'line' }}
-              scrollable
-              clickable
-              mouse
-              keys
-              label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
-              overflow={'scroll'}
-          >
-            <text>{fileContent}</text>
-          </box>
+          <TextEditor row={0} col={5} rowSpan={6} colSpan={10}
+                     border={{ type: 'line' }}
+                      label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
+              content={fileContent||""}
+              onSave={onTextEditorSave}
+              onCancel={onTextEditorCancel}
+          />
           <box
               row={6} col={5} rowSpan={2} colSpan={10}
               border={{ type: 'line' }}
