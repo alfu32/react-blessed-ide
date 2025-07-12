@@ -5,7 +5,7 @@ import {Workspace,INode} from './services/WorkspaceService';
 import FileTree from './FileTree';
 import ModalDialog from './ModalDialog.jsx';
 import { BoxElement as box, TextElement as text,ListElement as list } from 'react-blessed';
-import { Grid as grid } from 'react-blessed-contrib-17'
+import { Grid,GridItem } from 'react-blessed-contrib-17'
 import Counter from "./Counter";
 import FolderPickerDialog from "./FolderPickerDialog";
 
@@ -13,7 +13,7 @@ import FolderPickerDialog from "./FolderPickerDialog";
 export function App(props){
   const [message, setMessage] = useState(false);
   const [pickFolder, setPickFolder] = useState(false);
-  const [activeTab, setActiveTab] = useState('project');
+  const [activeTab, setActiveTab] = useState('Project');
   const [treeData, setTreeData]   = useState([]);
   const [gitStatus, setGitStatus] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -39,8 +39,13 @@ export function App(props){
   const onFilePathSelect = (event) => {
     setMessage(`file path selected ${event.content} ${process.cwd()}`)
   };
+    /**
+     *
+     * @param {INode} node
+     */
   const selectFile = (node) => {
-    setFileContent(`Loading ${node.fullPath}`)
+    setSelectedFile(node.fullPath)
+    setFileContent(`Loading ${node.relPath}`)
     node.readFile(node.fullPath).then(setFileContent);
   };
   /**
@@ -67,35 +72,17 @@ export function App(props){
     // setMessage(`dir selected ${Object.keys(dir)}`)
   };
   return (
-      <box
-          width="100%"
-          height="100%"
-          flexDirection="row"
-          keys
-          mouse
-          clickable
-          // close on ESC
-          onKey={(ch, key) => {
-              if (key.name === 'escape') {
-                  onClose();
-              } else if (key.name === 'W') {
-                  setPickFolder(true)
-                  setMessage(`selecting workspace`)
-              }
-              setMessage(`selecting key ${ch} ${key}`)
-          }}
-      >
-
+      <>
+      <Grid rows={8} cols={15}>
         {/* Right panel */}
-        <box width="30%" height="100%" left="0%" border={{ type: 'line' }} flexDirection="column">
-          {/* Tabs */}
-          <box height={1} flexDirection="row">
-            {['project','git'].map(tab => (
+          <box row={0} col={0} rowSpan={8} colSpan={1} label={'|||'}>
+            {/* Tabs */}
+            {['Project','Git'].map((tab,i,a) => (
                 <text
                     key={tab}
                     mouse
                     clickable
-                    left={tab==='git' ? 15 : 0}
+                    top={tab==='Git' ? 1 : 0}
                     style={{  bg: activeTab===tab?'blue':'' }}
                     onClick={(event) => setActiveTab(tab)}
                 >
@@ -103,71 +90,69 @@ export function App(props){
                 </text>
             ))}
           </box>
-
           {/* Tab content */}
-          {activeTab === 'project' ? (
-              <FileTree top={1} bottom={0} workspace={workspace} treeData={treeData} onDirSelect={selectDir} onFileSelect={selectFile}/>
-          ) : (
-              <list
-                  top={1} bottom={0}
-                  items={gitStatus}
-                  keys mouse style={{ selected: { bg: 'blue' } }}
-                  onSelect={onFilePathSelect}
-              />
-          )}
-        </box>
-        {/* Center pane */}
-        <box
-            width="70%"
-            height="100%"
-            left="30%"
-            border={{ type: 'line' }}
-            padding={1}
-            label={selectedFile || 'No file selected'}
-            flexDirection="column"
-        >
-            <box
-                top={2}
-                left="30%"
-                width="70%"
-                height="100%"
-                border={{ type: 'line' }}
-                padding={1}
-                label={selectedFile || 'No file selected'}
-                flexDirection="column"
-                scrollable
-                clickable
-                mouse
-                keys
-                alwaysScroll
-            >
-              <text
-                  position="absolute"
-                  top={2}
-                  left="30%"
-                  border={{ type: 'line' }}
-                  width="70%"
-                  height="100%"
-                  scrollable
-                  clickable
-                  mouse
-                  keys
-                  alwaysScroll
-                  flexDirection="row"
-              >
-                {fileContent}
-              </text>
-          <Counter count={10}/>
-            </box>
-        </box>
+          <box row={0} col={1} rowSpan={8} colSpan={4}
+               label={activeTab}>
+            <Grid rows={8} cols={1}>
+              {activeTab === 'Project' && (
+              <box
+                  row={0} col={0} rowSpan={3} colSpan={1}
+                  label={'Current Files'}>
+              </box>)}
+              {activeTab === 'Project' ? (
+              <box
+                  row={3} col={0} rowSpan={5} colSpan={1}
+                  label={'Project'}>
+                  <FileTree
+                      workspace={workspace}
+                      treeData={treeData}
+                      onDirSelect={selectDir}
+                      onFileSelect={selectFile}
+                  />
+              </box>):(<></>)}
+              {/**activeTab === 'Git' && (
+                  <box row={0} col={0} rowSpan={8} colSpan={1} label={'Git'}>
+                      <list
+                          items={gitStatus}
+                          keys mouse style={{ selected: { bg: 'blue' } }}
+                          onSelect={onFilePathSelect}
+                          label={'Status'}
+                      />
+                  </box>
+              )**/}
+            </Grid>
+          </box>
+          {/* Center panel */}
+          <box row={0} col={5} rowSpan={6} colSpan={10}
+              border={{ type: 'line' }}
+              scrollable
+              clickable
+              mouse
+              keys
+              label={selectedFile || 'No file selected'}
+              overflow={'scroll'}
+          >
+            <text>{fileContent}</text>
+          </box>
+          <box
+              row={6} col={5} rowSpan={2} colSpan={10}
+              border={{ type: 'line' }}
+              scrollable
+              clickable
+              mouse
+              keys
+              label={'Terminal'}
+              overflow={'scroll'}
+          >
+              <text></text>
+          </box>
+        </Grid>
         {message && (
             <ModalDialog
                 title="Message"
                 onClose={() => setMessage(false)}
             >
-              <text>
-                {message}
-              </text>
+              <text>{message}</text>
             </ModalDialog>
         )}
         {pickFolder && (
@@ -179,7 +164,6 @@ export function App(props){
                 }}
             />
         )}
-      </box>
-
+    </>
   );
 }

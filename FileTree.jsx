@@ -31,10 +31,8 @@ export default function FileTree({workspace,treeData, onDirSelect, onFileSelect}
         //     <text>{JSON.stringify(items,null,' ')}</text>
         // </>
         <list
-            top={1}
-            bottom={0}
-            width="97%"
-            height="95%"
+            top={0}
+            bottom={1}
             items={lines}
             keys mouse
             style={{ selected: { bg: 'blue' } }}
