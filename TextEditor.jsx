@@ -14,36 +14,43 @@ export function TextEditor({
         const node = ref.current;
         if (!node) return;
 
-        // initial focus & set content
-        node.focus();
+        // Set initial content
         node.setValue(content);
-        node.screen.render();
 
-        // also refocus on any mouse click inside the editor
-        const handler = (el) => {
-            if (el === node || el.parent === node) {
-                node.focus();
-                node.screen.render();
-            }
+        // Focus & start listening for input
+        node.focus();
+        node.readInput();
+        node.screen.program.showCursor();
+
+        // When this box regains focus, re-enable the cursor & input
+        const onFocus = () => {
+            node.readInput();
+            node.screen.program.showCursor();
+            node.screen.render();
         };
-        node.screen.on('element click', handler);
+        node.on('focus', onFocus);
 
         return () => {
-            node.screen.off('element click', handler);
+            node.removeListener('focus', onFocus);
+            node.screen.program.hideCursor();
         };
     }, [content]);
 
     return (
         <textarea
             ref={ref}
-            // enable keyboard, mouse & vi‐style navigation
+            // turn on the “input” behavior
+            input
             keys
             mouse
             clickable
             vi
             // show a scrollbar track
             scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
-            // basic styling
+
+            // explicitly enable a blinking line cursor
+            cursor={{ blink: true, shape: 'line' }}
+
             style={{ fg: 'white', bg: 'black' }}
             // position & size come from boxProps
             {...boxProps}
@@ -56,9 +63,8 @@ export function TextEditor({
                 }
             }}
             onKey={(ch, key) => {
-                const node = ref.current;
                 if (key.name === 's' && key.ctrl) {
-                    onSave && onSave(node.getValue());
+                    onSave && onSave(ref.current.getValue());
                 }
                 if (key.name === 'escape') {
                     onCancel && onCancel();
