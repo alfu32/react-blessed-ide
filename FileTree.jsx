@@ -1,6 +1,6 @@
 // components/FileTree.js
 import React, { Component } from 'react';
-import { ListElement as list, TextElement as text } from 'react-blessed';
+import { ListElement as list, TextElement as text, BoxElement as box } from 'react-blessed';
 import { Workspace,INode } from './services/WorkspaceService';
 
 /**
@@ -11,11 +11,11 @@ import { Workspace,INode } from './services/WorkspaceService';
  * @returns {JSX.Element}
  * @constructor
  */
-export default function FileTree({workspace,treeData, onDirSelect, onFileSelect}){
+export default function FileTree({workspace,treeData, onDirSelect, onFileSelect,label}){
     // let treeData = workspace.flatten()
     let lines = (treeData||[]).map((v,i,a) => {
-            return v.toText();
-        })
+        return v.toText();
+    })
     const itemSelect=(n,idx)=>{
         const node = treeData[idx];
         //throw JSON.stringify({node,idx},null, ' ')
@@ -30,14 +30,18 @@ export default function FileTree({workspace,treeData, onDirSelect, onFileSelect}
         //     <text>{workspacePath}</text>
         //     <text>{JSON.stringify(items,null,' ')}</text>
         // </>
-        <list
-            top={0}
-            bottom={1}
-            items={lines}
-            keys mouse
-            style={{ selected: { bg: 'blue' } }}
-            onSelect={itemSelect}
-        />
+        <box label={label}>
+            <text>{label}</text>
+            <list
+                top={0}
+                bottom={1}
+                items={lines}
+                keys mouse
+                style={{ selected: { bg: 'blue' } }}
+                onSelect={itemSelect}
+                label={label}
+            />
+        </box>
     );
 }
 

@@ -10,3 +10,6 @@ console.log(str)
 ws.rootNode.close()
 str = ws.flatten()
 console.log(str)
+
+const c={}
+Object.keys(c)
