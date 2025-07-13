@@ -12,7 +12,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/blessed": "^0.1.25",
+    "@types/react-blessed": "^0.7.8",
     "blessed-contrib": "^4.11.0",
+    "highlight.js": "^11.11.1",
     "ignore": "^7.0.5",
     "raf": "^3.4.1",
     "react-blessed": "^0.7.2",

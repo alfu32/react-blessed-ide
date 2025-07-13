@@ -9,7 +9,7 @@ import { Grid,GridItem } from 'react-blessed-contrib-17'
 import FolderPickerDialog from "./FolderPickerDialog";
 import {Tab, VTabs} from "./VTabs";
 import {TextEditor} from "./TextEditor";
-import {BlessedTextEditor} from "./BlessedTextEditor";
+import {CodeEditor} from "./CodeEditor";
 
 
 export function App(props){
@@ -133,13 +133,13 @@ export function App(props){
               </Tab>
           </VTabs>
           {/* Center panel */}
-          <BlessedTextEditor row={0} col={5} rowSpan={6} colSpan={10}
-                     border={{ type: 'line' }}
+          <CodeEditor row={0} col={5} rowSpan={6} colSpan={10}
+                      border={{ type: 'line' }}
                       label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
-              initialText={fileContent||""}
-              onSave={onTextEditorSave}
-              onCancel={onTextEditorCancel}
-              onChange={onCurrentEditorChange}
+                      initialText={fileContent||""}
+                      onSave={onTextEditorSave}
+                      onCancel={onTextEditorCancel}
+                      onChange={onCurrentEditorChange}
           />
           <box
               row={6} col={5} rowSpan={2} colSpan={10}
