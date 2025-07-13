@@ -150,15 +150,6 @@ export function App(props){
               keys
               label={'Terminal'}
               overflow={'scroll'}
-              style={{
-                bg:"yellow",
-                fg:"black",
-                blink:true,
-                hover:{
-                    bg:"black",
-                    fg:"yellow",
-                }
-              }}
           >
               {currentEditorText}
           </box>

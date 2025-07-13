@@ -100,6 +100,7 @@ export function BlessedTextEditor({
     const after = text.slice(cursorOffset + 1)
     const content = before + at + after
     const lines = content.split('\n')
+    const ll= Math.trunc(Math.log10(lines.length)) + 1
 
     return lines.map((line, y) => {
       const lineStartOffset = lines.slice(0, y).reduce((acc, l) => acc + l.length + 1, 0)
@@ -109,11 +110,11 @@ export function BlessedTextEditor({
 
       return (
         <box key={y} top={y} left={0} height={1}>
-          <text left={0} style={{ fg: 'red' }}>
-            {String(y + 1).padStart(3)}│
-          </text>
+          <box left={0} style={{ fg: 'red' }}>
+            |{String(y + 1).padStart(ll)}│
+          </box>
           {tokens.map((token, i) => {
-            const result = [...token.text].map((char, j) => {
+            const result = token.text.split('').map((char, j) => {
               const absOffset = lineStartOffset + offset + j
               const isCursor = absOffset === cursorOffset
               return (
@@ -122,7 +123,7 @@ export function BlessedTextEditor({
                   left={4 + offset + j}
                   style={isCursor ? { bg: 'white', fg: 'black' } : token.style}
                 >
-                  {char}
+                  {char+'!'}
                 </box>
               )
             })
