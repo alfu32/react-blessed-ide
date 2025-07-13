@@ -83,21 +83,38 @@ export function BlessedTextEditor({
       return (
         <box key={y} top={y} left={0} height={1}>
           <box left={0} content={lineNum} style={{ fg:'#aaaaaa' }}/>
-          {tokens.map((token, i) => {
+          {tokens.flatMap((token, i) => {
+                
                 // const tx=`${token.text}[${token.color}]`
-                const tx = token.text
+                let tx = token.text
+                const containsCursor = cursorOffset > offset && cursorOffset <(offset + tx.length)
+                const cursorPos =   cursorOffset - offset
                 const style={
                     fg: token.color,
-                    bold:true,
                   }
-                const bx = <box
-                  key={`${i}`}
-                  left={lineNum.length + offset}
-                  content={tx}
-                  style={style}
-                />
-                offset+=tx.length
-                return bx
+                if(containsCursor){
+                    const before = tx.slice(0, cursorPos)
+                    const at = tx[cursorPos] || ' '
+                    const after = tx.slice(cursorPos + 1)
+                    const bx = <box
+                      key={`${i}`}
+                      left={lineNum.length + offset}
+                      content={tx}
+                      style={style}
+                    />
+                    offset+=tx.length
+                    return [bx]
+                } else {
+                    const bx = <box
+                      key={`${i}`}
+                      left={lineNum.length + offset}
+                      content={tx}
+                      style={style}
+                    />
+                    offset+=tx.length
+                    return [bx]
+
+                }
           })}
         </box>
       )
