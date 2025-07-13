@@ -1,34 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { BoxElement as box, TextElement as text,ListElement as list } from 'react-blessed';
-
-function highlight(line) {
-  const tokens = []
-  const regexes = [
-    { regex: /\/\/.*/g, style: { fg: 'gray' } },
-    { regex: /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, style: { fg: 'yellow' } },
-    { regex: /\b(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)\b/g, style: { fg: 'cyan' } }
-  ]
-
-  let cursor = 0
-  while (cursor < line.length) {
-    let matched = false
-    for (const { regex, style } of regexes) {
-      regex.lastIndex = cursor
-      const match = regex.exec(line)
-      if (match && match.index === cursor) {
-        tokens.push({ text: match[0], style })
-        cursor += match[0].length
-        matched = true
-        break
-      }
-    }
-    if (!matched) {
-      tokens.push({ text: line[cursor], style: {color:'green'} })
-      cursor++
-    }
-  }
-  return tokens
-}
+import {getTokenizer,highlight} from './tokenizer'
 
 export function BlessedTextEditor({
   width = '100%',
@@ -105,30 +77,26 @@ export function BlessedTextEditor({
     return lines.map((line, y) => {
       const lineStartOffset = lines.slice(0, y).reduce((acc, l) => acc + l.length + 1, 0)
       const tokens = highlight(line)
-
+      const lineNum = '│ ' + String(y + 1).padStart(ll) + ' │'
       let offset = 0
 
       return (
         <box key={y} top={y} left={0} height={1}>
-          <box left={0} style={{ fg: 'red' }}>
-            |{String(y + 1).padStart(ll)}│
+          <box left={0} style={{ bg: 'red' }}>
+            |{lineNum}│
           </box>
           {tokens.map((token, i) => {
-            const result = token.text.split('').map((char, j) => {
-              const absOffset = lineStartOffset + offset + j
-              const isCursor = absOffset === cursorOffset
-              return (
-                <box
-                  key={`${i}-${j}`}
-                  left={4 + offset + j}
-                  style={isCursor ? { bg: 'white', fg: 'black' } : token.style}
+                // const tx=`${token.text}[${token.color}]`
+                const tx = token.text
+                const bx = <text
+                  key={`${i}`}
+                  left={lineNum.length + offset}
+                  style={{fg:token.color,bg:token.color}}
                 >
-                  {char+'!'}
-                </box>
-              )
-            })
-            offset += token.text.length
-            return result
+                  {tx}
+                </text>
+                offset+=tx.length
+                return bx
           })}
         </box>
       )
