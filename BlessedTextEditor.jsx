@@ -82,19 +82,20 @@ export function BlessedTextEditor({
 
       return (
         <box key={y} top={y} left={0} height={1}>
-          <box left={0} style={{ bg: 'red' }}>
-            |{lineNum}│
-          </box>
+          <box left={0} content={lineNum} style={{ fg:'#aaaaaa' }}/>
           {tokens.map((token, i) => {
                 // const tx=`${token.text}[${token.color}]`
                 const tx = token.text
-                const bx = <text
+                const style={
+                    fg: token.color,
+                    bold:true,
+                  }
+                const bx = <box
                   key={`${i}`}
                   left={lineNum.length + offset}
-                  style={{fg:token.color,bg:token.color}}
-                >
-                  {tx}
-                </text>
+                  content={tx}
+                  style={style}
+                />
                 offset+=tx.length
                 return bx
           })}

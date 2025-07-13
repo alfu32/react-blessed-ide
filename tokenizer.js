@@ -1,5 +1,5 @@
 export function highlight(line) {
-    const tokenizer=getTokenizer('js')
+    const tokenizer=getTokenizer('jsx')
     return tokenizer(line)
   }
 
@@ -13,31 +13,32 @@ export const namedTokenizers={
         Whitespace:   {color:'',pattern:'\\s+'},
     }},
     js:{name:'js',definitions:{
+        Keyword:      {color:'magenta',pattern:'(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)'},
         Number:       {color:'red',pattern:'\\d+(?:\\.\\d+)?'},
-        Identifier:   {color:'green',pattern:'[A-Za-z_]\\w*'},
         String:       {color:'yellow',pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {color:'blue',pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {color:'blue',pattern:'[()[\\]{}.,;]'},
         Whitespace:   {color:'',pattern:'\\s+'},
-        Keyword:      {color:'magenta',pattern:'(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)'},
+        Identifier:   {color:'green',pattern:'[A-Za-z_]\\w*'},
     }},
     jsx:{name:'jsx',definitions:{
+        Keyword:      {color:'magenta',pattern:'(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)'},
+        JsxTag:       {color:'yellow',pattern:'\\<(\\/){0,1}[a-zA-Z-]*\\>'},
         Number:       {color:'red',pattern:'\\d+(?:\\.\\d+)?'},
-        Identifier:   {color:'green',pattern:'[A-Za-z_]\\w*'},
         String:       {color:'yellow',pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {color:'blue',pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {color:'blue',pattern:'[()[\\]{}.,;]'},
         Whitespace:   {color:'',pattern:'\\s+'},
-        Keyword:      {color:'magenta',pattern:'(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)'},
+        Identifier:   {color:'green',pattern:'[A-Za-z_]\\w*'},
     }},
     c:{name:'c',definitions:{
+        Keyword:      {color:'magenta',pattern:'(int|const|char|long|if|else|for|while|return)'},
         Number:       {color:'red',pattern:'\\d+(?:\\.\\d+)?'},
-        Identifier:   {color:'green',pattern:'[A-Za-z_]\\w*'},
         String:       {color:'yellow',pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {color:'blue',pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {color:'blue',pattern:'[()[\\]{}.,;]'},
         Whitespace:   {color:'',pattern:'\\s+'},
-        Keyword:      {color:'magenta',pattern:'(int|const|char|long|if|else|for|while|return)'},
+        Identifier:   {color:'green',pattern:'[A-Za-z_]\\w*'},
     }},
   }
 export function getTokenizer(name) {
