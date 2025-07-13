@@ -9,11 +9,13 @@ import { Grid,GridItem } from 'react-blessed-contrib-17'
 import FolderPickerDialog from "./FolderPickerDialog";
 import {Tab, VTabs} from "./VTabs";
 import {TextEditor} from "./TextEditor";
+import {BlessedTextEditor} from "./BlessedTextEditor";
 
 
 export function App(props){
   const [message, setMessage] = useState(false);
   const [pickFolder, setPickFolder] = useState(false);
+  const [currentEditorText, setCurrentEditorText] = useState('');
   const [activeTab, setActiveTab] = useState('Project');
   const [treeData, setTreeData]   = useState([]);
   const [gitStatus, setGitStatus] = useState([]);
@@ -82,6 +84,9 @@ export function App(props){
   const onTextEditorCancel = (a,b,c)=> {
       setMessage(JSON.stringify({a,b,c}))
   }
+  const onCurrentEditorChange = (a,b,c)=> {
+    setCurrentEditorText(JSON.stringify({a,b,c}))
+  }
   return (
       <>
       <Grid rows={8} cols={15} hideBorder>
@@ -128,12 +133,13 @@ export function App(props){
               </Tab>
           </VTabs>
           {/* Center panel */}
-          <TextEditor row={0} col={5} rowSpan={6} colSpan={10}
+          <BlessedTextEditor row={0} col={5} rowSpan={6} colSpan={10}
                      border={{ type: 'line' }}
                       label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
-              content={fileContent||""}
+              initialText={fileContent||""}
               onSave={onTextEditorSave}
               onCancel={onTextEditorCancel}
+              onChange={onCurrentEditorChange}
           />
           <box
               row={6} col={5} rowSpan={2} colSpan={10}
@@ -144,8 +150,17 @@ export function App(props){
               keys
               label={'Terminal'}
               overflow={'scroll'}
+              style={{
+                bg:"yellow",
+                fg:"black",
+                blink:true,
+                hover:{
+                    bg:"black",
+                    fg:"yellow",
+                }
+              }}
           >
-              <text></text>
+              {currentEditorText}
           </box>
         </Grid>
         {message && (
