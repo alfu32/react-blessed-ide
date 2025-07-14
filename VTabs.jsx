@@ -14,6 +14,8 @@ export function VTabs({ children, ...boxProps}) {
         .filter(child => React.isValidElement(child) && child.props.name);
 
     const [activeIndex, setActiveIndex] = useState(0);
+    const styleActive={fg:'black',underline:true,bg:'orange'}
+    const styleInactive={}
 
     return (
         <box {...boxProps}>
@@ -21,17 +23,17 @@ export function VTabs({ children, ...boxProps}) {
             {/* Tab list */}
             <box row={0} col={0} rowSpan={1} colSpan={1}>
                 {tabs.map((tab, i) => (
-                    <text
+                    <box
                         key={tab.props.name}
                         top={i}
-                        left={0}
                         mouse
                         clickable
                         bold={activeIndex === i}
                         onClick={() => setActiveIndex(i)}
+                        style={activeIndex === i ? styleActive : styleInactive}
                     >
                         {activeIndex === i ? `> ${tab.props.name}` : `  ${tab.props.name}`}
-                    </text>
+                    </box>
                 ))}
             </box>
 

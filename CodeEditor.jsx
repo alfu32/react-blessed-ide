@@ -95,68 +95,42 @@ export function CodeEditor({
                 const cursorPos =   cursorOffset - offset
                 const style=token.style
                 if(containsCursor){
-                    if (tx.length <= 1) {
-                      bx= <box
+                  if (tx.length <= 1) {
+                    bx= <box
+                        key={`${y}-${i}`}
+                        left={lineNum.length + token.start + cursorPos}
+                        content={'_'}
+                        style={{fg:'black',underline:true,bg:'white'}}
+                    />
+                  } else {
+                      let before = tx.substring(0, cursorPos)
+                      let at = tx[cursorPos] || '.'
+                      let after = tx.substring(cursorPos + 1)
+                      bx = <box
                           key={`${y}-${i}`}
-                          left={lineNum.length + token.start + cursorPos}
-                          content={tx}
-                          style={{fg:'black',underline:true,bg:'white'}}
-                      />
-
-                    } else {
-                      if (cursorPos === 0) {
-                        const at = tx[cursorPos] || '.'
-                        const after = tx.substring(cursorPos + 1)
-                        bx = <box
-                            key={`${y}-${i}`}
-                            left={lineNum.length + token.start}
-                            style={{...style}}
-                        >
-                          <box
-                              key={`${y}-${i}-at`}
-                              left={cursorPos}
-                              content={at.toString()}
-                              style={{...style, underline:true,bg:'white'}}
-                          />
-                          <box
-                              key={`${y}-${i}-after`}
-                              left={cursorPos + 1}
-                              content={after}
-                              style={style}
-                          />
-                        </box>
-
-                      } else {
-                        const before = tx.substring(0, cursorPos)
-                        const at = tx[cursorPos] || '.'
-                        const after = tx.substring(cursorPos + 1)
-                        bx = <box
-                            key={`${y}-${i}`}
-                            left={lineNum.length + token.start}
-                            style={{...style}}
-                        >
-                          <box
-                              key={`${y}-${i}-before`}
-                              left={0}
-                              content={before}
-                              style={style}
-                          />
-                          <box
-                              key={`${y}-${i}-at`}
-                              left={cursorPos}
-                              content={at}
-                              style={{...style, underline:true,bg:'white'}}
-                          />
-                          <box
-                              key={`${y}-${i}-after`}
-                              left={cursorPos + 1}
-                              content={after}
-                              style={style}
-                          />
-                        </box>
-
-                      }
-                    }
+                          left={lineNum.length + token.start}
+                          style={{...style}}
+                      >
+                        {before !== '' && (<box
+                            key={`${y}-${i}-before`}
+                            left={0}
+                            content={before}
+                            style={style}
+                        />)}
+                        {(<box
+                            key={`${y}-${i}-at`}
+                            left={cursorPos}
+                            content={at !== '' ? at : '_'}
+                            style={{...style, underline:true,bg:'white'}}
+                        />)}
+                        {after !== '' && (<box
+                            key={`${y}-${i}-after`}
+                            left={cursorPos + 1}
+                            content={after}
+                            style={style}
+                        />)}
+                      </box>
+                  }
                 } else {
                     bx = <box
                       key={`${y}-${i}`}
