@@ -70,6 +70,7 @@ export function CodeEditor({
     const lines = text.split('\n')
     const ll= Math.trunc(Math.log10(lines.length)) + 1
     let offset = 0
+    let cursorStyle={underline:true,inverse:true}
 
     return lines.map((line, y) => {
       const lineStartOffset = lines.slice(0, y).reduce((acc, l) => acc + l.length + 1, 0)
@@ -88,24 +89,29 @@ export function CodeEditor({
                 if(token.text.length === 0){
                   return []
                 }
+                
                 let bx=[]
                 // const tx=`${token.text}[${token.color}]`
                 let tx = token.text
-                const containsCursor = cursorOffset > offset && cursorOffset <(offset + tx.length)
+                const containsCursor = cursorOffset >= offset && cursorOffset < (offset + tx.length)
                 const cursorPos =   cursorOffset - offset
                 const style=token.style
                 if(containsCursor){
-                  if (tx.length <= 1) {
+                  if (tx.length === 1) {
+                    let at = ['\n','\r'].indexOf(tx)>-1 ? `${tx} `: tx
                     bx= <box
                         key={`${y}-${i}`}
                         left={lineNum.length + token.start + cursorPos}
-                        content={'_'}
-                        style={{fg:'black',underline:true,bg:'white'}}
+                        content={at}
+                        style={{...style,...cursorStyle}}
                     />
                   } else {
-                      let before = tx.substring(0, cursorPos)
-                      let at = tx[cursorPos] || '.'
-                      let after = tx.substring(cursorPos + 1)
+                      let before = cursorPos>0 ? tx.substring(0, cursorPos) : false
+                      let at = tx[cursorPos]
+                      at = ['\n','\r'].indexOf(at)>-1 ? `${at} `: at
+
+
+                      let after = (cursorPos <= (tx.length - 2)) ? tx.substring(cursorPos + 1) : false
                       bx = <box
                           key={`${y}-${i}`}
                           left={lineNum.length + token.start}
@@ -120,8 +126,8 @@ export function CodeEditor({
                         {(<box
                             key={`${y}-${i}-at`}
                             left={cursorPos}
-                            content={at !== '' ? at : '_'}
-                            style={{...style, underline:true,bg:'white'}}
+                            content={at}
+                            style={{...style, ...cursorStyle}}
                         />)}
                         {after !== '' && (<box
                             key={`${y}-${i}-after`}
