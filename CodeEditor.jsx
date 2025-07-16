@@ -73,78 +73,51 @@ export function CodeEditor({
     let cursorStyle={underline:true,inverse:true}
 
     return lines.map((line, y) => {
-      const lineStartOffset = lines.slice(0, y).reduce((acc, l) => acc + l.length + 1, 0)
-      const tokens = highlight(line)
       const lineNum = '│ ' + String(y + 1).padStart(ll) + ' │'
+      const lineBox=<box key={`${y}-linenum`} left={0} height={1} content={lineNum} style={{ fg:'#aaaaaa' }}/>
+      
+      const tokens = highlight(line)
       let inlineOffset = 0
-      let lineOffset = offset
       /// return <box
       ///     key={`${y}`}
       ///     left={lineNum.length + inlineOffset + cursorPos}>{}</box>
 
       const renderedLine = (
         <box key={y} top={y} left={0} height={1}>
-          <box left={0} height={1} content={lineNum} style={{ fg:'#aaaaaa' }}/>
+          {lineBox}
           {tokens.map((token, i) => {
-                if(token.text.length === 0){
-                  return []
-                }
-                
-                let bx=[]
                 // const tx=`${token.text}[${token.color}]`
                 let tx = token.text
                 const containsCursor = cursorOffset >= offset && cursorOffset < (offset + tx.length)
                 const cursorPos =   cursorOffset - offset
+                let at = tx[cursorPos]
+                at = ['\n','\r'].indexOf(at)>-1 ? `${at}_`: at
                 const style=token.style
+                let bx = <box
+                  key={`${y}-${i}`}
+                  left={lineNum.length + token.start}
+                  content={tx}
+                  style={style}
+                />
                 if(containsCursor){
-                  if (tx.length === 1) {
-                    let at = ['\n','\r'].indexOf(tx)>-1 ? `${tx} `: tx
-                    bx= <box
-                        key={`${y}-${i}`}
-                        left={lineNum.length + token.start + cursorPos}
-                        content={at}
-                        style={{...style,...cursorStyle}}
-                    />
-                  } else {
-                      let before = cursorPos>0 ? tx.substring(0, cursorPos) : false
-                      let at = tx[cursorPos]
-                      at = ['\n','\r'].indexOf(at)>-1 ? `${at} `: at
-
-
-                      let after = (cursorPos <= (tx.length - 2)) ? tx.substring(cursorPos + 1) : false
                       bx = <box
                           key={`${y}-${i}`}
                           left={lineNum.length + token.start}
-                          style={{...style}}
                       >
-                        {before !== '' && (<box
-                            key={`${y}-${i}-before`}
-                            left={0}
-                            content={before}
-                            style={style}
-                        />)}
-                        {(<box
+                        <box
+                          key={`${y}-${i}`}
+                          left={lineNum.length + token.start}
+                          content={tx}
+                          style={style}
+                        />
+                        <box
                             key={`${y}-${i}-at`}
                             left={cursorPos}
                             content={at}
                             style={{...style, ...cursorStyle}}
-                        />)}
-                        {after !== '' && (<box
-                            key={`${y}-${i}-after`}
-                            left={cursorPos + 1}
-                            content={after}
-                            style={style}
-                        />)}
+                        />
+                        
                       </box>
-                  }
-                } else {
-                    bx = <box
-                      key={`${y}-${i}`}
-                      left={lineNum.length + token.start}
-                      content={tx}
-                      style={style}
-                    />
-
                 }
               inlineOffset+=tx.length
               offset+=tx.length
