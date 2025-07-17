@@ -49,7 +49,7 @@ export const namedTokenizers={
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {style: {fg:'cyan'},pattern:'[()[\\]{}.,;]'},
-        Whitespace:   {style: {fg:'white',bg:'#222222'},pattern:'\\s+'},
+        Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
     }},
     js:{name:'js',definitions:{
         Keyword:      {style: {fg:'magenta'},pattern:'(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)'},
@@ -57,7 +57,7 @@ export const namedTokenizers={
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {style: {fg:'cyan'},pattern:'[()[\\]{}.,;]'},
-        Whitespace:   {style: {fg:'white',bg:'#222222'},pattern:'\\s+'},
+        Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
     }},
     jsx:{name:'jsx',definitions:{
@@ -67,7 +67,7 @@ export const namedTokenizers={
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {style: {fg:'cyan'},pattern:'[()[\\]{}.,;]'},
-        Whitespace:   {style: {fg:'white',bg:'#222222'},pattern:'\\s+'},
+        Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
     }},
     c:{name:'c',definitions:{
@@ -76,7 +76,7 @@ export const namedTokenizers={
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {style: {fg:'cyan'},pattern:'[()[\\]{}.,;]'},
-        Whitespace:   {style: {fg:'white',bg:'#222222'},pattern:'\\s+'},
+        Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
     }},
   }

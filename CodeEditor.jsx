@@ -6,7 +6,8 @@ export function CodeEditor({
   width = '100%',
   height = '100%',
   initialText = '',
-  onChange = () => {},
+  onKeypress=(ch,key) =>{},
+  onChange = (p) => {},
   ...boxProps
 }) {
   const [text, setText] = useState(initialText)
@@ -57,10 +58,11 @@ export function CodeEditor({
     } else if (key.full === 'return') {
       newText = newText.slice(0, newCursor) + '\n' + newText.slice(newCursor)
       newCursor++
-    } else if (typeof ch === 'string' && ch.length === 1) {
+    } else if (typeof ch === 'string' && ch.length === 1 && !key.ctrl && !key.meta) {
       newText = newText.slice(0, newCursor) + ch + newText.slice(newCursor)
       newCursor++
     }
+    onKeypress({ch,key})
 
     setText(newText)
     setCursorOffset(newCursor)

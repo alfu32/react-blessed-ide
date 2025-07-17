@@ -85,7 +85,10 @@ export function App(props){
       setMessage(JSON.stringify({a,b,c}))
   }
   const onCurrentEditorChange = (a,b,c)=> {
-    setCurrentEditorText(JSON.stringify({a,b,c}))
+    // setCurrentEditorText(JSON.stringify(a))
+  }
+  const onCodeEditKeyPress = ({ch,key})=> {
+    setCurrentEditorText(JSON.stringify({ch,key}))
   }
   return (
       <>
@@ -137,6 +140,7 @@ export function App(props){
                       border={{ type: 'line' }}
                       label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
                       initialText={fileContent||""}
+                      onKeypress={onCodeEditKeyPress}
                       onSave={onTextEditorSave}
                       onCancel={onTextEditorCancel}
                       onChange={onCurrentEditorChange}

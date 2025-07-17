@@ -453,7 +453,7 @@ const namedTokenizers = {
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
     Punctuation: { style: { fg: "cyan" }, pattern: "[()[\\]{}.,;]" },
-    Whitespace: { style: { fg: "white", bg: "#222222" }, pattern: "\\s+" }
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" }
   } },
   js: { name: "js", definitions: {
     Keyword: { style: { fg: "magenta" }, pattern: "(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)" },
@@ -461,7 +461,7 @@ const namedTokenizers = {
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
     Punctuation: { style: { fg: "cyan" }, pattern: "[()[\\]{}.,;]" },
-    Whitespace: { style: { fg: "white", bg: "#222222" }, pattern: "\\s+" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
     Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" }
   } },
   jsx: { name: "jsx", definitions: {
@@ -471,7 +471,7 @@ const namedTokenizers = {
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
     Punctuation: { style: { fg: "cyan" }, pattern: "[()[\\]{}.,;]" },
-    Whitespace: { style: { fg: "white", bg: "#222222" }, pattern: "\\s+" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
     Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" }
   } },
   c: { name: "c", definitions: {
@@ -480,7 +480,7 @@ const namedTokenizers = {
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
     Punctuation: { style: { fg: "cyan" }, pattern: "[()[\\]{}.,;]" },
-    Whitespace: { style: { fg: "white", bg: "#222222" }, pattern: "\\s+" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
     Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" }
   } }
 };
@@ -505,7 +505,9 @@ function CodeEditor({
   width = "100%",
   height = "100%",
   initialText = "",
-  onChange = () => {
+  onKeypress = (ch, key) => {
+  },
+  onChange = (p) => {
   },
   ...boxProps
 }) {
@@ -553,10 +555,11 @@ function CodeEditor({
     } else if (key.full === "return") {
       newText = newText.slice(0, newCursor) + "\n" + newText.slice(newCursor);
       newCursor++;
-    } else if (typeof ch === "string" && ch.length === 1) {
+    } else if (typeof ch === "string" && ch.length === 1 && !key.ctrl && !key.meta) {
       newText = newText.slice(0, newCursor) + ch + newText.slice(newCursor);
       newCursor++;
     }
+    onKeypress({ ch, key });
     setText(newText);
     setCursorOffset(newCursor);
   };
@@ -709,7 +712,9 @@ function App(props) {
     setMessage(JSON.stringify({ a, b, c }));
   };
   const onCurrentEditorChange = (a, b, c) => {
-    setCurrentEditorText(JSON.stringify({ a, b, c }));
+  };
+  const onCodeEditKeyPress = ({ ch, key }) => {
+    setCurrentEditorText(JSON.stringify({ ch, key }));
   };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(jsxRuntime_js.Fragment, { children: [
     /* @__PURE__ */ jsxRuntime_js.jsxs(reactBlessedContrib17.Grid, { rows: 8, cols: 15, hideBorder: true, children: [
@@ -787,6 +792,7 @@ function App(props) {
           border: { type: "line" },
           label: (selectedFile || "No file selected").replace(workspace.rootDir, ""),
           initialText: fileContent || "",
+          onKeypress: onCodeEditKeyPress,
           onSave: onTextEditorSave,
           onCancel: onTextEditorCancel,
           onChange: onCurrentEditorChange
