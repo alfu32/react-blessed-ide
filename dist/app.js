@@ -560,70 +560,75 @@ function CodeEditor({
     setText(newText);
     setCursorOffset(newCursor);
   };
-  const renderWithCursor = () => {
-    const lines = text2.split("\n");
-    const ll = Math.trunc(Math.log10(lines.length)) + 1;
-    let offset = 0;
-    let cursorStyle = { underline: true, inverse: true };
-    return lines.map((line, y) => {
-      const lineNum = "│ " + String(y + 1).padStart(ll) + " │";
-      const lineBox = /* @__PURE__ */ jsxRuntime_js.jsx("box", { left: 0, height: 1, content: lineNum, style: { fg: "#aaaaaa" } }, `${y}-linenum`);
-      const tokens = highlight(line);
-      let inlineOffset = 0;
-      const renderedLine = /* @__PURE__ */ jsxRuntime_js.jsxs("box", { top: y, left: 0, height: 1, children: [
-        lineBox,
-        tokens.map((token, i) => {
-          let tx = token.text;
-          const containsCursor = cursorOffset >= offset && cursorOffset < offset + tx.length;
-          const cursorPos = cursorOffset - offset;
-          let at = tx[cursorPos];
-          at = ["\n", "\r"].indexOf(at) > -1 ? `${at}_` : at;
-          const style = token.style;
-          let bx = /* @__PURE__ */ jsxRuntime_js.jsx(
+  const cursorStyle = { underline: true, inverse: true };
+  const renderLOC = (line, y, offset, ll) => {
+    const lineNum = "│ " + String(y + 1).padStart(ll) + " │";
+    const lineBox = /* @__PURE__ */ jsxRuntime_js.jsx("box", { left: 0, height: 1, content: lineNum, style: { fg: "#aaaaaa" } }, `${y}-linenum`);
+    const tokens = highlight(line);
+    let inlineOffset = 0;
+    const renderedLine = /* @__PURE__ */ jsxRuntime_js.jsxs("box", { top: y, left: 0, height: 1, children: [
+      lineBox,
+      tokens.map((token, i) => {
+        let tx = token.text;
+        const containsCursor = cursorOffset >= offset && cursorOffset < offset + tx.length;
+        const cursorPos = cursorOffset - offset;
+        let at = tx[cursorPos];
+        at = ["\n", "\r"].indexOf(at) > -1 ? `${at}_` : at;
+        const style = token.style;
+        let bx = /* @__PURE__ */ jsxRuntime_js.jsx(
+          "box",
+          {
+            left: lineNum.length + token.start,
+            content: tx,
+            style
+          },
+          `${y}-${i}`
+        );
+        if (containsCursor) {
+          bx = /* @__PURE__ */ jsxRuntime_js.jsxs(
             "box",
             {
               left: lineNum.length + token.start,
-              content: tx,
-              style
+              children: [
+                /* @__PURE__ */ jsxRuntime_js.jsx(
+                  "box",
+                  {
+                    left: lineNum.length + token.start,
+                    content: tx,
+                    style
+                  },
+                  `${y}-${i}`
+                ),
+                /* @__PURE__ */ jsxRuntime_js.jsx(
+                  "box",
+                  {
+                    left: cursorPos,
+                    content: at,
+                    style: { ...style, ...cursorStyle }
+                  },
+                  `${y}-${i}-at`
+                )
+              ]
             },
             `${y}-${i}`
           );
-          if (containsCursor) {
-            bx = /* @__PURE__ */ jsxRuntime_js.jsxs(
-              "box",
-              {
-                left: lineNum.length + token.start,
-                children: [
-                  /* @__PURE__ */ jsxRuntime_js.jsx(
-                    "box",
-                    {
-                      left: lineNum.length + token.start,
-                      content: tx,
-                      style
-                    },
-                    `${y}-${i}`
-                  ),
-                  /* @__PURE__ */ jsxRuntime_js.jsx(
-                    "box",
-                    {
-                      left: cursorPos,
-                      content: at,
-                      style: { ...style, ...cursorStyle }
-                    },
-                    `${y}-${i}-at`
-                  )
-                ]
-              },
-              `${y}-${i}`
-            );
-          }
-          inlineOffset += tx.length;
-          offset += tx.length;
-          return [bx];
-        })
-      ] }, y);
-      offset += 1;
-      return renderedLine;
+        }
+        inlineOffset += tx.length;
+        offset += tx.length;
+        return [bx];
+      })
+    ] }, y);
+    offset += 1;
+    return [renderedLine, offset];
+  };
+  const renderWithCursor = () => {
+    const lines = text2.split("\n");
+    const linesLength = Math.trunc(Math.log10(lines.length)) + 1;
+    let offset = 0;
+    return lines.map((line, y, lines2) => {
+      let [loc, offsetOut] = renderLOC(line, y, offset, linesLength);
+      offset = offsetOut;
+      return loc;
     });
   };
   return /* @__PURE__ */ jsxRuntime_js.jsx(

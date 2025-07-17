@@ -66,13 +66,8 @@ export function CodeEditor({
     setCursorOffset(newCursor)
   }
 
-  const renderWithCursor = () => {
-    const lines = text.split('\n')
-    const ll= Math.trunc(Math.log10(lines.length)) + 1
-    let offset = 0
-    let cursorStyle={underline:true,inverse:true}
-
-    return lines.map((line, y) => {
+  const cursorStyle={underline:true,inverse:true}
+  const renderLOC = (line,y,offset,ll) =>{
       const lineNum = '│ ' + String(y + 1).padStart(ll) + ' │'
       const lineBox=<box key={`${y}-linenum`} left={0} height={1} content={lineNum} style={{ fg:'#aaaaaa' }}/>
       
@@ -127,7 +122,18 @@ export function CodeEditor({
         </box>
       )
       offset+=1
-      return renderedLine
+      return [renderedLine,offset]
+  }
+
+  const renderWithCursor = () => {
+    const lines = text.split('\n')
+    const linesLength = Math.trunc(Math.log10(lines.length)) + 1
+    let offset = 0
+
+    return lines.map((line, y,lines) => {
+      let [loc,offsetOut] = renderLOC(line,y,offset,linesLength)
+      offset=offsetOut
+      return loc
     })
   }
 
