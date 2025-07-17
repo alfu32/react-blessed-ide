@@ -571,9 +571,6 @@ function CodeEditor({
       tokens.map((token, i) => {
         let tx = token.text;
         const containsCursor = cursorOffset >= offset && cursorOffset < offset + tx.length;
-        const cursorPos = cursorOffset - offset;
-        let at = tx[cursorPos];
-        at = ["\n", "\r"].indexOf(at) > -1 ? `${at}_` : at;
         const style = token.style;
         let bx = /* @__PURE__ */ jsxRuntime_js.jsx(
           "box",
@@ -585,6 +582,9 @@ function CodeEditor({
           `${y}-${i}`
         );
         if (containsCursor) {
+          const cursorPos = cursorOffset - offset;
+          let at = tx[cursorPos];
+          at = ["\n", "\r"].indexOf(at) > -1 ? `${at}_` : at;
           bx = /* @__PURE__ */ jsxRuntime_js.jsxs(
             "box",
             {
@@ -593,7 +593,7 @@ function CodeEditor({
                 /* @__PURE__ */ jsxRuntime_js.jsx(
                   "box",
                   {
-                    left: lineNum.length + token.start,
+                    left: 0,
                     content: tx,
                     style
                   },
@@ -603,6 +603,7 @@ function CodeEditor({
                   "box",
                   {
                     left: cursorPos,
+                    width: 1,
                     content: at,
                     style: { ...style, ...cursorStyle }
                   },

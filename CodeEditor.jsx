@@ -84,9 +84,6 @@ export function CodeEditor({
                 // const tx=`${token.text}[${token.color}]`
                 let tx = token.text
                 const containsCursor = cursorOffset >= offset && cursorOffset < (offset + tx.length)
-                const cursorPos =   cursorOffset - offset
-                let at = tx[cursorPos]
-                at = ['\n','\r'].indexOf(at)>-1 ? `${at}_`: at
                 const style=token.style
                 let bx = <box
                   key={`${y}-${i}`}
@@ -95,19 +92,23 @@ export function CodeEditor({
                   style={style}
                 />
                 if(containsCursor){
+                      const cursorPos = cursorOffset - offset
+                      let at = tx[cursorPos]
+                      at = ['\n','\r'].indexOf(at)>-1 ? `${at}_`: at
                       bx = <box
                           key={`${y}-${i}`}
                           left={lineNum.length + token.start}
                       >
                         <box
                           key={`${y}-${i}`}
-                          left={lineNum.length + token.start}
+                          left={0}
                           content={tx}
                           style={style}
                         />
                         <box
                             key={`${y}-${i}-at`}
                             left={cursorPos}
+                            width={1}
                             content={at}
                             style={{...style, ...cursorStyle}}
                         />
