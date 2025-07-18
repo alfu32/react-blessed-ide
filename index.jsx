@@ -31,5 +31,6 @@ screen.key(["C-s", "C-S-s", 'f8'], () => {
   console.log('Wrote SGR dump to buffer.sgr');
   // new Message().display('Buffer saved!', 1, () => screen.render());
 });
+screen.enableMouse()
 
 render(<App />, screen);

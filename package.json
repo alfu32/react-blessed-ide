@@ -33,5 +33,8 @@
     "react-devtools-core": "4.10.1",
     "vite": "^7.0.3",
     "vite-node": "^3.2.4"
+  },
+  "overrides": {
+    "esbuild": "0.25.5"
   }
 }

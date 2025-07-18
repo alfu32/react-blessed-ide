@@ -848,4 +848,5 @@ screen.key(["C-s", "C-S-s", "f8"], () => {
   fs.writeFileSync("buffer.sgr", dump, "utf8");
   console.log("Wrote SGR dump to buffer.sgr");
 });
+screen.enableMouse();
 reactBlessed.render(/* @__PURE__ */ jsxRuntime_js.jsx(App, {}), screen);
