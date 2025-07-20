@@ -15,19 +15,24 @@ export function CodeEditor({
   const [cursorVisible, setCursorVisible] = useState(true)
   const boxRef = useRef(null)
   const [scrollTop, setScrollTop] = useState(0)
-  let visibleHeight = 40  // or parseInt(height) if passed as string like '80%'
+  const [size, setSize] = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    const node = boxRef.current.widget || boxRef.current
+    const handler = () => setSize({ width: node.width-2, height: node.height-2 })
+
+    handler()
+    node.screen.on('resize', handler)
+    node.on('resize', handler)
+    return () => {
+      node.screen.off('resize', handler)
+      node.off('resize', handler)
+    }
+  }, [])
   useEffect(() => {
     setText(initialText)
     setCursorOffset(0)
   }, [initialText])
-
-  useEffect(() => {
-    if (boxRef.current) {
-      boxRef.current.focus()
-      visibleHeight=boxRef.current.height
-    }
-
-  }, [])
 
   useEffect(() => {
     onChange({ text, cursorOffset })
@@ -38,8 +43,8 @@ export function CodeEditor({
   
     if (lineIndex < scrollTop) {
       setScrollTop(lineIndex)
-    } else if (lineIndex >= scrollTop + visibleHeight) {
-      setScrollTop(lineIndex - visibleHeight + 1)
+    } else if (lineIndex >= scrollTop + size.height) {
+      setScrollTop(lineIndex - size.height + 1)
     }
   }, [cursorOffset])
 
@@ -56,8 +61,13 @@ export function CodeEditor({
       const col = lines.at(-1)?.length || 0
       const lineIndex=lines.length-1
       if (lines.length > 1) {
+        const before=lines[lines.length-1].length
         const prevLine = lines[lines.length - 2]
-        newCursor -= col + 1 + Math.min(prevLine.length, col)
+        const prev=prevLine.length
+        newCursor -= before + 1
+        if (prev > before) {
+          newCursor-=prev-before
+        }
       }
       if (lineIndex - 1 < scrollTop) {
         setScrollTop(Math.max(0, scrollTop - 1))
@@ -71,7 +81,7 @@ export function CodeEditor({
         const below = lines[index + 1]
         newCursor += lines[index].length - col + 1 + Math.min(below.length, col)
       }
-      if (lineIndex + 1 >= scrollTop + visibleHeight){
+      if (lineIndex + 1 >= scrollTop + size.height){
         setScrollTop(scrollTop + 1)
       }
     } else if (key.name === 'backspace') {
@@ -96,24 +106,14 @@ export function CodeEditor({
   const renderLOC = (line,y,offset,ll) =>{
       const lineNum = '│ ' + String(scrollTop+y + 1).padStart(ll) + ' │'
       const lineBox=<box key={`${y}-linenum`} left={0} height={1} content={lineNum} style={{ fg:'#aaaaaa' }}/>
-      
-      // if(y<scrollTop || y>(scrollTop+visibleHeight)){
-      //   offset+=1
-      //   return [
-      //     <box key={y} top={y} left={0} height={1}>
-      //     {lineBox}{line}
-      //     </box>,
-      //     offset
-      //   ]
-      // }
 
       const tokens = highlight(line)
       let inlineOffset = 0
 
       const renderedLine = (
-        <box key={y} top={y} left={0} height={1}>
+        <box key={y} top={1+y-scrollTop} left={0} height={1}>
           {lineBox}
-          {tokens.map((token, i) => {
+          {tokens.filter(tk => tk.start<size.width).map((token, i) => {
               // const tx=`${token.text}[${token.color}]`
               let tx = token.text
               const containsCursor = cursorOffset >= offset && cursorOffset < (offset + tx.length)
@@ -164,7 +164,7 @@ export function CodeEditor({
     const linesLength = Math.trunc(Math.log10(lines.length)) + 1
     let offset = 0
 
-    return lines.slice(scrollTop, scrollTop + visibleHeight)
+    return lines.slice(scrollTop, scrollTop + size.height)
     .map((line, y,lines) => {
       let [loc,offsetOut] = renderLOC(line,y,offset,linesLength)
       offset=offsetOut

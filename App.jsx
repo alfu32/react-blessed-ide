@@ -10,6 +10,7 @@ import FolderPickerDialog from "./FolderPickerDialog";
 import {Tab, VTabs} from "./VTabs";
 import {TextEditor} from "./TextEditor";
 import {CodeEditor} from "./CodeEditor";
+import {LayoutCatcher} from "./LayoutCatcher";
 
 
 export function App(props){
@@ -157,6 +158,7 @@ export function App(props){
           >
               {currentEditorText}
           </box>
+          {/*<LayoutCatcher  row={0} col={5} rowSpan={6} colSpan={10}/>*/}
         </Grid>
         {message && (
             <ModalDialog

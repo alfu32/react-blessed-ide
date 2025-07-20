@@ -516,17 +516,22 @@ function CodeEditor({
   const [cursorVisible, setCursorVisible] = React.useState(true);
   const boxRef = React.useRef(null);
   const [scrollTop, setScrollTop] = React.useState(0);
-  let visibleHeight = 40;
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+  React.useEffect(() => {
+    const node = boxRef.current.widget || boxRef.current;
+    const handler = () => setSize({ width: node.width - 2, height: node.height - 2 });
+    handler();
+    node.screen.on("resize", handler);
+    node.on("resize", handler);
+    return () => {
+      node.screen.off("resize", handler);
+      node.off("resize", handler);
+    };
+  }, []);
   React.useEffect(() => {
     setText(initialText);
     setCursorOffset(0);
   }, [initialText]);
-  React.useEffect(() => {
-    if (boxRef.current) {
-      boxRef.current.focus();
-      visibleHeight = boxRef.current.height;
-    }
-  }, []);
   React.useEffect(() => {
     onChange({ text: text2, cursorOffset });
   }, [text2, cursorOffset]);
@@ -535,8 +540,8 @@ function CodeEditor({
     const lineIndex = lines.length - 1;
     if (lineIndex < scrollTop) {
       setScrollTop(lineIndex);
-    } else if (lineIndex >= scrollTop + visibleHeight) {
-      setScrollTop(lineIndex - visibleHeight + 1);
+    } else if (lineIndex >= scrollTop + size.height) {
+      setScrollTop(lineIndex - size.height + 1);
     }
   }, [cursorOffset]);
   const handleKeyPress = (ch, key) => {
@@ -548,11 +553,16 @@ function CodeEditor({
       newCursor = Math.min(newText.length, newCursor + 1);
     } else if (key.name === "up") {
       const lines = text2.slice(0, newCursor).split("\n");
-      const col = lines.at(-1)?.length || 0;
+      lines.at(-1)?.length || 0;
       const lineIndex = lines.length - 1;
       if (lines.length > 1) {
+        const before = lines[lines.length - 1].length;
         const prevLine = lines[lines.length - 2];
-        newCursor -= col + 1 + Math.min(prevLine.length, col);
+        const prev = prevLine.length;
+        newCursor -= before + 1;
+        if (prev > before) {
+          newCursor -= prev - before;
+        }
       }
       if (lineIndex - 1 < scrollTop) {
         setScrollTop(Math.max(0, scrollTop - 1));
@@ -566,7 +576,7 @@ function CodeEditor({
         const below = lines[index + 1];
         newCursor += lines[index].length - col + 1 + Math.min(below.length, col);
       }
-      if (lineIndex + 1 >= scrollTop + visibleHeight) {
+      if (lineIndex + 1 >= scrollTop + size.height) {
         setScrollTop(scrollTop + 1);
       }
     } else if (key.name === "backspace") {
@@ -591,9 +601,9 @@ function CodeEditor({
     const lineBox = /* @__PURE__ */ jsxRuntime_js.jsx("box", { left: 0, height: 1, content: lineNum, style: { fg: "#aaaaaa" } }, `${y}-linenum`);
     const tokens = highlight(line);
     let inlineOffset = 0;
-    const renderedLine = /* @__PURE__ */ jsxRuntime_js.jsxs("box", { top: y, left: 0, height: 1, children: [
+    const renderedLine = /* @__PURE__ */ jsxRuntime_js.jsxs("box", { top: 1 + y - scrollTop, left: 0, height: 1, children: [
       lineBox,
-      tokens.map((token, i) => {
+      tokens.filter((tk) => tk.start < size.width).map((token, i) => {
         let tx = token.text;
         const containsCursor = cursorOffset >= offset && cursorOffset < offset + tx.length;
         const style = token.style;
@@ -651,7 +661,7 @@ function CodeEditor({
     const lines = text2.split("\n");
     const linesLength = Math.trunc(Math.log10(lines.length)) + 1;
     let offset = 0;
-    return lines.slice(scrollTop, scrollTop + visibleHeight).map((line, y, lines2) => {
+    return lines.slice(scrollTop, scrollTop + size.height).map((line, y, lines2) => {
       let [loc, offsetOut] = renderLOC(line, y, offset, linesLength);
       offset = offsetOut;
       return loc;
