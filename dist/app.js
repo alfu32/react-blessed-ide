@@ -515,16 +515,30 @@ function CodeEditor({
   const [cursorOffset, setCursorOffset] = React.useState(0);
   const [cursorVisible, setCursorVisible] = React.useState(true);
   const boxRef = React.useRef(null);
+  const [scrollTop, setScrollTop] = React.useState(0);
+  let visibleHeight = 40;
   React.useEffect(() => {
     setText(initialText);
     setCursorOffset(0);
   }, [initialText]);
   React.useEffect(() => {
-    if (boxRef.current) boxRef.current.focus();
+    if (boxRef.current) {
+      boxRef.current.focus();
+      visibleHeight = boxRef.current.height;
+    }
   }, []);
   React.useEffect(() => {
     onChange({ text: text2, cursorOffset });
   }, [text2, cursorOffset]);
+  React.useEffect(() => {
+    const lines = text2.slice(0, cursorOffset).split("\n");
+    const lineIndex = lines.length - 1;
+    if (lineIndex < scrollTop) {
+      setScrollTop(lineIndex);
+    } else if (lineIndex >= scrollTop + visibleHeight) {
+      setScrollTop(lineIndex - visibleHeight + 1);
+    }
+  }, [cursorOffset]);
   const handleKeyPress = (ch, key) => {
     let newText = text2;
     let newCursor = cursorOffset;
@@ -535,17 +549,25 @@ function CodeEditor({
     } else if (key.name === "up") {
       const lines = text2.slice(0, newCursor).split("\n");
       const col = lines.at(-1)?.length || 0;
+      const lineIndex = lines.length - 1;
       if (lines.length > 1) {
         const prevLine = lines[lines.length - 2];
         newCursor -= col + 1 + Math.min(prevLine.length, col);
+      }
+      if (lineIndex - 1 < scrollTop) {
+        setScrollTop(Math.max(0, scrollTop - 1));
       }
     } else if (key.name === "down") {
       const lines = text2.split("\n");
       const index = text2.slice(0, newCursor).split("\n").length - 1;
       const col = newCursor - text2.lastIndexOf("\n", newCursor - 1) - 1;
+      const lineIndex = index;
       if (index < lines.length - 1) {
         const below = lines[index + 1];
         newCursor += lines[index].length - col + 1 + Math.min(below.length, col);
+      }
+      if (lineIndex + 1 >= scrollTop + visibleHeight) {
+        setScrollTop(scrollTop + 1);
       }
     } else if (key.name === "backspace") {
       if (newCursor > 0) {
@@ -565,7 +587,7 @@ function CodeEditor({
   };
   const cursorStyle = { underline: true, inverse: true };
   const renderLOC = (line, y, offset, ll) => {
-    const lineNum = "│ " + String(y + 1).padStart(ll) + " │";
+    const lineNum = "│ " + String(scrollTop + y + 1).padStart(ll) + " │";
     const lineBox = /* @__PURE__ */ jsxRuntime_js.jsx("box", { left: 0, height: 1, content: lineNum, style: { fg: "#aaaaaa" } }, `${y}-linenum`);
     const tokens = highlight(line);
     let inlineOffset = 0;
@@ -629,7 +651,7 @@ function CodeEditor({
     const lines = text2.split("\n");
     const linesLength = Math.trunc(Math.log10(lines.length)) + 1;
     let offset = 0;
-    return lines.map((line, y, lines2) => {
+    return lines.slice(scrollTop, scrollTop + visibleHeight).map((line, y, lines2) => {
       let [loc, offsetOut] = renderLOC(line, y, offset, linesLength);
       offset = offsetOut;
       return loc;
@@ -649,8 +671,6 @@ function CodeEditor({
       input: true,
       clickable: true,
       focused: true,
-      scrollable: true,
-      alwaysScroll: true,
       onKeypress: handleKeyPress,
       ...boxProps,
       children: renderWithCursor()
