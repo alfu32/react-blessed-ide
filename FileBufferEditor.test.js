@@ -1,6 +1,11 @@
 import { FileBufferEditor } from './services/FileBufferEditor.js';
 import { getTokenizer } from './tokenizer.js'
 
+function log(...args){
+  const place = new Error()
+  const placeText = place.stack.split('\n').slice(1).map(l => l.replace(/^\s+at /gi,''))
+  console.log(placeText[1].replace('file://',''),...args)
+}
 
 // simple ANSI color map
 
@@ -36,20 +41,23 @@ function renderConsole(lines) {
 
 const myTokenizer = getTokenizer('jsx')
 
-const editor = new FileBufferEditor('CodeEditor.jsx', { rows: 40, cols: 120 });
-editor.moveCursorVertically(40);
-console.log('moved cursor')
+const editor = new FileBufferEditor('CodeEditor.jsx', { rows: 20, cols: 80 });
 
-// “Which lines are we seeing?”
-const { startLine, endLine } = editor.getWindowRange();
-console.log(`Showing file lines ${startLine} through ${endLine}`);
+for(let move of [0,50,-40,50,-40,50,-60]){
+  editor.moveCursorVertically(move);
+  log('moved cursor')
+
+  // “Which lines are we seeing?”
+  const { startLine, endLine } = editor.getWindowRange();
+  log(`Showing file lines ${startLine} through ${endLine}`);
 
 
-// Or, if you want both tokens *and* numbers in one shot:
-const lines = editor.renderWithLineNumbers(myTokenizer);
-// lines.forEach(({ lineNumber, tokens }) => {
-//   console.log(`${lineNumber}:`, tokens);
-// });
-console.log('tokenizer finished')
+  // Or, if you want both tokens *and* numbers in one shot:
+  const lines = editor.renderWithLineNumbers(myTokenizer);
+  // lines.forEach(({ lineNumber, tokens }) => {
+  //   console.log(`${lineNumber}:`, tokens);
+  // });
+  log('tokenizer finished')
 
-renderConsole(lines);
+  renderConsole(lines);
+}

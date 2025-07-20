@@ -43,29 +43,41 @@ export class FileBufferEditor {
     return headBytes + colBytes;
   }
 
-  // read just window‐sized region, line by line, via seek+read
   render(tokenizer) {
-    const fd = fs.openSync(this.filePath, 'r');
-    // first find byte offset of windowStartRow
+    const fd    = fs.openSync(this.filePath, 'r');
+    const stats = fs.statSync(this.filePath);
+    const fileSize = stats.size;
+  
+    // 1) find the byte‐offset at the start of windowStartRow
     let linesFound = 0;
-    let offset = 0;
+    let offset     = 0;
     const BUF_SZ = 4096;
-    const buf = Buffer.alloc(BUF_SZ);
-    while (linesFound < this.windowStartRow) {
-      const { bytesRead } = fs.readSync(fd, buf, 0, BUF_SZ, offset);
-      if (bytesRead === 0) break;
+    const buf    = Buffer.alloc(BUF_SZ);
+  
+    while (linesFound < this.windowStartRow && offset < fileSize) {
+      // console.log({linesFound})
+      const bytesRead = fs.readSync(fd, buf, 0, BUF_SZ, offset);
+      if (bytesRead === 0) break;       // EOF
+      // console.log({bytesRead});
       for (let i = 0; i < bytesRead && linesFound < this.windowStartRow; i++) {
         if (buf[i] === 0x0A) linesFound++;
         offset++;
       }
     }
-    // now read enough bytes to cover windowRows × (windowCols+1)
+  
+    // 2) now read just enough bytes to cover the onscreen window
     const toRead = this.windowRows * (this.windowCols + 1);
     const winBuf = Buffer.alloc(toRead);
     fs.readSync(fd, winBuf, 0, toRead, offset);
     fs.closeSync(fd);
-
-    const textLines = winBuf.toString('utf8').split('\n').slice(0, this.windowRows);
+  
+    // 3) split into lines, crop to exactly windowRows,
+    //    then apply your tokenizer to the windowCols slice
+    const textLines = winBuf
+      .toString('utf8')
+      .split('\n')
+      .slice(0, this.windowRows);
+  
     return textLines.map(line => {
       const seg = line.substr(this.windowStartCol, this.windowCols);
       return tokenizer(seg);
