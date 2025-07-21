@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { getTokenizer } from '../tokenizer';
 
 export class FileBufferEditor {
   /**
@@ -13,6 +14,8 @@ export class FileBufferEditor {
     this.col             = 0;
     this.windowStartRow  = 0;
     this.windowStartCol  = 0;
+    this.cursorStyle     = {};
+    this.cursorChar      = '#';
   }
 
   // ── private ────────────────────────────────────────────────────────────
@@ -43,7 +46,24 @@ export class FileBufferEditor {
     return headBytes + colBytes;
   }
 
-  render(tokenizer) {
+  /**
+   * @returns {{ rowInWindow: number, colInWindow: number }}
+   *   0-based coords of the cursor inside the viewport
+   */
+  getCursorWindowCoords() {
+    return {
+      rowInWindow: this.row - this.windowStartRow,
+      colInWindow: this.col - this.windowStartCol
+    };
+  }
+  /**
+  * @param {(code:string)=>TokenizerToken[]} tokenizer
+  * @returns {{tokens:TokenizerToken[],cursorStyle:object}}
+  *
+  * */
+  render() {
+    const ps = this.filePath.split('.')
+    const tokenizer = getTokenizer(ps[ps.length-1])
     const fd    = fs.openSync(this.filePath, 'r');
     const stats = fs.statSync(this.filePath);
     const fileSize = stats.size;
@@ -78,9 +98,48 @@ export class FileBufferEditor {
       .split('\n')
       .slice(0, this.windowRows);
   
-    return textLines.map(line => {
-      const seg = line.substr(this.windowStartCol, this.windowCols);
-      return tokenizer(seg);
+    return textLines.map((line,i) => {
+      const seg = line.substring(this.windowStartCol, this.windowCols);
+      const tokens = tokenizer(seg);
+      const { rowInWindow, colInWindow } = this.getCursorWindowCoords();
+
+      // 2) if cursor isn’t in view, bail
+      if (
+        tokens && (
+          rowInWindow < 0 ||
+          rowInWindow >= tokens.length ||
+          colInWindow < 0 ||
+          colInWindow >= this.windowCols
+        )
+      ) {
+        this.cursorStyle=null;
+      }
+      let ln=this.windowStartRow
+
+      // 3) scan tokens to find which one covers colInWindow
+      let col = 0;
+      for (const tok of tokens) {
+        if(tok.text=='\n'){
+          ln+=1
+          col=0
+        }
+        const len = tok.text.length;
+        if (rowInWindow == ln && colInWindow >= col && colInWindow < col + len) {
+          this.cursorStyle = tok.style;
+          this.cursorChar = tok.text[col - colInWindow]
+          break
+        }
+        col += len;
+      }
+
+      // 4) fallback to last token’s style (e.g. past EOL)
+      if(this.cursorStyle==null){
+        const last = tokens.slice(-1)[0];
+        this.cursorStyle = last ? last.style : {};
+        this.cursorChar = last && last.text.length ? last.text[last.text.length-1] : '#';
+      }
+
+      return tokens
     });
   }
 
@@ -175,8 +234,8 @@ export class FileBufferEditor {
    * @param  {(line: string)=>any[]} tokenizer
    * @return {{ lineNumber: number, tokens: any[] }[]}
    */
-  renderWithLineNumbers(tokenizer) {
-    const raw = this.render(tokenizer);
+  renderWithLineNumbers() {
+    const raw = this.render();
     return raw.map((tokens, idx) => ({
       lineNumber: this.windowStartRow + idx,
       tokens

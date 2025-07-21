@@ -416,16 +416,13 @@ function VTabs({ children, ...boxProps }) {
 function Tab({ children }) {
   return /* @__PURE__ */ jsxRuntime_js.jsx(jsxRuntime_js.Fragment, { children });
 }
-function highlight(line) {
-  const tokenizer = getTokenizer("jsx");
-  return tokenizer(line);
-}
 class TokenizerToken {
   tokenizerName = "";
   type = "";
   style = {};
   start = 0;
   end = 0;
+  text = "";
   /**
    *
    * @param {RegExpExecArray} m
@@ -501,189 +498,361 @@ function getTokenizer(name) {
     return tokens;
   };
 }
-function CodeEditor({
-  width = "100%",
-  height = "100%",
-  initialText = "",
+class FileBufferEditor {
+  /**
+   * @param {string} filePath
+   * @param {{rows:number, cols:number}} windowSize
+   */
+  constructor(filePath, windowSize) {
+    this.filePath = filePath;
+    this.windowRows = windowSize.rows;
+    this.windowCols = windowSize.cols;
+    this.row = 0;
+    this.col = 0;
+    this.windowStartRow = 0;
+    this.windowStartCol = 0;
+    this.cursorStyle = {};
+    this.cursorChar = "#";
+  }
+  // ── private ────────────────────────────────────────────────────────────
+  _ensureCursorInView() {
+    if (this.row < this.windowStartRow) {
+      this.windowStartRow = this.row;
+    } else if (this.row >= this.windowStartRow + this.windowRows) {
+      this.windowStartRow = this.row - this.windowRows + 1;
+    }
+    if (this.col < this.windowStartCol) {
+      this.windowStartCol = this.col;
+    } else if (this.col >= this.windowStartCol + this.windowCols) {
+      this.windowStartCol = this.col - this.windowCols + 1;
+    }
+  }
+  // compute byte‐offset in file for (row, col)
+  _offsetFor(row, col) {
+    const content = fs.readFileSync(this.filePath, "utf8");
+    const lines = content.split("\n");
+    const head = lines.slice(0, row).join("\n");
+    head.length + (row > 0 ? 1 : 0);
+    const headBytes = Buffer.byteLength(head + (row > 0 ? "\n" : ""), "utf8");
+    const colBytes = Buffer.byteLength(lines[row].slice(0, col), "utf8");
+    return headBytes + colBytes;
+  }
+  /**
+   * @returns {{ rowInWindow: number, colInWindow: number }}
+   *   0-based coords of the cursor inside the viewport
+   */
+  getCursorWindowCoords() {
+    return {
+      rowInWindow: this.row - this.windowStartRow,
+      colInWindow: this.col - this.windowStartCol
+    };
+  }
+  /**
+  * @param {(code:string)=>TokenizerToken[]} tokenizer
+  * @returns {{tokens:TokenizerToken[],cursorStyle:object}}
+  *
+  * */
+  render() {
+    const ps = this.filePath.split(".");
+    const tokenizer = getTokenizer(ps[ps.length - 1]);
+    const fd = fs.openSync(this.filePath, "r");
+    const stats = fs.statSync(this.filePath);
+    const fileSize = stats.size;
+    let linesFound = 0;
+    let offset = 0;
+    const BUF_SZ = 4096;
+    const buf = Buffer.alloc(BUF_SZ);
+    while (linesFound < this.windowStartRow && offset < fileSize) {
+      const bytesRead = fs.readSync(fd, buf, 0, BUF_SZ, offset);
+      if (bytesRead === 0) break;
+      for (let i = 0; i < bytesRead && linesFound < this.windowStartRow; i++) {
+        if (buf[i] === 10) linesFound++;
+        offset++;
+      }
+    }
+    const toRead = this.windowRows * (this.windowCols + 1);
+    const winBuf = Buffer.alloc(toRead);
+    fs.readSync(fd, winBuf, 0, toRead, offset);
+    fs.closeSync(fd);
+    const textLines = winBuf.toString("utf8").split("\n").slice(0, this.windowRows);
+    return textLines.map((line, i) => {
+      const seg = line.substring(this.windowStartCol, this.windowCols);
+      const tokens = tokenizer(seg);
+      const { rowInWindow, colInWindow } = this.getCursorWindowCoords();
+      if (tokens && (rowInWindow < 0 || rowInWindow >= tokens.length || colInWindow < 0 || colInWindow >= this.windowCols)) {
+        this.cursorStyle = null;
+      }
+      let ln = this.windowStartRow;
+      let col = 0;
+      for (const tok of tokens) {
+        if (tok.text == "\n") {
+          ln += 1;
+          col = 0;
+        }
+        const len = tok.text.length;
+        if (rowInWindow == ln && colInWindow >= col && colInWindow < col + len) {
+          this.cursorStyle = tok.style;
+          this.cursorChar = tok.text[col - colInWindow];
+          break;
+        }
+        col += len;
+      }
+      if (this.cursorStyle == null) {
+        const last = tokens.slice(-1)[0];
+        this.cursorStyle = last ? last.style : {};
+        this.cursorChar = last && last.text.length ? last.text[last.text.length - 1] : "#";
+      }
+      return tokens;
+    });
+  }
+  // full‐buffer rewrite for any edit
+  _rewriteAt(offset, removeBytes, insertText) {
+    const buf = fs.readFileSync(this.filePath);
+    const before = buf.slice(0, offset);
+    const after = buf.slice(offset + removeBytes);
+    const inserted = Buffer.from(insertText, "utf8");
+    const out = Buffer.concat([before, inserted, after]);
+    fs.writeFileSync(this.filePath, out);
+  }
+  // ── cursor moves ───────────────────────────────────────────────────────
+  moveCursorUp() {
+    if (this.row > 0) {
+      this.row--;
+      this.col = 0;
+      this._ensureCursorInView();
+    }
+  }
+  moveCursorDown() {
+    this.row++;
+    this.col = 0;
+    this._ensureCursorInView();
+  }
+  moveCursorLeft() {
+    if (this.col > 0) this.col--;
+    else if (this.row > 0) {
+      this.row--;
+      this.col = 0;
+    }
+    this._ensureCursorInView();
+  }
+  moveCursorRight() {
+    this.col++;
+    this._ensureCursorInView();
+  }
+  moveCursorVertically(n) {
+    if (n > 0) {
+      for (let i = 0; i < n; i++) {
+        this.moveCursorDown();
+      }
+    } else if (n < 0) {
+      for (let i = n; i <= 0; i++) {
+        this.moveCursorUp();
+      }
+    }
+  }
+  moveCursorHorizontally(n) {
+    if (n > 0) {
+      for (let i = 0; i < n; i++) {
+        this.moveCursorRight();
+      }
+    } else if (n < 0) {
+      for (let i = n; i <= 0; i++) {
+        this.moveCursorLeft();
+      }
+    }
+  }
+  // ── edits ───────────────────────────────────────────────────────────────
+  insert(text) {
+    const off = this._offsetFor(this.row, this.col);
+    this._rewriteAt(off, 0, text);
+    const lines = text.split("\n");
+    if (lines.length > 1) {
+      this.row += lines.length - 1;
+      this.col = lines[lines.length - 1].length;
+    } else {
+      this.col += text.length;
+    }
+    this._ensureCursorInView();
+  }
+  delete() {
+    const off = this._offsetFor(this.row, this.col);
+    this._rewriteAt(off, 1, "");
+    this._ensureCursorInView();
+  }
+  backspace() {
+    if (this.col > 0) {
+      const off = this._offsetFor(this.row, this.col);
+      this._rewriteAt(off - Buffer.byteLength("a", "utf8"), 1, "");
+      this.col--;
+    } else if (this.row > 0) {
+      const off = this._offsetFor(this.row - 1, fs.readFileSync(this.filePath, "utf8").split("\n")[this.row - 1].length);
+      this._rewriteAt(off, 1, "");
+      this.row--;
+      this.col = Infinity;
+    }
+    this._ensureCursorInView();
+  }
+  /**
+   * @returns {{ startLine: number, endLine: number }}
+   *  both 0‐based; add +1 if you need 1‐based
+   */
+  getWindowRange() {
+    const startLine = this.windowStartRow;
+    const endLine = this.windowStartRow + this.windowRows - 1;
+    return { startLine, endLine };
+  }
+  /**
+   * Like render(), but prefixes each token array with its file line number.
+   * @param  {(line: string)=>any[]} tokenizer
+   * @return {{ lineNumber: number, tokens: any[] }[]}
+   */
+  renderWithLineNumbers() {
+    const raw = this.render();
+    return raw.map((tokens, idx) => ({
+      lineNumber: this.windowStartRow + idx,
+      tokens
+    }));
+  }
+  // ── clone ──────────────────────────────────────────────────────────────
+  /** return a new instance with identical state */
+  copy() {
+    const clone = new FileBufferEditor(this.filePath, {
+      rows: this.windowRows,
+      cols: this.windowCols
+    });
+    clone.row = this.row;
+    clone.col = this.col;
+    clone.windowStartRow = this.windowStartRow;
+    clone.windowStartCol = this.windowStartCol;
+    return clone;
+  }
+}
+function CodeBufferEditor({
+  filePath,
   onKeypress = (ch, key) => {
   },
   onChange = (p) => {
   },
   ...boxProps
 }) {
-  const [text2, setText] = React.useState(initialText);
-  const [cursorOffset, setCursorOffset] = React.useState(0);
-  const [cursorVisible, setCursorVisible] = React.useState(true);
-  const boxRef = React.useRef(null);
-  const [scrollTop, setScrollTop] = React.useState(0);
-  const [size, setSize] = React.useState({ width: 0, height: 0 });
+  const boxRef = React.useRef();
+  const [editor, setEditor] = React.useState(null);
+  const [size, setSize] = React.useState({ rows: 0, cols: 0 });
+  const [content, setContent] = React.useState("");
+  const [caret, setCaret] = React.useState({
+    row: 0,
+    col: 0,
+    char: " ",
+    style: {}
+  });
   React.useEffect(() => {
-    const node = boxRef.current.widget || boxRef.current;
-    const handler = () => setSize({ width: node.width - 2, height: node.height - 2 });
-    handler();
-    node.screen.on("resize", handler);
-    node.on("resize", handler);
-    return () => {
-      node.screen.off("resize", handler);
-      node.off("resize", handler);
+    if (filePath) {
+      const ed = new FileBufferEditor(filePath, { rows: size.rows, cols: size.cols });
+      setEditor(ed);
+      ed.windowRows = size.rows;
+      ed.windowCols = size.cols;
+      const tokens = ed.render();
+      setContent(tokens.map((line) => line.map((t) => t.ansi || t.text).join("")).join("\n"));
+    } else {
+      setEditor(null);
+      setContent("No file open");
+    }
+  }, [filePath]);
+  React.useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const update = () => {
+      setSize({ cols: box.width, rows: box.height });
     };
+    update();
+    box.on("resize", update);
+    return () => box.removeListener("resize", update);
   }, []);
-  React.useEffect(() => {
-    setText(initialText);
-    setCursorOffset(0);
-  }, [initialText]);
-  React.useEffect(() => {
-    onChange({ text: text2, cursorOffset });
-  }, [text2, cursorOffset]);
-  React.useEffect(() => {
-    const lines = text2.slice(0, cursorOffset).split("\n");
-    const lineIndex = lines.length - 1;
-    if (lineIndex < scrollTop) {
-      setScrollTop(lineIndex);
-    } else if (lineIndex >= scrollTop + size.height) {
-      setScrollTop(lineIndex - size.height + 1);
+  const refresh = () => {
+    if (filePath == null) {
+      return;
     }
-  }, [cursorOffset]);
-  const handleKeyPress = (ch, key) => {
-    let newText = text2;
-    let newCursor = cursorOffset;
-    if (key.name === "left") {
-      newCursor = Math.max(0, newCursor - 1);
-    } else if (key.name === "right") {
-      newCursor = Math.min(newText.length, newCursor + 1);
-    } else if (key.name === "up") {
-      const lines = text2.slice(0, newCursor).split("\n");
-      lines.at(-1)?.length || 0;
-      const lineIndex = lines.length - 1;
-      if (lines.length > 1) {
-        const before = lines[lines.length - 1].length;
-        const prevLine = lines[lines.length - 2];
-        const prev = prevLine.length;
-        newCursor -= before + 1;
-        if (prev > before) {
-          newCursor -= prev - before;
-        }
-      }
-      if (lineIndex - 1 < scrollTop) {
-        setScrollTop(Math.max(0, scrollTop - 1));
-      }
-    } else if (key.name === "down") {
-      const lines = text2.split("\n");
-      const index = text2.slice(0, newCursor).split("\n").length - 1;
-      const col = newCursor - text2.lastIndexOf("\n", newCursor - 1) - 1;
-      const lineIndex = index;
-      if (index < lines.length - 1) {
-        const below = lines[index + 1];
-        newCursor += lines[index].length - col + 1 + Math.min(below.length, col);
-      }
-      if (lineIndex + 1 >= scrollTop + size.height) {
-        setScrollTop(scrollTop + 1);
-      }
-    } else if (key.name === "backspace") {
-      if (newCursor > 0) {
-        newText = newText.slice(0, newCursor - 1) + newText.slice(newCursor);
-        newCursor--;
-      }
-    } else if (key.full === "return") {
-      newText = newText.slice(0, newCursor) + "\n" + newText.slice(newCursor);
-      newCursor++;
-    } else if (typeof ch === "string" && ch.length === 1 && !key.ctrl && !key.meta) {
-      newText = newText.slice(0, newCursor) + ch + newText.slice(newCursor);
-      newCursor++;
-    }
-    onKeypress({ ch, key });
-    setText(newText);
-    setCursorOffset(newCursor);
-  };
-  const cursorStyle = { underline: true, inverse: true };
-  const renderLOC = (line, y, offset, ll) => {
-    const lineNum = "│ " + String(scrollTop + y + 1).padStart(ll) + " │";
-    const lineBox = /* @__PURE__ */ jsxRuntime_js.jsx("box", { left: 0, height: 1, content: lineNum, style: { fg: "#aaaaaa" } }, `${y}-linenum`);
-    const tokens = highlight(line);
-    let inlineOffset = 0;
-    const renderedLine = /* @__PURE__ */ jsxRuntime_js.jsxs("box", { top: 1 + y - scrollTop, left: 0, height: 1, children: [
-      lineBox,
-      tokens.filter((tk) => tk.start < size.width).map((token, i) => {
-        let tx = token.text;
-        const containsCursor = cursorOffset >= offset && cursorOffset < offset + tx.length;
-        const style = token.style;
-        let bx = /* @__PURE__ */ jsxRuntime_js.jsx(
-          "box",
-          {
-            left: lineNum.length + token.start,
-            content: tx,
-            style
-          },
-          `${y}-${i}`
-        );
-        if (containsCursor) {
-          const cursorPos = cursorOffset - offset;
-          let at = tx[cursorPos];
-          at = ["\n", "\r"].indexOf(at) > -1 ? `${at}_` : at;
-          bx = /* @__PURE__ */ jsxRuntime_js.jsxs(
-            "box",
-            {
-              left: lineNum.length + token.start,
-              children: [
-                /* @__PURE__ */ jsxRuntime_js.jsx(
-                  "box",
-                  {
-                    left: 0,
-                    content: tx,
-                    style
-                  },
-                  `${y}-${i}`
-                ),
-                /* @__PURE__ */ jsxRuntime_js.jsx(
-                  "box",
-                  {
-                    left: cursorPos,
-                    width: 1,
-                    content: at,
-                    style: { ...style, ...cursorStyle }
-                  },
-                  `${y}-${i}-at`
-                )
-              ]
-            },
-            `${y}-${i}`
-          );
-        }
-        inlineOffset += tx.length;
-        offset += tx.length;
-        return [bx];
-      })
-    ] }, y);
-    offset += 1;
-    return [renderedLine, offset];
-  };
-  const renderWithCursor = () => {
-    const lines = text2.split("\n");
-    const linesLength = Math.trunc(Math.log10(lines.length)) + 1;
-    let offset = 0;
-    return lines.slice(scrollTop, scrollTop + size.height).map((line, y, lines2) => {
-      let [loc, offsetOut] = renderLOC(line, y, offset, linesLength);
-      offset = offsetOut;
-      return loc;
+    editor.windowCols = size.cols;
+    editor.windowRows = size.rows;
+    const tokenLines = editor.render();
+    const ansi = tokenLines.map(
+      (line) => line.map((t) => t.ansi || t.text).join("")
+    ).join("\n");
+    setContent(ansi);
+    const { rowInWindow, colInWindow } = editor.getCursorWindowCoords();
+    const style = editor.cursorStyle;
+    const char = editor.cursorChar;
+    setCaret({
+      row: rowInWindow,
+      col: colInWindow,
+      style,
+      char
     });
+  };
+  React.useEffect(refresh, [size]);
+  const internalOnKeypress = (ch, key) => {
+    onKeypress({ ch, key });
+    if (filePath == null) {
+      return;
+    }
+    switch (key.name) {
+      case "up":
+        editor.moveCursorUp();
+        break;
+      case "down":
+        editor.moveCursorDown();
+        break;
+      case "left":
+        editor.moveCursorLeft();
+        break;
+      case "right":
+        editor.moveCursorRight();
+        break;
+      case "backspace":
+        editor.backspace();
+        onChange();
+        break;
+      case "delete":
+        editor.delete();
+        onChange();
+        break;
+      default:
+        if (ch && ch.length === 1) {
+          editor.insert(ch);
+          onChange();
+        }
+    }
+    refresh();
   };
   return /* @__PURE__ */ jsxRuntime_js.jsx(
     "box",
     {
       ref: boxRef,
-      label: " Blessed Editor ",
-      border: { type: "line" },
-      style: { border: { fg: "cyan" } },
-      width,
-      height,
+      ...boxProps,
       mouse: true,
       keys: true,
       input: true,
       clickable: true,
       focused: true,
-      onKeypress: handleKeyPress,
-      ...boxProps,
-      children: renderWithCursor()
+      border: { type: "line" },
+      style: { border: { fg: "cyan" } },
+      content,
+      tags: false,
+      scrollable: false,
+      onKeypress: internalOnKeypress,
+      label: `Editing: ${filePath}`,
+      children: /* @__PURE__ */ jsxRuntime_js.jsx(
+        "box",
+        {
+          top: caret.row,
+          left: caret.col,
+          width: 1,
+          height: 1,
+          content: caret.char,
+          tags: false,
+          style: { ...caret.style, inverse: true }
+        }
+      )
     }
   );
 }
@@ -734,12 +903,6 @@ function App(props) {
         setTreeData(td);
       });
     }
-  };
-  const onTextEditorSave = (a, b, c) => {
-    setMessage(JSON.stringify({ a, b, c }));
-  };
-  const onTextEditorCancel = (a, b, c) => {
-    setMessage(JSON.stringify({ a, b, c }));
   };
   const onCurrentEditorChange = (a, b, c) => {
   };
@@ -813,7 +976,7 @@ function App(props) {
         ) }, 3) })
       ] }),
       /* @__PURE__ */ jsxRuntime_js.jsx(
-        CodeEditor,
+        CodeBufferEditor,
         {
           row: 0,
           col: 5,
@@ -821,10 +984,8 @@ function App(props) {
           colSpan: 10,
           border: { type: "line" },
           label: (selectedFile || "No file selected").replace(workspace.rootDir, ""),
-          initialText: fileContent || "",
+          filePath: selectedFile || null,
           onKeypress: onCodeEditKeyPress,
-          onSave: onTextEditorSave,
-          onCancel: onTextEditorCancel,
           onChange: onCurrentEditorChange
         }
       ),

@@ -60,4 +60,6 @@ for(let move of [0,50,-40,50,-40,50,-60]){
   log('tokenizer finished')
 
   renderConsole(lines);
+  log(editor.getCursorWindowCoords())
+  log(editor.cursorStyle)
 }

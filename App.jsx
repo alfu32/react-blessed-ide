@@ -11,6 +11,7 @@ import {Tab, VTabs} from "./VTabs";
 import {TextEditor} from "./TextEditor";
 import {CodeEditor} from "./CodeEditor";
 import {LayoutCatcher} from "./LayoutCatcher";
+import {CodeBufferEditor} from './CodeBufferEditor'
 
 
 export function App(props){
@@ -137,13 +138,20 @@ export function App(props){
               </Tab>
           </VTabs>
           {/* Center panel */}
-          <CodeEditor row={0} col={5} rowSpan={6} colSpan={10}
+          {/**<CodeEditor row={0} col={5} rowSpan={6} colSpan={10}
                       border={{ type: 'line' }}
                       label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
                       initialText={fileContent||""}
                       onKeypress={onCodeEditKeyPress}
                       onSave={onTextEditorSave}
                       onCancel={onTextEditorCancel}
+                      onChange={onCurrentEditorChange}
+          />**/}
+          <CodeBufferEditor row={0} col={5} rowSpan={6} colSpan={10}
+                      border={{ type: 'line' }}
+                      label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
+                      filePath={selectedFile||null}
+                      onKeypress={onCodeEditKeyPress}
                       onChange={onCurrentEditorChange}
           />
           <box
