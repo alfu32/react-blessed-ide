@@ -1,5 +1,4 @@
-import { FileBufferEditor } from './services/FileBufferEditor.js';
-import { getTokenizer } from './tokenizer.js'
+import { FileBufferEditor } from './FileBufferEditor.js';
 
 function log(...args){
   const place = new Error()
@@ -29,7 +28,8 @@ const ANSI = {
 * e.g. { 38: [ ...tokens ], 39: [ ...tokens ] }
 */
 function renderConsole(lines) {
-  lines.forEach(({ lineNumber, tokens }) => {
+  Object.keys(lines).forEach((lineNumber) => {
+      const tokens=lines[lineNumber]
       const lineText = tokens.map(tok => {
         const color = ANSI[tok.style.fg] || '';
         return color + tok.text + ANSI.reset;
@@ -37,9 +37,6 @@ function renderConsole(lines) {
       console.log(`${String(lineNumber).padStart(3,'0')}| ${lineText}`);
     });
 }
-
-
-const myTokenizer = getTokenizer('jsx')
 
 const editor = new FileBufferEditor('CodeEditor.jsx', { rows: 20, cols: 80 });
 
@@ -53,7 +50,7 @@ for(let move of [0,50,-40,50,-40,50,-60]){
 
 
   // Or, if you want both tokens *and* numbers in one shot:
-  const lines = editor.renderWithLineNumbers(myTokenizer);
+  const lines = editor.render();
   // lines.forEach(({ lineNumber, tokens }) => {
   //   console.log(`${lineNumber}:`, tokens);
   // });

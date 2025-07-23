@@ -17,6 +17,8 @@ export class TokenizerToken{
     style={}
     start=0
     end=0
+    y=0
+    x=0
     text=''
 
     /**
@@ -25,7 +27,7 @@ export class TokenizerToken{
      * @param tokenizerDef
      * @return {{name: void | string, text: *, type: string, style, start, end: *}}
      */
-    static fromRegexpMatch(m,tokenizerDef,tokenizerName){
+    static fromRegexpMatch(m,tokenizerDef,tokenizerName,lineNumber){
         const groups = m.groups;
         const type = Object.keys(groups).find(key => groups[key] !== undefined);
         const tokenDef = tokenizerDef.definitions[type]
@@ -36,6 +38,8 @@ export class TokenizerToken{
         tt.style=tokenDef.style
         tt.start=m.index
         tt.end=m.index+m[0].length
+        tt.y=lineNumber
+        tt.x=tt.start
         return tt
     }
 }
@@ -62,6 +66,7 @@ export const namedTokenizers={
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
     }},
     jsx:{name:'jsx',definitions:{
+        ReactToken:   {style: {fg:'yellow'},pattern:'use[A-Z][a-z]*'},
         Keyword:      {style: {fg:'magenta'},pattern:'(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)'},
         JsxTag:       {style: {fg:'yellow'},pattern:'\\<(\\/){0,1}[a-zA-Z-]*\\>'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
@@ -85,7 +90,7 @@ export const namedTokenizers={
 /**
  *
  * @param {string} name language name
- * @return {function (code:string): Array<TokenizerToken>}
+ * @return {function (code:string,lineNumber:int): Array<TokenizerToken>}
  */
 export function getTokenizer(name) {
     const tokenizerDef = namedTokenizers[name]||namedTokenizers['any']
@@ -99,13 +104,13 @@ export function getTokenizer(name) {
      * @param {String} code
      * @return {Array<TokenizerToken>}
      */
-    return function tokenizer(code){
+    return function tokenizer(code,lineNumber){
         const tokens=[]
         for (const m of code.matchAll(tokenRegex)) {
             const groups = m.groups;
             const type = Object.keys(groups).find(key => groups[key] !== undefined);
             const tokenDef = tokenizerDef.definitions[type]
-            tokens.push(TokenizerToken.fromRegexpMatch(m,tokenizerDef,name))
+            tokens.push(TokenizerToken.fromRegexpMatch(m,tokenizerDef,name,lineNumber))
         }
         return tokens
     }

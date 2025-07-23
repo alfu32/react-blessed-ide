@@ -422,6 +422,8 @@ class TokenizerToken {
   style = {};
   start = 0;
   end = 0;
+  y = 0;
+  x = 0;
   text = "";
   /**
    *
@@ -429,7 +431,7 @@ class TokenizerToken {
    * @param tokenizerDef
    * @return {{name: void | string, text: *, type: string, style, start, end: *}}
    */
-  static fromRegexpMatch(m, tokenizerDef, tokenizerName) {
+  static fromRegexpMatch(m, tokenizerDef, tokenizerName, lineNumber) {
     const groups = m.groups;
     const type = Object.keys(groups).find((key) => groups[key] !== void 0);
     const tokenDef = tokenizerDef.definitions[type];
@@ -440,6 +442,8 @@ class TokenizerToken {
     tt.style = tokenDef.style;
     tt.start = m.index;
     tt.end = m.index + m[0].length;
+    tt.y = lineNumber;
+    tt.x = tt.start;
     return tt;
   }
 }
@@ -462,6 +466,7 @@ const namedTokenizers = {
     Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" }
   } },
   jsx: { name: "jsx", definitions: {
+    ReactToken: { style: { fg: "yellow" }, pattern: "use[A-Z][a-z]*" },
     Keyword: { style: { fg: "magenta" }, pattern: "(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)" },
     JsxTag: { style: { fg: "yellow" }, pattern: "\\<(\\/){0,1}[a-zA-Z-]*\\>" },
     Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
@@ -487,13 +492,13 @@ function getTokenizer(name) {
     Object.entries(tokenizerDef.definitions).map(([name2, definition]) => `(?<${name2}>${definition.pattern})`).join("|"),
     "g"
   );
-  return function tokenizer(code) {
+  return function tokenizer(code, lineNumber) {
     const tokens = [];
     for (const m of code.matchAll(tokenRegex)) {
       const groups = m.groups;
       const type = Object.keys(groups).find((key) => groups[key] !== void 0);
       tokenizerDef.definitions[type];
-      tokens.push(TokenizerToken.fromRegexpMatch(m, tokenizerDef, name));
+      tokens.push(TokenizerToken.fromRegexpMatch(m, tokenizerDef, name, lineNumber));
     }
     return tokens;
   };
@@ -549,7 +554,7 @@ class FileBufferEditor {
   }
   /**
   * @param {(code:string)=>TokenizerToken[]} tokenizer
-  * @returns {{tokens:TokenizerToken[],cursorStyle:object}}
+  * @returns {{[lineNumber:string]:TokenizerToken[]}}
   *
   * */
   render() {
@@ -575,35 +580,29 @@ class FileBufferEditor {
     fs.readSync(fd, winBuf, 0, toRead, offset);
     fs.closeSync(fd);
     const textLines = winBuf.toString("utf8").split("\n").slice(0, this.windowRows);
-    return textLines.map((line, i) => {
-      const seg = line.substring(this.windowStartCol, this.windowCols);
-      const tokens = tokenizer(seg);
-      const { rowInWindow, colInWindow } = this.getCursorWindowCoords();
-      if (tokens && (rowInWindow < 0 || rowInWindow >= tokens.length || colInWindow < 0 || colInWindow >= this.windowCols)) {
-        this.cursorStyle = null;
-      }
-      let ln = this.windowStartRow;
+    return textLines.reduce((r, line, i) => {
+      const lineNumber = i + this.windowStartRow;
+      const tokens = tokenizer(line, lineNumber).filter((tk) => {
+        return tk.end > this.windowStartCol && tk.start <= this.windowStartCol + this.windowCols;
+      });
+      const { rowInWindow: cy, colInWindow: cx } = this.getCursorWindowCoords();
       let col = 0;
       for (const tok of tokens) {
-        if (tok.text == "\n") {
-          ln += 1;
-          col = 0;
-        }
-        const len = tok.text.length;
-        if (rowInWindow == ln && colInWindow >= col && colInWindow < col + len) {
+        if (cy == lineNumber && cx >= tok.start && cx < tok.end) {
           this.cursorStyle = tok.style;
-          this.cursorChar = tok.text[col - colInWindow];
+          this.cursorChar = tok.text[col - cx];
           break;
         }
-        col += len;
+        col += tok.text.length;
       }
       if (this.cursorStyle == null) {
         const last = tokens.slice(-1)[0];
         this.cursorStyle = last ? last.style : {};
         this.cursorChar = last && last.text.length ? last.text[last.text.length - 1] : "#";
       }
-      return tokens;
-    });
+      r[lineNumber] = tokens;
+      return r;
+    }, {});
   }
   // full‐buffer rewrite for any edit
   _rewriteAt(offset, removeBytes, insertText) {
@@ -618,13 +617,11 @@ class FileBufferEditor {
   moveCursorUp() {
     if (this.row > 0) {
       this.row--;
-      this.col = 0;
       this._ensureCursorInView();
     }
   }
   moveCursorDown() {
     this.row++;
-    this.col = 0;
     this._ensureCursorInView();
   }
   moveCursorLeft() {
@@ -701,18 +698,6 @@ class FileBufferEditor {
     const endLine = this.windowStartRow + this.windowRows - 1;
     return { startLine, endLine };
   }
-  /**
-   * Like render(), but prefixes each token array with its file line number.
-   * @param  {(line: string)=>any[]} tokenizer
-   * @return {{ lineNumber: number, tokens: any[] }[]}
-   */
-  renderWithLineNumbers() {
-    const raw = this.render();
-    return raw.map((tokens, idx) => ({
-      lineNumber: this.windowStartRow + idx,
-      tokens
-    }));
-  }
   // ── clone ──────────────────────────────────────────────────────────────
   /** return a new instance with identical state */
   copy() {
@@ -726,6 +711,9 @@ class FileBufferEditor {
     clone.windowStartCol = this.windowStartCol;
     return clone;
   }
+  getStatus() {
+    return ` row:${this.row} col:${this.col} `;
+  }
 }
 function CodeBufferEditor({
   filePath,
@@ -737,59 +725,107 @@ function CodeBufferEditor({
 }) {
   const boxRef = React.useRef();
   const [editor, setEditor] = React.useState(null);
-  const [size, setSize] = React.useState({ rows: 0, cols: 0 });
-  const [content, setContent] = React.useState("");
-  const [caret, setCaret] = React.useState({
-    row: 0,
-    col: 0,
-    char: " ",
-    style: {}
-  });
+  const [size, setSize] = React.useState({ rows: 10, cols: 30 });
   React.useEffect(() => {
     if (filePath) {
       const ed = new FileBufferEditor(filePath, { rows: size.rows, cols: size.cols });
-      setEditor(ed);
       ed.windowRows = size.rows;
       ed.windowCols = size.cols;
-      const tokens = ed.render();
-      setContent(tokens.map((line) => line.map((t) => t.ansi || t.text).join("")).join("\n"));
+      setEditor(ed);
     } else {
       setEditor(null);
-      setContent("No file open");
     }
   }, [filePath]);
   React.useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
     const update = () => {
-      setSize({ cols: box.width, rows: box.height });
+      setSize({ cols: box.width, rows: box.height - 2 });
     };
     update();
     box.on("resize", update);
     return () => box.removeListener("resize", update);
   }, []);
-  const refresh = () => {
-    if (filePath == null) {
-      return;
+  React.useEffect(() => {
+    if (editor) {
+      editor.windowCols = size.cols;
+      editor.windowRows = size.rows;
+      setEditor(editor.copy());
     }
-    editor.windowCols = size.cols;
-    editor.windowRows = size.rows;
-    const tokenLines = editor.render();
-    const ansi = tokenLines.map(
-      (line) => line.map((t) => t.ansi || t.text).join("")
-    ).join("\n");
-    setContent(ansi);
+  }, [size]);
+  const tokenList = () => {
+    if (!editor) {
+      return /* @__PURE__ */ jsxRuntime_js.jsx(
+        "box",
+        {
+          mouse: true,
+          keys: true,
+          input: true,
+          clickable: true,
+          focused: true,
+          left: (size.cols >> 1) - 8,
+          top: (size.rows >> 1) - 1,
+          width: 16,
+          height: 3,
+          style: { bg: "yellow", fg: "#111111" },
+          content: "No File Loaded"
+        },
+        `0-0-no-file`
+      );
+    }
+    const padLength = Math.ceil(Math.log10(editor.windowRows + editor.windowStartRow));
+    const lines = editor.render();
     const { rowInWindow, colInWindow } = editor.getCursorWindowCoords();
+    const tt = Object.keys(lines).flatMap((lineNumber, k) => {
+      const line = lines[lineNumber];
+      const lineNumberText = `${String(lineNumber).padStart(padLength, " ")}`;
+      const lineNumberBox = /* @__PURE__ */ jsxRuntime_js.jsx(
+        "box",
+        {
+          left: 0,
+          top: k,
+          width: padLength,
+          height: 1,
+          style: { bg: "black", fg: "blue", inverse: rowInWindow == lineNumber },
+          content: lineNumberText
+        },
+        `${lineNumber}-lineNumber`
+      );
+      return line.reduce((a, t) => {
+        a.push(
+          /* @__PURE__ */ jsxRuntime_js.jsx(
+            "box",
+            {
+              left: t.x + padLength + 1,
+              top: t.y,
+              width: t.text.length,
+              height: 1,
+              style: t.style,
+              content: t.text
+            },
+            `${t.x}-${t.y}`
+          )
+        );
+        return a;
+      }, [lineNumberBox]);
+    });
     const style = editor.cursorStyle;
     const char = editor.cursorChar;
-    setCaret({
-      row: rowInWindow,
-      col: colInWindow,
-      style,
-      char
-    });
+    tt.push(/* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        left: colInWindow + padLength + 1,
+        top: rowInWindow,
+        width: 1,
+        height: 1,
+        style: { ...style, inverse: true },
+        tags: false,
+        content: char
+      },
+      `cursor`
+    ));
+    return tt;
   };
-  React.useEffect(refresh, [size]);
   const internalOnKeypress = (ch, key) => {
     onKeypress({ ch, key });
     if (filePath == null) {
@@ -822,9 +858,9 @@ function CodeBufferEditor({
           onChange();
         }
     }
-    refresh();
+    setEditor(editor.copy());
   };
-  return /* @__PURE__ */ jsxRuntime_js.jsx(
+  return /* @__PURE__ */ jsxRuntime_js.jsxs(
     "box",
     {
       ref: boxRef,
@@ -836,23 +872,26 @@ function CodeBufferEditor({
       focused: true,
       border: { type: "line" },
       style: { border: { fg: "cyan" } },
-      content,
       tags: false,
       scrollable: false,
       onKeypress: internalOnKeypress,
       label: `Editing: ${filePath}`,
-      children: /* @__PURE__ */ jsxRuntime_js.jsx(
-        "box",
-        {
-          top: caret.row,
-          left: caret.col,
-          width: 1,
-          height: 1,
-          content: caret.char,
-          tags: false,
-          style: { ...caret.style, inverse: true }
-        }
-      )
+      children: [
+        tokenList(),
+        /* @__PURE__ */ jsxRuntime_js.jsx(
+          "box",
+          {
+            top: size.rows,
+            left: -1,
+            width: size.cols,
+            height: 1,
+            content: editor?.getStatus(),
+            tags: false,
+            style: { fg: "black", bg: "yellow" }
+          },
+          `status`
+        )
+      ]
     }
   );
 }

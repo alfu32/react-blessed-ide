@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { getTokenizer } from '../tokenizer';
+import { getTokenizer } from './tokenizer.js';
 
 export class FileBufferEditor {
   /**
@@ -58,7 +58,7 @@ export class FileBufferEditor {
   }
   /**
   * @param {(code:string)=>TokenizerToken[]} tokenizer
-  * @returns {{tokens:TokenizerToken[],cursorStyle:object}}
+  * @returns {{[lineNumber:string]:TokenizerToken[]}}
   *
   * */
   render() {
@@ -98,38 +98,37 @@ export class FileBufferEditor {
       .split('\n')
       .slice(0, this.windowRows);
   
-    return textLines.map((line,i) => {
-      const seg = line.substring(this.windowStartCol, this.windowCols);
-      const tokens = tokenizer(seg);
-      const { rowInWindow, colInWindow } = this.getCursorWindowCoords();
+    return textLines.reduce((r,line,i) => {
+      const lineNumber=i+this.windowStartRow
+      // const seg = line.substring(this.windowStartCol, this.windowCols);
+      const tokens = tokenizer(line,lineNumber)
+        .filter(tk =>{
+          return tk.end > this.windowStartCol && tk.start <= (this.windowStartCol + this.windowCols)
+        });
+      const { rowInWindow:cy, colInWindow:cx } = this.getCursorWindowCoords();
 
       // 2) if cursor isn’t in view, bail
-      if (
-        tokens && (
-          rowInWindow < 0 ||
-          rowInWindow >= tokens.length ||
-          colInWindow < 0 ||
-          colInWindow >= this.windowCols
-        )
-      ) {
-        this.cursorStyle=null;
-      }
-      let ln=this.windowStartRow
+      // if (
+      //   tokens && (
+      //     rowInWindow < 0 ||
+      //     rowInWindow >= tokens.length ||
+      //     colInWindow < 0 ||
+      //     colInWindow >= this.windowCols
+      //   )
+      // ) {
+      //   this.cursorStyle=null;
+      // }
+      // let ln=this.windowStartRow
 
       // 3) scan tokens to find which one covers colInWindow
       let col = 0;
       for (const tok of tokens) {
-        if(tok.text=='\n'){
-          ln+=1
-          col=0
-        }
-        const len = tok.text.length;
-        if (rowInWindow == ln && colInWindow >= col && colInWindow < col + len) {
+        if (cy == lineNumber && cx >= tok.start && cx < tok.end) {
           this.cursorStyle = tok.style;
-          this.cursorChar = tok.text[col - colInWindow]
+          this.cursorChar = tok.text[col - cx]
           break
         }
-        col += len;
+        col += tok.text.length;
       }
 
       // 4) fallback to last token’s style (e.g. past EOL)
@@ -139,8 +138,9 @@ export class FileBufferEditor {
         this.cursorChar = last && last.text.length ? last.text[last.text.length-1] : '#';
       }
 
-      return tokens
-    });
+      r[lineNumber]=tokens
+      return r
+    },{});
   }
 
   // full‐buffer rewrite for any edit
@@ -155,8 +155,8 @@ export class FileBufferEditor {
 
   // ── cursor moves ───────────────────────────────────────────────────────
 
-  moveCursorUp()    { if (this.row>0) { this.row--; this.col=0; this._ensureCursorInView(); } }
-  moveCursorDown()  { this.row++; this.col=0; this._ensureCursorInView(); }
+  moveCursorUp()    { if (this.row>0) { this.row--; this._ensureCursorInView(); } }
+  moveCursorDown()  { this.row++; this._ensureCursorInView(); }
   moveCursorLeft()  { if (this.col>0) this.col--; else if(this.row>0){this.row--;this.col=0;} this._ensureCursorInView(); }
   moveCursorRight() { this.col++; this._ensureCursorInView(); }
   moveCursorVertically(n){
@@ -229,19 +229,6 @@ export class FileBufferEditor {
     return { startLine, endLine };
   }
 
-  /**
-   * Like render(), but prefixes each token array with its file line number.
-   * @param  {(line: string)=>any[]} tokenizer
-   * @return {{ lineNumber: number, tokens: any[] }[]}
-   */
-  renderWithLineNumbers() {
-    const raw = this.render();
-    return raw.map((tokens, idx) => ({
-      lineNumber: this.windowStartRow + idx,
-      tokens
-    }));
-  }
-
   // ── clone ──────────────────────────────────────────────────────────────
 
   /** return a new instance with identical state */
@@ -255,5 +242,8 @@ export class FileBufferEditor {
     clone.windowStartRow = this.windowStartRow;
     clone.windowStartCol = this.windowStartCol;
     return clone;
+  }
+  getStatus(){
+    return ` row:${this.row} col:${this.col} `
   }
 }
