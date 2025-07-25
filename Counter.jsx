@@ -1,7 +1,7 @@
 import React, { useState,useEffect } from 'react';
 import { BoxElement as box, TextElement as text,ListElement as list } from 'react-blessed';
 
-
+export const mumu={}
 export default function Counter(props,children) {
     const [count,setCount] = useState(props.count)
     useEffect(() => {

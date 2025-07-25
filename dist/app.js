@@ -503,21 +503,36 @@ function getTokenizer(name) {
     return tokens;
   };
 }
-class FileBufferEditor {
+class MemoryBufferEditor {
   /**
    * @param {string} filePath
    * @param {{rows:number, cols:number}} windowSize
    */
   constructor(filePath, windowSize) {
     this.filePath = filePath;
+    this.windowStartRow = 0;
+    this.windowStartCol = 0;
     this.windowRows = windowSize.rows;
     this.windowCols = windowSize.cols;
     this.row = 0;
     this.col = 0;
-    this.windowStartRow = 0;
-    this.windowStartCol = 0;
     this.cursorStyle = {};
     this.cursorChar = "#";
+    this.lines = [];
+    this._to = 0;
+    this._saved = "";
+    this.setFilePath(filePath);
+  }
+  setFilePath(filePath) {
+    this.filePath = filePath;
+    this.lines = fs.readFileSync(filePath, { encoding: "utf-8" }).split("\n");
+  }
+  save() {
+    clearTimeout(this._to);
+    this._to = setTimeout(() => {
+      fs.writeFileSync(this.filePath, this.lines.join("\n"));
+      this._saved = `saved ${(/* @__PURE__ */ new Date()).toISOString()}`;
+    }, 1e3);
   }
   // ── private ────────────────────────────────────────────────────────────
   _ensureCursorInView() {
@@ -534,13 +549,21 @@ class FileBufferEditor {
   }
   // compute byte‐offset in file for (row, col)
   _offsetFor(row, col) {
-    const content = fs.readFileSync(this.filePath, "utf8");
-    const lines = content.split("\n");
-    const head = lines.slice(0, row).join("\n");
-    head.length + (row > 0 ? 1 : 0);
-    const headBytes = Buffer.byteLength(head + (row > 0 ? "\n" : ""), "utf8");
-    const colBytes = Buffer.byteLength(lines[row].slice(0, col), "utf8");
-    return headBytes + colBytes;
+    let offsetStart = 0;
+    let offsetEnd = 0;
+    for (let i = 0; i < this.lines.length; i++) {
+      const line = this.lines[i];
+      offsetStart = offsetEnd;
+      offsetEnd = offsetEnd + line.length + 1;
+      if (i == row) {
+        if (col <= line.length) {
+          return offsetStart + col;
+        } else {
+          return offsetEnd;
+        }
+      }
+    }
+    return offsetEnd;
   }
   /**
    * @returns {{ rowInWindow: number, colInWindow: number }}
@@ -560,27 +583,7 @@ class FileBufferEditor {
   render() {
     const ps = this.filePath.split(".");
     const tokenizer = getTokenizer(ps[ps.length - 1]);
-    const fd = fs.openSync(this.filePath, "r");
-    const stats = fs.statSync(this.filePath);
-    const fileSize = stats.size;
-    let linesFound = 0;
-    let offset = 0;
-    const BUF_SZ = 4096;
-    const buf = Buffer.alloc(BUF_SZ);
-    while (linesFound < this.windowStartRow && offset < fileSize) {
-      const bytesRead = fs.readSync(fd, buf, 0, BUF_SZ, offset);
-      if (bytesRead === 0) break;
-      for (let i = 0; i < bytesRead && linesFound < this.windowStartRow; i++) {
-        if (buf[i] === 10) linesFound++;
-        offset++;
-      }
-    }
-    const toRead = this.windowRows * (this.windowCols + 1);
-    const winBuf = Buffer.alloc(toRead);
-    fs.readSync(fd, winBuf, 0, toRead, offset);
-    fs.closeSync(fd);
-    const textLines = winBuf.toString("utf8").split("\n").slice(0, this.windowRows);
-    return textLines.reduce((r, line, i) => {
+    return this.lines.slice(this.windowStartRow, this.windowStartRow + this.windowRows).reduce((r, line, i) => {
       const lineNumber = i + this.windowStartRow;
       const tokens = tokenizer(line, lineNumber).filter((tk) => {
         return tk.end > this.windowStartCol && tk.start <= this.windowStartCol + this.windowCols;
@@ -603,15 +606,6 @@ class FileBufferEditor {
       r[lineNumber] = tokens;
       return r;
     }, {});
-  }
-  // full‐buffer rewrite for any edit
-  _rewriteAt(offset, removeBytes, insertText) {
-    const buf = fs.readFileSync(this.filePath);
-    const before = buf.slice(0, offset);
-    const after = buf.slice(offset + removeBytes);
-    const inserted = Buffer.from(insertText, "utf8");
-    const out = Buffer.concat([before, inserted, after]);
-    fs.writeFileSync(this.filePath, out);
   }
   // ── cursor moves ───────────────────────────────────────────────────────
   moveCursorUp() {
@@ -660,34 +654,40 @@ class FileBufferEditor {
   }
   // ── edits ───────────────────────────────────────────────────────────────
   insert(text) {
-    const off = this._offsetFor(this.row, this.col);
-    this._rewriteAt(off, 0, text);
-    const lines = text.split("\n");
-    if (lines.length > 1) {
-      this.row += lines.length - 1;
-      this.col = lines[lines.length - 1].length;
-    } else {
-      this.col += text.length;
-    }
+    const oldLine = this.lines[this.row];
+    const before = oldLine.substring(0, this.col);
+    const after = oldLine.substring(this.col);
+    const newLine = before + text + after;
+    let newLines = this.lines.slice(0, this.row);
+    let oldLinesAfter = this.lines.slice(this.row + 1);
+    this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
+    this.col++;
     this._ensureCursorInView();
+    return this;
   }
   delete() {
-    const off = this._offsetFor(this.row, this.col);
-    this._rewriteAt(off, 1, "");
+    const oldLine = this.lines[this.row];
+    const before = oldLine.substring(0, this.col - 1);
+    const after = oldLine.substring(this.col + 1);
+    const newLine = before + after;
+    let newLines = this.lines.slice(0, this.row);
+    let oldLinesAfter = this.lines.slice(this.row + 1);
+    this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
     this._ensureCursorInView();
+    return this;
   }
   backspace() {
     if (this.col > 0) {
-      const off = this._offsetFor(this.row, this.col);
-      this._rewriteAt(off - Buffer.byteLength("a", "utf8"), 1, "");
+      this.delete();
       this.col--;
     } else if (this.row > 0) {
-      const off = this._offsetFor(this.row - 1, fs.readFileSync(this.filePath, "utf8").split("\n")[this.row - 1].length);
-      this._rewriteAt(off, 1, "");
+      const newCol = this.lines[this.row - 1].length;
+      this.delete();
       this.row--;
-      this.col = Infinity;
+      this.col = newCol;
     }
     this._ensureCursorInView();
+    return this;
   }
   /**
    * @returns {{ startLine: number, endLine: number }}
@@ -701,7 +701,7 @@ class FileBufferEditor {
   // ── clone ──────────────────────────────────────────────────────────────
   /** return a new instance with identical state */
   copy() {
-    const clone = new FileBufferEditor(this.filePath, {
+    const clone = new MemoryBufferEditor(this.filePath, {
       rows: this.windowRows,
       cols: this.windowCols
     });
@@ -709,10 +709,15 @@ class FileBufferEditor {
     clone.col = this.col;
     clone.windowStartRow = this.windowStartRow;
     clone.windowStartCol = this.windowStartCol;
+    clone.cursorStyle = this.cursorStyle;
+    clone.cursorChar = this.cursorChar;
+    clone.lines = this.lines;
+    clone._to = this._to;
+    clone._saved = this._saved;
     return clone;
   }
   getStatus() {
-    return ` row:${this.row} col:${this.col} `;
+    return ` row:${this.row} col:${this.col} ${this._saved}`;
   }
 }
 function CodeBufferEditor({
@@ -728,7 +733,7 @@ function CodeBufferEditor({
   const [size, setSize] = React.useState({ rows: 10, cols: 30 });
   React.useEffect(() => {
     if (filePath) {
-      const ed = new FileBufferEditor(filePath, { rows: size.rows, cols: size.cols });
+      const ed = new MemoryBufferEditor(filePath, { rows: size.rows, cols: size.cols });
       ed.windowRows = size.rows;
       ed.windowCols = size.cols;
       setEditor(ed);
@@ -845,16 +850,16 @@ function CodeBufferEditor({
         editor.moveCursorRight();
         break;
       case "backspace":
-        editor.backspace();
+        editor.backspace().save();
         onChange();
         break;
       case "delete":
-        editor.delete();
+        editor.delete().save();
         onChange();
         break;
       default:
         if (ch && ch.length === 1) {
-          editor.insert(ch);
+          editor.insert(ch).save();
           onChange();
         }
     }

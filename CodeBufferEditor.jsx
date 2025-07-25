@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import blessed from 'blessed';
 import { render } from 'react-blessed';
-import {FileBufferEditor} from './FileBufferEditor';
+import {MemoryBufferEditor} from './MemoryBufferEditor';
 
 export function CodeBufferEditor({
     filePath,
@@ -11,7 +11,7 @@ export function CodeBufferEditor({
 }) {
   const boxRef = useRef();
   /**
-   * @constant {[FileBufferEditor,(ed:FileBufferEditor)=>void]} [editor, setEditor]
+   * @constant {[MemoryBufferEditor,(ed:MemoryBufferEditor)=>void]} [editor, setEditor]
    */
   const [editor, setEditor] = useState(null);
   const [size, setSize]     = useState({ rows: 10, cols: 30 });
@@ -20,7 +20,7 @@ export function CodeBufferEditor({
   // 1) (Re)create editor whenever filePath changes
   useEffect(() => {
     if (filePath) {
-      const ed = new FileBufferEditor(filePath, { rows: size.rows, cols: size.cols });
+      const ed = new MemoryBufferEditor(filePath, { rows: size.rows, cols: size.cols });
       // immediately render the new file
       ed.windowRows = size.rows;
       ed.windowCols = size.cols;
@@ -115,10 +115,10 @@ export function CodeBufferEditor({
       case 'down':  editor.moveCursorDown();  break;
       case 'left':  editor.moveCursorLeft();  break;
       case 'right': editor.moveCursorRight(); break;
-      case 'backspace': editor.backspace();  onChange(); break;
-      case 'delete':    editor.delete();  onChange();      break;
+      case 'backspace': editor.backspace().save();  onChange(); break;
+      case 'delete':    editor.delete().save();  onChange();      break;
       default:
-        if (ch && ch.length === 1){ editor.insert(ch);  onChange();}
+        if (ch && ch.length === 1){ editor.insert(ch).save();  onChange();}
     }
     setEditor(editor.copy())
     // refresh();
