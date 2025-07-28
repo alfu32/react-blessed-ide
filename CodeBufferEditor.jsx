@@ -69,20 +69,20 @@ export function CodeBufferEditor({
     
     const padLength=Math.ceil(Math.log10(editor.windowRows+editor.windowStartRow))
     const lines = editor.render();
-    const { rowInWindow, colInWindow } = editor.getCursorWindowCoords();
+    const { y: cursorY, x: cursorX } = editor.getCursorWindowCoords();
     const tt = Object.keys(lines).flatMap((lineNumber,k) => {
       const line = lines[lineNumber]
       const lineNumberText=`${String(lineNumber).padStart(padLength,' ')}`
       const lineNumberBox=(
         <box key={`${lineNumber}-lineNumber`} 
           left={0} top={k} width={padLength} height={1} 
-          style={{bg:'black',fg:'blue',inverse:rowInWindow==lineNumber}} 
+          style={{bg:'black',fg:'blue',inverse:cursorY==lineNumber}} 
           content={lineNumberText}
         />)
       return line.reduce((a,t) => {
         a.push(
           <box key={`${t.x}-${t.y}`} 
-            left={t.x+padLength+1} top={t.y} width={t.text.length} height={1} 
+            left={t.x+padLength+1} top={t.y-editor.windowStartRow} width={t.text.length} height={1} 
             style={t.style} 
             content={t.text}
           />
@@ -95,7 +95,7 @@ export function CodeBufferEditor({
     const char  = editor.cursorChar;
     tt.push((
       <box key={`cursor`} 
-        left={colInWindow+padLength+1} top={rowInWindow} width={1} height={1} 
+        left={cursorX+padLength+1} top={cursorY} width={1} height={1} 
         style={{...style,inverse: true}}
         tags={false}
         content={char}

@@ -514,8 +514,8 @@ class MemoryBufferEditor {
     this.windowStartCol = 0;
     this.windowRows = windowSize.rows;
     this.windowCols = windowSize.cols;
-    this.row = 0;
-    this.col = 0;
+    this.cursorY = 0;
+    this.cursorX = 0;
     this.cursorStyle = {};
     this.cursorChar = "#";
     this.lines = [];
@@ -526,6 +526,7 @@ class MemoryBufferEditor {
   setFilePath(filePath) {
     this.filePath = filePath;
     this.lines = fs.readFileSync(filePath, { encoding: "utf-8" }).split("\n");
+    this.updateTokens();
   }
   save() {
     clearTimeout(this._to);
@@ -536,15 +537,15 @@ class MemoryBufferEditor {
   }
   // ── private ────────────────────────────────────────────────────────────
   _ensureCursorInView() {
-    if (this.row < this.windowStartRow) {
-      this.windowStartRow = this.row;
-    } else if (this.row >= this.windowStartRow + this.windowRows) {
-      this.windowStartRow = this.row - this.windowRows + 1;
+    if (this.cursorY < this.windowStartRow) {
+      this.windowStartRow = this.cursorY;
+    } else if (this.cursorY >= this.windowStartRow + this.windowRows) {
+      this.windowStartRow = this.cursorY - this.windowRows;
     }
-    if (this.col < this.windowStartCol) {
-      this.windowStartCol = this.col;
-    } else if (this.col >= this.windowStartCol + this.windowCols) {
-      this.windowStartCol = this.col - this.windowCols + 1;
+    if (this.cursorX < this.windowStartCol) {
+      this.windowStartCol = this.cursorX;
+    } else if (this.cursorX >= this.windowStartCol + this.windowCols) {
+      this.windowStartCol = this.cursorX - this.windowCols;
     }
   }
   // compute byte‐offset in file for (row, col)
@@ -571,9 +572,18 @@ class MemoryBufferEditor {
    */
   getCursorWindowCoords() {
     return {
-      rowInWindow: this.row - this.windowStartRow,
-      colInWindow: this.col - this.windowStartCol
+      y: this.cursorY - this.windowStartRow,
+      x: this.cursorX - this.windowStartCol
     };
+  }
+  updateTokens() {
+    const ps = this.filePath.split(".");
+    const tokenizer = getTokenizer(ps[ps.length - 1]);
+    this.tokens = this.lines.reduce((r, line, lineNumber) => {
+      const tokens = tokenizer(line, lineNumber);
+      r[lineNumber] = tokens;
+      return r;
+    }, {});
   }
   /**
   * @param {(code:string)=>TokenizerToken[]} tokenizer
@@ -581,53 +591,65 @@ class MemoryBufferEditor {
   *
   * */
   render() {
-    const ps = this.filePath.split(".");
-    const tokenizer = getTokenizer(ps[ps.length - 1]);
-    return this.lines.slice(this.windowStartRow, this.windowStartRow + this.windowRows).reduce((r, line, i) => {
-      const lineNumber = i + this.windowStartRow;
-      const tokens = tokenizer(line, lineNumber).filter((tk) => {
-        return tk.end > this.windowStartCol && tk.start <= this.windowStartCol + this.windowCols;
-      });
-      const { rowInWindow: cy, colInWindow: cx } = this.getCursorWindowCoords();
-      let col = 0;
-      for (const tok of tokens) {
-        if (cy == lineNumber && cx >= tok.start && cx < tok.end) {
-          this.cursorStyle = tok.style;
-          this.cursorChar = tok.text[col - cx];
-          break;
+    return Object.keys(this.tokens).reduce(
+      (visible, lineNumber) => {
+        if (parseInt(lineNumber) >= this.windowStartRow && parseInt(lineNumber) < this.windowStartRow + this.windowRows) {
+          visible[lineNumber] = this.tokens[lineNumber];
+          const tokens = this.tokens[lineNumber];
+          let col = 0;
+          if (this.cursorY == lineNumber) {
+            this.cursorChar = " ";
+            for (const tok of tokens) {
+              if (this.cursorX >= tok.start && this.cursorX < tok.end) {
+                this.cursorStyle = tok.style;
+                this.cursorChar = (this.lines[lineNumber] || " ")[this.cursorX] || " ";
+                break;
+              }
+              col += tok.text.length;
+            }
+          }
+          if (this.cursorStyle == null) {
+            const last = tokens.slice(-1)[0];
+            this.cursorStyle = last ? last.style : {};
+            this.cursorChar = last && last.text.length ? last.text[last.text.length - 1] : "#";
+          }
         }
-        col += tok.text.length;
-      }
-      if (this.cursorStyle == null) {
-        const last = tokens.slice(-1)[0];
-        this.cursorStyle = last ? last.style : {};
-        this.cursorChar = last && last.text.length ? last.text[last.text.length - 1] : "#";
-      }
-      r[lineNumber] = tokens;
-      return r;
-    }, {});
+        return visible;
+      },
+      {}
+    );
   }
   // ── cursor moves ───────────────────────────────────────────────────────
   moveCursorUp() {
-    if (this.row > 0) {
-      this.row--;
+    if (this.cursorY > 0) {
+      this.cursorY--;
+      if (this.cursorX >= this.lines[this.cursorY].length) {
+        this.cursorX = this.lines[this.cursorY].length;
+      }
       this._ensureCursorInView();
     }
   }
   moveCursorDown() {
-    this.row++;
-    this._ensureCursorInView();
+    if (this.cursorY < this.lines.length) {
+      this.cursorY++;
+      if (this.cursorX >= this.lines[this.cursorY].length) {
+        this.cursorX = this.lines[this.cursorY].length;
+      }
+      this._ensureCursorInView();
+    }
   }
   moveCursorLeft() {
-    if (this.col > 0) this.col--;
-    else if (this.row > 0) {
-      this.row--;
-      this.col = 0;
+    if (this.cursorX > 0) {
+      this.cursorX--;
+      this._ensureCursorInView();
     }
-    this._ensureCursorInView();
   }
   moveCursorRight() {
-    this.col++;
+    if (this.cursorX < this.lines[this.cursorY].length) {
+      this.cursorX++;
+    } else {
+      this.cursorX = this.lines[this.cursorY].length;
+    }
     this._ensureCursorInView();
   }
   moveCursorVertically(n) {
@@ -654,37 +676,37 @@ class MemoryBufferEditor {
   }
   // ── edits ───────────────────────────────────────────────────────────────
   insert(text) {
-    const oldLine = this.lines[this.row];
-    const before = oldLine.substring(0, this.col);
-    const after = oldLine.substring(this.col);
+    const oldLine = this.lines[this.cursorY];
+    const before = oldLine.substring(0, this.cursorX);
+    const after = oldLine.substring(this.cursorX);
     const newLine = before + text + after;
-    let newLines = this.lines.slice(0, this.row);
-    let oldLinesAfter = this.lines.slice(this.row + 1);
+    let newLines = this.lines.slice(0, this.cursorY);
+    let oldLinesAfter = this.lines.slice(this.cursorY + 1);
     this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
-    this.col++;
+    this.cursorX++;
     this._ensureCursorInView();
     return this;
   }
   delete() {
-    const oldLine = this.lines[this.row];
-    const before = oldLine.substring(0, this.col - 1);
-    const after = oldLine.substring(this.col + 1);
+    const oldLine = this.lines[this.cursorY];
+    const before = oldLine.substring(0, this.cursorX - 1);
+    const after = oldLine.substring(this.cursorX + 1);
     const newLine = before + after;
-    let newLines = this.lines.slice(0, this.row);
-    let oldLinesAfter = this.lines.slice(this.row + 1);
+    let newLines = this.lines.slice(0, this.cursorY);
+    let oldLinesAfter = this.lines.slice(this.cursorY + 1);
     this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
     this._ensureCursorInView();
     return this;
   }
   backspace() {
-    if (this.col > 0) {
+    if (this.cursorX > 0) {
       this.delete();
-      this.col--;
-    } else if (this.row > 0) {
-      const newCol = this.lines[this.row - 1].length;
+      this.cursorX--;
+    } else if (this.cursorY > 0) {
+      const newCol = this.lines[this.cursorY - 1].length;
       this.delete();
-      this.row--;
-      this.col = newCol;
+      this.cursorY--;
+      this.cursorX = newCol;
     }
     this._ensureCursorInView();
     return this;
@@ -705,8 +727,8 @@ class MemoryBufferEditor {
       rows: this.windowRows,
       cols: this.windowCols
     });
-    clone.row = this.row;
-    clone.col = this.col;
+    clone.cursorY = this.cursorY;
+    clone.cursorX = this.cursorX;
     clone.windowStartRow = this.windowStartRow;
     clone.windowStartCol = this.windowStartCol;
     clone.cursorStyle = this.cursorStyle;
@@ -717,7 +739,7 @@ class MemoryBufferEditor {
     return clone;
   }
   getStatus() {
-    return ` row:${this.row} col:${this.col} ${this._saved}`;
+    return ` row:${this.cursorY} col:${this.cursorX} ${this._saved}`;
   }
 }
 function CodeBufferEditor({
@@ -780,7 +802,7 @@ function CodeBufferEditor({
     }
     const padLength = Math.ceil(Math.log10(editor.windowRows + editor.windowStartRow));
     const lines = editor.render();
-    const { rowInWindow, colInWindow } = editor.getCursorWindowCoords();
+    const { y: cursorY, x: cursorX } = editor.getCursorWindowCoords();
     const tt = Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber];
       const lineNumberText = `${String(lineNumber).padStart(padLength, " ")}`;
@@ -791,7 +813,7 @@ function CodeBufferEditor({
           top: k,
           width: padLength,
           height: 1,
-          style: { bg: "black", fg: "blue", inverse: rowInWindow == lineNumber },
+          style: { bg: "black", fg: "blue", inverse: cursorY == lineNumber },
           content: lineNumberText
         },
         `${lineNumber}-lineNumber`
@@ -802,7 +824,7 @@ function CodeBufferEditor({
             "box",
             {
               left: t.x + padLength + 1,
-              top: t.y,
+              top: t.y - editor.windowStartRow,
               width: t.text.length,
               height: 1,
               style: t.style,
@@ -819,8 +841,8 @@ function CodeBufferEditor({
     tt.push(/* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
       {
-        left: colInWindow + padLength + 1,
-        top: rowInWindow,
+        left: cursorX + padLength + 1,
+        top: cursorY,
         width: 1,
         height: 1,
         style: { ...style, inverse: true },
