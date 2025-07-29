@@ -8,16 +8,16 @@ export class MemoryBufferEditor {
    */
   constructor(filePath, windowSize) {
     this.filePath        = filePath;
-    this.windowStartRow  = 0;
-    this.windowStartCol  = 0;
-    this.windowRows      = windowSize.rows;
-    this.windowCols      = windowSize.cols;
+    this.viewportY  = 0;
+    this.viewportX  = 0;
+    this.viewportHeight      = windowSize.rows;
+    this.viewportWidth      = windowSize.cols;
     this.cursorY             = 0;
     this.cursorX             = 0;
     this.cursorStyle     = {};
     this.cursorChar      = '#';
     this.lines           = [];
-    this._to             = 0
+    this._tout000             = 0
     this._saved           = ''
     this.setFilePath(filePath)
   }
@@ -27,8 +27,8 @@ export class MemoryBufferEditor {
     this.updateTokens()
   }
   save(){
-    clearTimeout(this._to)
-    this._to = setTimeout(()=>{
+    clearTimeout(this._tout000)
+    this._tout000 = setTimeout(()=>{
       fs.writeFileSync(this.filePath,this.lines.join('\n'))
       this._saved = `saved ${new Date().toISOString()}`
     },1000)
@@ -37,35 +37,16 @@ export class MemoryBufferEditor {
   // ── private ────────────────────────────────────────────────────────────
 
   _ensureCursorInView() {
-    if (this.cursorY < this.windowStartRow) {
-      this.windowStartRow = this.cursorY;
-    } else if (this.cursorY >= (this.windowStartRow + this.windowRows)) {
-      this.windowStartRow = this.cursorY - this.windowRows;
+    if (this.cursorY < this.viewportY) {
+      this.viewportY = this.cursorY;
+    } else if (this.cursorY >= (this.viewportY + this.viewportHeight)) {
+      this.viewportY = this.cursorY - this.viewportHeight;
     }
-    if (this.cursorX < this.windowStartCol) {
-      this.windowStartCol = this.cursorX;
-    } else if (this.cursorX >= this.windowStartCol + this.windowCols) {
-      this.windowStartCol = this.cursorX - this.windowCols;
+    if (this.cursorX < this.viewportX) {
+      this.viewportX = this.cursorX;
+    } else if (this.cursorX >= this.viewportX + this.viewportWidth) {
+      this.viewportX = this.cursorX - this.viewportWidth;
     }
-  }
-
-  // compute byte‐offset in file for (row, col)
-  _offsetFor(row, col) {
-    let offsetStart=0
-    let offsetEnd=0
-    for(let i=0;i<this.lines.length;i++){
-      const line=this.lines[i]
-      offsetStart=offsetEnd
-      offsetEnd=offsetEnd+line.length+1
-      if(i==row){
-        if(col<=line.length){
-          return offsetStart+col
-        }else{
-          return offsetEnd
-        }
-      }
-    }
-    return offsetEnd
   }
 
   /**
@@ -74,8 +55,8 @@ export class MemoryBufferEditor {
    */
   getCursorWindowCoords() {
     return {
-      y: this.cursorY - this.windowStartRow,
-      x: this.cursorX - this.windowStartCol
+      cursorY: this.cursorY - this.viewportY,
+      cursorX: this.cursorX - this.viewportX
     };
   }
   updateTokens(){
@@ -83,7 +64,7 @@ export class MemoryBufferEditor {
     const tokenizer = getTokenizer(ps[ps.length-1])
 
     this.tokens=this.lines.reduce((r,line,lineNumber) => {
-      // const seg = line.substring(this.windowStartCol, this.windowCols);
+      // const seg = line.substring(this.viewportX, this.viewportWidth);
       const tokens = tokenizer(line,lineNumber)
       r[lineNumber]=tokens
       return r
@@ -96,21 +77,21 @@ export class MemoryBufferEditor {
   * */
   render() {
     return Object.keys(this.tokens).reduce(
-      (visible,lineNumber) => {
+      (visible,lineId) => {
+        const lineNumber=parseInt(lineId)
+        if(lineNumber>=this.viewportY && lineNumber<=(this.viewportY+this.viewportHeight)){
+          visible[lineId]=this.tokens[lineId]
 
-        if(parseInt(lineNumber)>=this.windowStartRow && parseInt(lineNumber)<(this.windowStartRow+this.windowRows)){
-          visible[lineNumber]=this.tokens[lineNumber]
-
-          const tokens = this.tokens[lineNumber]
+          const tokens = this.tokens[lineId]
 
           // 3) scan tokens to find which one covers colInWindow
           let col = 0;
-          if (this.cursorY == lineNumber) {
+          if (this.cursorY == lineId) {
             this.cursorChar = ' '
             for (const tok of tokens) {
               if( this.cursorX >= tok.start && this.cursorX < tok.end) {
                 this.cursorStyle = tok.style;
-                this.cursorChar = (this.lines[lineNumber]||" ")[this.cursorX]||' '
+                this.cursorChar = (this.lines[lineId]||" ")[this.cursorX]||' '
                 break
               }
               col += tok.text.length;
@@ -132,10 +113,39 @@ export class MemoryBufferEditor {
 
   // ── cursor moves ───────────────────────────────────────────────────────
 
-  moveCursorUp()    { if (this.cursorY>0) { this.cursorY--;if(this.cursorX>=this.lines[this.cursorY].length){this.cursorX=this.lines[this.cursorY].length};  this._ensureCursorInView(); } }
-  moveCursorDown()  { if (this.cursorY<this.lines.length) { this.cursorY++;if(this.cursorX>=this.lines[this.cursorY].length){this.cursorX=this.lines[this.cursorY].length}; this._ensureCursorInView(); } }
-  moveCursorLeft()  { if (this.cursorX>0) { this.cursorX--; this._ensureCursorInView(); } }
-  moveCursorRight() { if(this.cursorX<this.lines[this.cursorY].length) {this.cursorX++}else{this.cursorX=this.lines[this.cursorY].length}; this._ensureCursorInView();}
+  moveCursorUp() {
+    if (this.cursorY > 0) { 
+      this.cursorY--;
+      if (this.cursorX >= this.lines[this.cursorY].length) {
+        this.cursorX = this.lines[this.cursorY].length
+      }
+      this._ensureCursorInView();
+    }
+  }
+  moveCursorDown() {
+    if (this.cursorY < this.lines.length) {
+      this.cursorY++;
+      if (this.cursorX >= this.lines[this.cursorY].length) {
+        this.cursorX = this.lines[this.cursorY].length
+      }
+      this._ensureCursorInView();
+    }
+  }
+  moveCursorLeft() {
+    if (this.cursorX > 0) {
+      this.cursorX--;
+      this._ensureCursorInView();
+    }
+  }
+  moveCursorRight() {
+    if (this.cursorX < this.lines[this.cursorY].length) {
+      this.cursorX++
+    } else {
+      this.cursorX = this.lines[this.cursorY].length
+    }
+    this._ensureCursorInView()
+  }
+
   moveCursorVertically(n){
     if(n>0){
         for(let i=0;i<n;i++){
@@ -198,28 +208,19 @@ export class MemoryBufferEditor {
     this._ensureCursorInView();
     return this
   }
-  /**
-   * @returns {{ startLine: number, endLine: number }}
-   *  both 0‐based; add +1 if you need 1‐based
-   */
-  getWindowRange() {
-    const startLine = this.windowStartRow;
-    const endLine   = this.windowStartRow + this.windowRows - 1;
-    return { startLine, endLine };
-  }
 
   // ── clone ──────────────────────────────────────────────────────────────
 
   /** return a new instance with identical state */
   copy() {
     const clone = new MemoryBufferEditor(this.filePath, {
-      rows: this.windowRows,
-      cols: this.windowCols
+      rows: this.viewportHeight,
+      cols: this.viewportWidth
     });
     clone.cursorY            = this.cursorY;
     clone.cursorX            = this.cursorX;
-    clone.windowStartRow = this.windowStartRow;
-    clone.windowStartCol = this.windowStartCol;
+    clone.viewportY = this.viewportY;
+    clone.viewportX = this.viewportX;
     clone.cursorStyle    = this.cursorStyle
     clone.cursorChar     = this.cursorChar
     clone.lines          = this.lines
@@ -228,6 +229,18 @@ export class MemoryBufferEditor {
     return clone;
   }
   getStatus(){
-    return ` row:${this.cursorY} col:${this.cursorX} ${this._saved}`
+    const range=Object.keys(this.render())
+    const json={
+      cursor:{
+        abs:{x:this.cursorX,y:this.cursorY},
+        rel:{x:this.cursorX-this.viewportX,y:this.cursorY-this.viewportY},
+        stl:this.cursorStyle,
+      },
+      view:{x:this.viewportX,y:this.viewportY,w:this.viewportWidth,h:this.viewportHeight},
+      saved:this._saved,
+      lines:range[0]+' ... '+range[range.length-1]
+    }
+    return JSON.stringify(json).replace(/"/gi,'')
+    // return ` cursor:{abs:{x:${this.cursorY},y:${this.cursorX}}},viewport:{x:${this.viewportX},y:${this.viewportY},w:${this.viewportWidth},h:${this.viewportHeight}} ${this._saved}`
   }
 }

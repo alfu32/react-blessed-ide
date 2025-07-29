@@ -22,8 +22,8 @@ export function CodeBufferEditor({
     if (filePath) {
       const ed = new MemoryBufferEditor(filePath, { rows: size.rows, cols: size.cols });
       // immediately render the new file
-      ed.windowRows = size.rows;
-      ed.windowCols = size.cols;
+      ed.viewportHeight = size.rows-1;
+      ed.viewportWidth = size.cols;
       setEditor(ed);
     } else {
       setEditor(null);
@@ -45,8 +45,8 @@ export function CodeBufferEditor({
   // run once on size change
   useEffect(()=>{
     if(editor){
-      editor.windowCols = size.cols;
-      editor.windowRows = size.rows;
+      editor.viewportWidth = size.cols;
+      editor.viewportHeight = size.rows;
       setEditor(editor.copy())
     }
   }, [size]);
@@ -67,9 +67,9 @@ export function CodeBufferEditor({
         )
     }
     
-    const padLength=Math.ceil(Math.log10(editor.windowRows+editor.windowStartRow))
+    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
     const lines = editor.render();
-    const { y: cursorY, x: cursorX } = editor.getCursorWindowCoords();
+    const { cursorY, cursorX } = editor.getCursorWindowCoords();
     const tt = Object.keys(lines).flatMap((lineNumber,k) => {
       const line = lines[lineNumber]
       const lineNumberText=`${String(lineNumber).padStart(padLength,' ')}`
@@ -82,7 +82,7 @@ export function CodeBufferEditor({
       return line.reduce((a,t) => {
         a.push(
           <box key={`${t.x}-${t.y}`} 
-            left={t.x+padLength+1} top={t.y-editor.windowStartRow} width={t.text.length} height={1} 
+            left={t.x+padLength+1} top={t.y-editor.viewportY} width={t.text.length} height={1} 
             style={t.style} 
             content={t.text}
           />
