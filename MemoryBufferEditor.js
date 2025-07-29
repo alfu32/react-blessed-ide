@@ -15,7 +15,7 @@ export class MemoryBufferEditor {
     this.cursorY             = 0;
     this.cursorX             = 0;
     this.cursorStyle     = {};
-    this.cursorChar      = '#';
+    this.cursorChar      = '_';
     this.lines           = [];
     this._tout000             = 0
     this._saved           = ''
@@ -72,41 +72,36 @@ export class MemoryBufferEditor {
     },{});
   }
   updateCursor(){
-    Object.keys(this.tokens).forEach(
-      (lineId) => {
-        const lineNumber=parseInt(lineId)
+    const lineId=this.cursorY
+    const lineNumber=parseInt(lineId)
 
-          const tokens = this.tokens[lineId]
+    const tokens = this.tokens[lineId]
 
-          // 3) scan tokens to find which one covers colInWindow
-          let col = 0;
-          if (this.cursorY == lineId) {
-            this.cursorChar = ' '
-            for (const tok of tokens) {
-              if( this.cursorX >= tok.start && this.cursorX < tok.end) {
-                this.cursorStyle = tok.style;
-                this.cursorChar = (this.lines[lineId]||" ")[this.cursorX]||' '
-                break
-              }
-              col += tok.text.length;
-            }
-          }
-
-          // 4) fallback to last token’s style (e.g. past EOL)
-          if(this.cursorStyle==null){
-            const last = tokens.slice(-1)[0];
-            this.cursorStyle = last ? last.style : {};
-            this.cursorChar = last && last.text.length ? last.text[last.text.length-1] : '#';
-          }
+    // 3) scan tokens to find which one covers colInWindow
+    let col = 0;
+    this.cursorChar = '_'
+    for (const tok of tokens) {
+      if( this.cursorX >= tok.start && this.cursorX < tok.end) {
+        this.cursorStyle = tok.style;
+        this.cursorChar = (this.lines[lineId]||"_")[this.cursorX]||'_'
+        break
       }
-    );
+      col += tok.text.length;
+    }
+
+    // 4) fallback to last token’s style (e.g. past EOL)
+    if(this.cursorStyle==null){
+      const last = tokens.slice(-1)[0];
+      this.cursorStyle = last ? last.style : {};
+      this.cursorChar = last && last.text.length ? last.text[last.text.length-1] : '_';
+    }
   }
   /**
   * @param {(code:string)=>TokenizerToken[]} tokenizer
   * @returns {{[lineNumber:string]:TokenizerToken[]}}
   *
   * */
-  render() {
+  renderViewport() {
     return Object.keys(this.tokens).reduce(
       (visible,lineId) => {
         const lineNumber=parseInt(lineId)
@@ -122,7 +117,7 @@ export class MemoryBufferEditor {
   // ── cursor moves ───────────────────────────────────────────────────────
   setCursor(x,y){
     this.cursorX=x
-    this.cursor=y
+    this.cursorY=y
   }
 
   moveCursorUp() {
@@ -233,27 +228,29 @@ export class MemoryBufferEditor {
       rows: this.viewportHeight,
       cols: this.viewportWidth
     });
-    clone.cursorY            = this.cursorY;
-    clone.cursorX            = this.cursorX;
-    clone.viewportY = this.viewportY;
-    clone.viewportX = this.viewportX;
-    clone.cursorStyle    = this.cursorStyle
-    clone.cursorChar     = this.cursorChar
-    clone.lines          = this.lines
-    clone._to            = this._to
-    clone._saved         = this._saved
+    clone.filePath=this.filePath
+    clone.viewportY=this.viewportY
+    clone.viewportX=this.viewportX
+    clone.cursorY=this.cursorY
+    clone.cursorX=this.cursorX
+    clone.cursorStyle=this.cursorStyle
+    clone.cursorChar=this.cursorChar
+    clone.lines=this.lines
+    clone._saved=this._saved
     return clone;
   }
   getStatus(){
-    const range=Object.keys(this.render())
+    const range=Object.keys(this.renderViewport())
     const json={
       cursor:{
-        x:this.cursorX,y:this.cursorY,
-        stl:this.cursorStyle,
+        x:this.cursorX,
+        y:this.cursorY,
+        chr:this.cursorChar,
+        ...this.cursorStyle,
       },
-      view:{x:this.viewportX,y:this.viewportY,w:this.viewportWidth,h:this.viewportHeight},
-      saved:this._saved,
-      lines:range[0]+' ... '+range[range.length-1]
+      v:{x:this.viewportX,y:this.viewportY,w:this.viewportWidth,h:this.viewportHeight},
+      s:this._saved,
+      l:range[0]+' ... '+range[range.length-1]
     }
     json.cursor[`${this.cursorX}-${this.viewportX}`]=this.cursorX-this.viewportX
     json.cursor[`${this.cursorY}-${this.viewportY}`]=this.cursorY-this.viewportY

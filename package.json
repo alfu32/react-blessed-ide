@@ -4,10 +4,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "vt:dev": "vite-node index.jsx",
+    "vt:dev0": "vite-node index.jsx",
     "vt:build": "vite build --ssr",
-    "vt:start": "node dist/app.js"
-  },
+    "vt:start": "node dist/app.js",
+    "vt:watch": "vite build --watch",
+    "start":         "node dist/index.js",
+    "vt:dev":   "concurrently \"npm run vt:watch\" \"nodemon --watch dist/app.js --exec \\\"npm run vt:start\\\"\""
+},
   "author": "",
   "license": "ISC",
   "description": "",
@@ -28,7 +31,9 @@
     "@babel/register": "^7.12.10",
     "@vitejs/plugin-react": "^4.6.0",
     "blessed": "^0.1.81",
+    "concurrently": "^9.2.0",
     "neo-blessed": "^0.2.0",
+    "nodemon": "^3.1.10",
     "react": "^17.0.1",
     "react-devtools-core": "4.10.1",
     "vite": "^7.0.3",

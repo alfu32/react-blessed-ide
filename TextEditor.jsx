@@ -26,7 +26,7 @@ export function TextEditor({
         const onFocus = () => {
             node.readInput();
             node.screen.program.showCursor();
-            node.screen.render();
+            node.screen.renderViewport();
         };
         node.on('focus', onFocus);
 
@@ -59,7 +59,7 @@ export function TextEditor({
                 const node = ref.current;
                 if (node) {
                     node.focus();
-                    node.screen.render();
+                    node.screen.renderViewport();
                 }
             }}
             onKey={(ch, key) => {

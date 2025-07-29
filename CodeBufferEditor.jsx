@@ -1,8 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import blessed,{} from 'blessed';
-import { render,ScreenEventHandler } from 'react-blessed';
+import React, {useEffect, useRef, useState} from 'react';
 import {MemoryBufferEditor} from './MemoryBufferEditor';
-import {safeStringify} from './util.js'
 
 export function CodeBufferEditor({
     filePath,
@@ -60,23 +57,19 @@ export function CodeBufferEditor({
             input
             clickable
             focused
-            left={(size.cols>>1) - 8} top={0} width={16} height={1} 
-            style={{bg:'yellow',fg:'#111111'}} 
-            content={'No File Loaded'}
+            left={4} top={1} width={1} height={1}
+            style={{blink:true}}
+            content={'_'}
           />
         )
     }
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
-    editor.updateTokens()
     editor.updateCursor()
-    const { cursorY, cursorX } = editor.getCursorWindowCoords();
-    const style = editor.cursorStyle;
-    const char  = editor.cursorChar;
     return <box key={`cursor`} 
-      left={cursorX+padLength+1} top={editor.cursorY-editor.viewportY} width={1} height={1} 
-      style={{...style,inverse: true}}
+      left={editor.cursorX-editor.viewportX+padLength+1} top={editor.cursorY-editor.viewportY} width={1} height={1}
+      style={{...editor.cursorStyle,underline: true,bold:true}}
       tags={false}
-      content={char}
+      content={editor.cursorChar}
     />
   }
   const tokenList = ()=>{
@@ -97,31 +90,28 @@ export function CodeBufferEditor({
     
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
     editor.updateTokens()
-    editor.updateCursor()
-    const lines = editor.render();
+    const lines = editor.renderViewport();
     const { cursorY, cursorX } = editor.getCursorWindowCoords();
-    const tt = Object.keys(lines).flatMap((lineNumber,k) => {
+    return Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber]
-      const lineNumberText=`${String(lineNumber).padStart(padLength,' ')}`
-      const lineNumberBox=(
-        <box key={`${lineNumber}-lineNumber`} 
-          left={0} top={k} width={padLength} height={1} 
-          style={{bg:'black',fg:'blue',inverse:editor.cursorY==lineNumber}} 
-          content={lineNumberText}
-        />)
-      return line.reduce((a,t) => {
+      const lineNumberText = `${String(lineNumber).padStart(padLength, ' ')}`
+      const lineNumberBox = (
+          <box key={`${lineNumber}-lineNumber`}
+               left={0} top={k} width={padLength} height={1}
+               style={{bg: 'black', fg: 'blue', inverse: editor.cursorY == lineNumber}}
+               content={lineNumberText}
+          />)
+      return line.reduce((a, t) => {
         a.push(
-          <box key={`${t.x}-${t.y}`} 
-            left={t.x+padLength+1} top={t.y-editor.viewportY} width={t.text.length} height={1} 
-            style={t.style} 
-            content={t.text}
-          />
+            <box key={`${t.x}-${t.y}`}
+                 left={t.x + padLength + 1} top={t.y - editor.viewportY} width={t.text.length} height={1}
+                 style={t.style}
+                 content={t.text}
+            />
         )
         return a
-      },[lineNumberBox])
+      }, [lineNumberBox])
     })
-
-    return tt
   }
 
   // 3) On keypress, update editor then re-render
@@ -146,15 +136,11 @@ export function CodeBufferEditor({
 
   // 3) On keypress, update editor then re-render
   const setCursorPosition = (screenEvent) => {
-    editor.setCursor(screenEvent.x,screenEvent.y)
-    delete boxRef.screen
-    throw new Error(safeStringify({
-      lpos:boxRef.current.element,
-      element:boxRef.current,
-      screenEvent:screenEvent
-    },null,'  '))
+    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
+    const {xi,yi} = boxRef.current.lpos;
+    const {x,y} = screenEvent;
+    editor.setCursor(x-xi-padLength-1-1+editor.viewportX,y-yi-1+editor.viewportY)
     setEditor(editor.copy())
-    // refresh();
   };
   return (
     <box
@@ -174,18 +160,6 @@ export function CodeBufferEditor({
       label={`Editing: ${filePath}`}
     >
       {tokenList()}
-      {cursor()}
-      {/* caret overlay 
-      <box
-        key={`caret`}
-        top={caret.row}
-        left={caret.col}
-        width={1}
-        height={1}
-        content={caret.char}
-        tags={false}
-        style={{...caret.style,inverse: true}}
-      />*/}
       {/* status */}
       <box
         key={`status`}
@@ -197,6 +171,7 @@ export function CodeBufferEditor({
         tags={false}
         style={{fg:'black',bg:'yellow'}}
       />
+      {cursor()}
     </box>
   );
 }
