@@ -610,6 +610,10 @@ class MemoryBufferEditor {
     );
   }
   // ── cursor moves ───────────────────────────────────────────────────────
+  setCursor(x, y) {
+    this.cursorX = x;
+    this.cursor = y;
+  }
   moveCursorUp() {
     if (this.cursorY > 0) {
       this.cursorY--;
@@ -727,16 +731,40 @@ class MemoryBufferEditor {
     const range = Object.keys(this.render());
     const json = {
       cursor: {
-        abs: { x: this.cursorX, y: this.cursorY },
-        rel: { x: this.cursorX - this.viewportX, y: this.cursorY - this.viewportY },
+        x: this.cursorX,
+        y: this.cursorY,
         stl: this.cursorStyle
       },
       view: { x: this.viewportX, y: this.viewportY, w: this.viewportWidth, h: this.viewportHeight },
       saved: this._saved,
       lines: range[0] + " ... " + range[range.length - 1]
     };
+    json.cursor[`${this.cursorX}-${this.viewportX}`] = this.cursorX - this.viewportX;
+    json.cursor[`${this.cursorY}-${this.viewportY}`] = this.cursorY - this.viewportY;
     return JSON.stringify(json).replace(/"/gi, "");
   }
+}
+function safeStringify(obj) {
+  const seen = /* @__PURE__ */ new WeakSet();
+  return JSON.stringify(obj, (key, value) => {
+    switch (key) {
+      case "screen":
+        return "[screen]";
+      case "parent":
+        return "[parent]";
+      case "lines":
+        return "[lines]";
+      case "children":
+        return "[children]";
+    }
+    if (typeof value === "object" && value !== null) {
+      if (seen.has(value)) {
+        return;
+      }
+      seen.add(value);
+    }
+    return value;
+  }, 2);
 }
 function CodeBufferEditor({
   filePath,
@@ -806,7 +834,7 @@ function CodeBufferEditor({
       "box",
       {
         left: cursorX + padLength + 1,
-        top: cursorY,
+        top: editor.cursorY - editor.viewportY,
         width: 1,
         height: 1,
         style: { ...style, inverse: true },
@@ -851,7 +879,7 @@ function CodeBufferEditor({
           top: k,
           width: padLength,
           height: 1,
-          style: { bg: "black", fg: "blue", inverse: cursorY == lineNumber },
+          style: { bg: "black", fg: "blue", inverse: editor.cursorY == lineNumber },
           content: lineNumberText
         },
         `${lineNumber}-lineNumber`
@@ -910,6 +938,15 @@ function CodeBufferEditor({
     }
     setEditor(editor.copy());
   };
+  const setCursorPosition = (screenEvent) => {
+    editor.setCursor(screenEvent.x, screenEvent.y);
+    delete boxRef.screen;
+    throw new Error(safeStringify({
+      lpos: boxRef.current.element,
+      element: boxRef.current,
+      screenEvent
+    }));
+  };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(
     "box",
     {
@@ -925,6 +962,7 @@ function CodeBufferEditor({
       tags: false,
       scrollable: false,
       onKeypress: internalOnKeypress,
+      onClick: setCursorPosition,
       label: `Editing: ${filePath}`,
       children: [
         tokenList(),

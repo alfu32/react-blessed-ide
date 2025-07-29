@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import blessed from 'blessed';
-import { render } from 'react-blessed';
+import blessed,{} from 'blessed';
+import { render,ScreenEventHandler } from 'react-blessed';
 import {MemoryBufferEditor} from './MemoryBufferEditor';
+import {safeStringify} from './util.js'
 
 export function CodeBufferEditor({
     filePath,
@@ -72,7 +73,7 @@ export function CodeBufferEditor({
     const style = editor.cursorStyle;
     const char  = editor.cursorChar;
     return <box key={`cursor`} 
-      left={cursorX+padLength+1} top={cursorY} width={1} height={1} 
+      left={cursorX+padLength+1} top={editor.cursorY-editor.viewportY} width={1} height={1} 
       style={{...style,inverse: true}}
       tags={false}
       content={char}
@@ -105,7 +106,7 @@ export function CodeBufferEditor({
       const lineNumberBox=(
         <box key={`${lineNumber}-lineNumber`} 
           left={0} top={k} width={padLength} height={1} 
-          style={{bg:'black',fg:'blue',inverse:cursorY==lineNumber}} 
+          style={{bg:'black',fg:'blue',inverse:editor.cursorY==lineNumber}} 
           content={lineNumberText}
         />)
       return line.reduce((a,t) => {
@@ -143,6 +144,18 @@ export function CodeBufferEditor({
     // refresh();
   };
 
+  // 3) On keypress, update editor then re-render
+  const setCursorPosition = (screenEvent) => {
+    editor.setCursor(screenEvent.x,screenEvent.y)
+    delete boxRef.screen
+    throw new Error(safeStringify({
+      lpos:boxRef.current.element,
+      element:boxRef.current,
+      screenEvent:screenEvent
+    },null,'  '))
+    setEditor(editor.copy())
+    // refresh();
+  };
   return (
     <box
       ref={boxRef}
@@ -157,6 +170,7 @@ export function CodeBufferEditor({
       tags={false}           // raw ANSI
       scrollable={false}
       onKeypress={internalOnKeypress}
+      onClick={setCursorPosition}
       label={`Editing: ${filePath}`}
     >
       {tokenList()}

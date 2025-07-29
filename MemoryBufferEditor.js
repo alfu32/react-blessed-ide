@@ -120,6 +120,10 @@ export class MemoryBufferEditor {
   }
 
   // ── cursor moves ───────────────────────────────────────────────────────
+  setCursor(x,y){
+    this.cursorX=x
+    this.cursor=y
+  }
 
   moveCursorUp() {
     if (this.cursorY > 0) { 
@@ -244,14 +248,15 @@ export class MemoryBufferEditor {
     const range=Object.keys(this.render())
     const json={
       cursor:{
-        abs:{x:this.cursorX,y:this.cursorY},
-        rel:{x:this.cursorX-this.viewportX,y:this.cursorY-this.viewportY},
+        x:this.cursorX,y:this.cursorY,
         stl:this.cursorStyle,
       },
       view:{x:this.viewportX,y:this.viewportY,w:this.viewportWidth,h:this.viewportHeight},
       saved:this._saved,
       lines:range[0]+' ... '+range[range.length-1]
     }
+    json.cursor[`${this.cursorX}-${this.viewportX}`]=this.cursorX-this.viewportX
+    json.cursor[`${this.cursorY}-${this.viewportY}`]=this.cursorY-this.viewportY
     return JSON.stringify(json).replace(/"/gi,'')
     // return ` cursor:{abs:{x:${this.cursorY},y:${this.cursorX}}},viewport:{x:${this.viewportX},y:${this.viewportY},w:${this.viewportWidth},h:${this.viewportHeight}} ${this._saved}`
   }

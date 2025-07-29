@@ -1,0 +1,216 @@
+{
+  "element": {
+    "_events": {
+      "resize": [
+        null,
+        null,
+        null
+      ]
+    },
+    "options": {
+      "row": 0,
+      "col": 5,
+      "rowSpan": 6,
+      "colSpan": 10,
+      "border": {
+        "type": "line",
+        "ch": " ",
+        "left": true,
+        "top": true,
+        "right": true,
+        "bottom": true
+      },
+      "label": "Editing: null",
+      "top": "0%",
+      "left": "33.333333333333336%",
+      "width": "66.66666666666667%",
+      "height": "75%",
+      "mouse": true,
+      "keys": true,
+      "input": true,
+      "clickable": true,
+      "focused": true,
+      "style": {
+        "border": {
+          "fg": "cyan"
+        }
+      },
+      "tags": false,
+      "scrollable": false,
+      "screen": "[screen]",
+      "position": {
+        "left": "33.333333333333336%",
+        "top": "0%",
+        "width": "66.66666666666667%",
+        "height": "75%"
+      },
+      "padding": {}
+    },
+    "screen": "[screen]",
+    "parent": "[parent]",
+    "children": "[children]",
+    "data": {},
+    "uid": 22,
+    "index": 56,
+    "style": {
+      "border": {
+        "fg": "cyan"
+      }
+    },
+    "hidden": false,
+    "align": "left",
+    "valign": "top",
+    "wrap": true,
+    "ch": " ",
+    "padding": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    },
+    "border": {
+      "type": "line",
+      "ch": " ",
+      "left": true,
+      "top": true,
+      "right": true,
+      "bottom": true
+    },
+    "clickable": true,
+    "keyable": true,
+    "parseTags": false,
+    "content": "",
+    "_label": {
+      "_events": {},
+      "options": {
+        "screen": "[screen]",
+        "parent": "[parent]",
+        "content": "Editing: null",
+        "top": -1,
+        "tags": false,
+        "shrink": true,
+        "position": {
+          "left": 1,
+          "top": -1
+        },
+        "padding": {}
+      },
+      "screen": "[screen]",
+      "parent": "[parent]",
+      "children": "[children]",
+      "data": {},
+      "uid": 23,
+      "index": 57,
+      "style": {},
+      "hidden": false,
+      "align": "left",
+      "valign": "top",
+      "wrap": true,
+      "shrink": true,
+      "ch": " ",
+      "padding": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      },
+      "parseTags": false,
+      "content": "Editing: /home/alfu64/Development/react-blessed-ide/CodeBufferEditor.jsx",
+      "_isLabel": true,
+      "_clines": [
+        "Editing: /home/alfu64/Development/react-blessed-ide/CodeBufferEditor.jsx"
+      ],
+      "_pcontent": "Editing: /home/alfu64/Development/react-blessed-ide/CodeBufferEditor.jsx",
+      "lpos": {
+        "xi": 63,
+        "xl": 135,
+        "yi": 0,
+        "yl": 1,
+        "base": 0,
+        "renders": 33
+      }
+    },
+    "props": {
+      "row": 0,
+      "col": 5,
+      "rowSpan": 6,
+      "colSpan": 10,
+      "border": {
+        "type": "line"
+      },
+      "label": "Editing: /home/alfu64/Development/react-blessed-ide/CodeBufferEditor.jsx",
+      "top": "0%",
+      "left": "33.333333333333336%",
+      "width": "66.66666666666667%",
+      "height": "75%",
+      "mouse": true,
+      "keys": true,
+      "input": true,
+      "clickable": true,
+      "focused": true,
+      "style": {
+        "border": {
+          "fg": "cyan"
+        }
+      },
+      "tags": false,
+      "scrollable": false,
+      "children": "[children]"
+    },
+    "input": true,
+    "tags": false,
+    "scrollable": false,
+    "_clines": [
+      ""
+    ],
+    "_pcontent": "",
+    "_updating": false,
+    "lpos": {
+      "xi": 61,
+      "xl": 183,
+      "yi": 0,
+      "yl": 27,
+      "base": 0,
+      "renders": 33,
+      "aleft": 61,
+      "atop": 0,
+      "aright": 1,
+      "abottom": 10,
+      "width": 122,
+      "height": 27
+    }
+  },
+  "screenEvent": {
+    "name": "mouse",
+    "ctrl": false,
+    "meta": false,
+    "shift": false,
+    "type": "sgr",
+    "raw": [
+      0,
+      84,
+      11,
+      "\u001b[<0;84;11m"
+    ],
+    "buf": {
+      "type": "Buffer",
+      "data": [
+        27,
+        91,
+        60,
+        48,
+        59,
+        56,
+        52,
+        59,
+        49,
+        49,
+        109
+      ]
+    },
+    "x": 83,
+    "y": 10,
+    "action": "mouseup",
+    "button": "left"
+  }
+}
