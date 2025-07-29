@@ -527,6 +527,7 @@ class MemoryBufferEditor {
     this.filePath = filePath;
     this.lines = fs.readFileSync(filePath, { encoding: "utf-8" }).split("\n");
     this.updateTokens();
+    this.updateCursor();
   }
   save() {
     clearTimeout(this._tout000);
@@ -567,6 +568,30 @@ class MemoryBufferEditor {
       return r;
     }, {});
   }
+  updateCursor() {
+    Object.keys(this.tokens).forEach(
+      (lineId) => {
+        const tokens = this.tokens[lineId];
+        let col = 0;
+        if (this.cursorY == lineId) {
+          this.cursorChar = " ";
+          for (const tok of tokens) {
+            if (this.cursorX >= tok.start && this.cursorX < tok.end) {
+              this.cursorStyle = tok.style;
+              this.cursorChar = (this.lines[lineId] || " ")[this.cursorX] || " ";
+              break;
+            }
+            col += tok.text.length;
+          }
+        }
+        if (this.cursorStyle == null) {
+          const last = tokens.slice(-1)[0];
+          this.cursorStyle = last ? last.style : {};
+          this.cursorChar = last && last.text.length ? last.text[last.text.length - 1] : "#";
+        }
+      }
+    );
+  }
   /**
   * @param {(code:string)=>TokenizerToken[]} tokenizer
   * @returns {{[lineNumber:string]:TokenizerToken[]}}
@@ -578,24 +603,6 @@ class MemoryBufferEditor {
         const lineNumber = parseInt(lineId);
         if (lineNumber >= this.viewportY && lineNumber <= this.viewportY + this.viewportHeight) {
           visible[lineId] = this.tokens[lineId];
-          const tokens = this.tokens[lineId];
-          let col = 0;
-          if (this.cursorY == lineId) {
-            this.cursorChar = " ";
-            for (const tok of tokens) {
-              if (this.cursorX >= tok.start && this.cursorX < tok.end) {
-                this.cursorStyle = tok.style;
-                this.cursorChar = (this.lines[lineId] || " ")[this.cursorX] || " ";
-                break;
-              }
-              col += tok.text.length;
-            }
-          }
-          if (this.cursorStyle == null) {
-            const last = tokens.slice(-1)[0];
-            this.cursorStyle = last ? last.style : {};
-            this.cursorChar = last && last.text.length ? last.text[last.text.length - 1] : "#";
-          }
         }
         return visible;
       },
@@ -610,6 +617,7 @@ class MemoryBufferEditor {
         this.cursorX = this.lines[this.cursorY].length;
       }
       this._ensureCursorInView();
+      this.updateCursor();
     }
   }
   moveCursorDown() {
@@ -619,12 +627,14 @@ class MemoryBufferEditor {
         this.cursorX = this.lines[this.cursorY].length;
       }
       this._ensureCursorInView();
+      this.updateCursor();
     }
   }
   moveCursorLeft() {
     if (this.cursorX > 0) {
       this.cursorX--;
       this._ensureCursorInView();
+      this.updateCursor();
     }
   }
   moveCursorRight() {
@@ -634,6 +644,7 @@ class MemoryBufferEditor {
       this.cursorX = this.lines[this.cursorY].length;
     }
     this._ensureCursorInView();
+    this.updateCursor();
   }
   moveCursorVertically(n) {
     if (n > 0) {
@@ -765,6 +776,46 @@ function CodeBufferEditor({
       setEditor(editor.copy());
     }
   }, [size]);
+  const cursor = () => {
+    if (!editor) {
+      return /* @__PURE__ */ jsxRuntime_js.jsx(
+        "box",
+        {
+          mouse: true,
+          keys: true,
+          input: true,
+          clickable: true,
+          focused: true,
+          left: (size.cols >> 1) - 8,
+          top: 0,
+          width: 16,
+          height: 1,
+          style: { bg: "yellow", fg: "#111111" },
+          content: "No File Loaded"
+        },
+        `0-1-no-file`
+      );
+    }
+    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY));
+    editor.updateTokens();
+    editor.updateCursor();
+    const { cursorY, cursorX } = editor.getCursorWindowCoords();
+    const style = editor.cursorStyle;
+    const char = editor.cursorChar;
+    return /* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        left: cursorX + padLength + 1,
+        top: cursorY,
+        width: 1,
+        height: 1,
+        style: { ...style, inverse: true },
+        tags: false,
+        content: char
+      },
+      `cursor`
+    );
+  };
   const tokenList = () => {
     if (!editor) {
       return /* @__PURE__ */ jsxRuntime_js.jsx(
@@ -786,6 +837,8 @@ function CodeBufferEditor({
       );
     }
     const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY));
+    editor.updateTokens();
+    editor.updateCursor();
     const lines = editor.render();
     const { cursorY, cursorX } = editor.getCursorWindowCoords();
     const tt = Object.keys(lines).flatMap((lineNumber, k) => {
@@ -821,21 +874,6 @@ function CodeBufferEditor({
         return a;
       }, [lineNumberBox]);
     });
-    const style = editor.cursorStyle;
-    const char = editor.cursorChar;
-    tt.push(/* @__PURE__ */ jsxRuntime_js.jsx(
-      "box",
-      {
-        left: cursorX + padLength + 1,
-        top: cursorY,
-        width: 1,
-        height: 1,
-        style: { ...style, inverse: true },
-        tags: false,
-        content: char
-      },
-      `cursor`
-    ));
     return tt;
   };
   const internalOnKeypress = (ch, key) => {
@@ -890,6 +928,7 @@ function CodeBufferEditor({
       label: `Editing: ${filePath}`,
       children: [
         tokenList(),
+        cursor(),
         /* @__PURE__ */ jsxRuntime_js.jsx(
           "box",
           {

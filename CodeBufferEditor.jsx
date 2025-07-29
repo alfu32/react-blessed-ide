@@ -50,7 +50,34 @@ export function CodeBufferEditor({
       setEditor(editor.copy())
     }
   }, [size]);
-
+  const cursor = ()=>{
+    if(!editor){
+        return (
+          <box key={`0-1-no-file`} 
+            mouse
+            keys
+            input
+            clickable
+            focused
+            left={(size.cols>>1) - 8} top={0} width={16} height={1} 
+            style={{bg:'yellow',fg:'#111111'}} 
+            content={'No File Loaded'}
+          />
+        )
+    }
+    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
+    editor.updateTokens()
+    editor.updateCursor()
+    const { cursorY, cursorX } = editor.getCursorWindowCoords();
+    const style = editor.cursorStyle;
+    const char  = editor.cursorChar;
+    return <box key={`cursor`} 
+      left={cursorX+padLength+1} top={cursorY} width={1} height={1} 
+      style={{...style,inverse: true}}
+      tags={false}
+      content={char}
+    />
+  }
   const tokenList = ()=>{
     if(!editor){
         return (
@@ -68,6 +95,8 @@ export function CodeBufferEditor({
     }
     
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
+    editor.updateTokens()
+    editor.updateCursor()
     const lines = editor.render();
     const { cursorY, cursorX } = editor.getCursorWindowCoords();
     const tt = Object.keys(lines).flatMap((lineNumber,k) => {
@@ -91,16 +120,6 @@ export function CodeBufferEditor({
       },[lineNumberBox])
     })
 
-    const style = editor.cursorStyle;
-    const char  = editor.cursorChar;
-    tt.push((
-      <box key={`cursor`} 
-        left={cursorX+padLength+1} top={cursorY} width={1} height={1} 
-        style={{...style,inverse: true}}
-        tags={false}
-        content={char}
-      />
-    ))
     return tt
   }
 
@@ -141,6 +160,7 @@ export function CodeBufferEditor({
       label={`Editing: ${filePath}`}
     >
       {tokenList()}
+      {cursor()}
       {/* caret overlay 
       <box
         key={`caret`}

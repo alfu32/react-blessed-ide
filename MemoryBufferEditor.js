@@ -25,6 +25,7 @@ export class MemoryBufferEditor {
     this.filePath        = filePath;
     this.lines=fs.readFileSync(filePath,{encoding:'utf-8'}).split('\n')
     this.updateTokens()
+    this.updateCursor()
   }
   save(){
     clearTimeout(this._tout000)
@@ -70,17 +71,10 @@ export class MemoryBufferEditor {
       return r
     },{});
   }
-  /**
-  * @param {(code:string)=>TokenizerToken[]} tokenizer
-  * @returns {{[lineNumber:string]:TokenizerToken[]}}
-  *
-  * */
-  render() {
-    return Object.keys(this.tokens).reduce(
-      (visible,lineId) => {
+  updateCursor(){
+    Object.keys(this.tokens).forEach(
+      (lineId) => {
         const lineNumber=parseInt(lineId)
-        if(lineNumber>=this.viewportY && lineNumber<=(this.viewportY+this.viewportHeight)){
-          visible[lineId]=this.tokens[lineId]
 
           const tokens = this.tokens[lineId]
 
@@ -104,6 +98,20 @@ export class MemoryBufferEditor {
             this.cursorStyle = last ? last.style : {};
             this.cursorChar = last && last.text.length ? last.text[last.text.length-1] : '#';
           }
+      }
+    );
+  }
+  /**
+  * @param {(code:string)=>TokenizerToken[]} tokenizer
+  * @returns {{[lineNumber:string]:TokenizerToken[]}}
+  *
+  * */
+  render() {
+    return Object.keys(this.tokens).reduce(
+      (visible,lineId) => {
+        const lineNumber=parseInt(lineId)
+        if(lineNumber>=this.viewportY && lineNumber<=(this.viewportY+this.viewportHeight)){
+          visible[lineId]=this.tokens[lineId]
         }
         return visible
       },
@@ -120,6 +128,7 @@ export class MemoryBufferEditor {
         this.cursorX = this.lines[this.cursorY].length
       }
       this._ensureCursorInView();
+      this.updateCursor();
     }
   }
   moveCursorDown() {
@@ -129,12 +138,14 @@ export class MemoryBufferEditor {
         this.cursorX = this.lines[this.cursorY].length
       }
       this._ensureCursorInView();
+      this.updateCursor();
     }
   }
   moveCursorLeft() {
     if (this.cursorX > 0) {
       this.cursorX--;
       this._ensureCursorInView();
+      this.updateCursor();
     }
   }
   moveCursorRight() {
@@ -144,6 +155,7 @@ export class MemoryBufferEditor {
       this.cursorX = this.lines[this.cursorY].length
     }
     this._ensureCursorInView()
+    this.updateCursor();
   }
 
   moveCursorVertically(n){
