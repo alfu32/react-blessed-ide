@@ -56,19 +56,23 @@ export const namedTokenizers={
         Punctuation:  {style: {fg:'cyan'},pattern:'[()[\\]{}.,;]'},
         Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
     }},
-    js:{name:'js',definitions:{
-        Keyword:      {style: {fg:'magenta'},pattern:'\\b(this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)\\b'},
+    js:{name:'js',flags:'mg',definitions:{
+        Keyword:      {style: {fg:'magenta'},pattern:'\\b(this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
+        Comment:      {style: {fg:'#779977'},pattern:'//.*$'},
+        // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {style: {fg:'cyan'},pattern:'[()[\\]{}.,;]'},
         Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
     }},
-    jsx:{name:'jsx',definitions:{
+    jsx:{name:'jsx',flags:'mg',definitions:{
         ReactToken:   {style: {fg:'#FFDD00'},pattern:'\\buse[A-Z][a-z]*\\b'},
-        Keyword:      {style: {fg:'magenta'},pattern:'\\b(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)\\b'},
+        Keyword:      {style: {fg:'magenta'},pattern:'\\b(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b'},
         JsxTag:       {style: {fg:'#FFDD00'},pattern:'\\<(\\/){0,1}[a-zA-Z-]*\\>'},
+        Comment:      {style: {fg:'#779977'},pattern:'//.*$'},
+        // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
@@ -76,9 +80,11 @@ export const namedTokenizers={
         Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
     }},
-    c:{name:'c',definitions:{
-        Keyword:      {style: {fg:'magenta'},pattern:'\\b(int|const|char|long|if|else|for|while|return)\\b'},
+    c:{name:'c',flags:'mg',definitions:{
+        Keyword:      {style: {fg:'magenta'},pattern:'\\b(int|const|char|long|if|else|for|while|return|switch|case|break|continue)\\b'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
+        Comment:      {style: {fg:'#779977'},pattern:'//.*$'},
+        // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
         Punctuation:  {style: {fg:'cyan'},pattern:'[()[\\]{}.,;]'},
@@ -98,7 +104,7 @@ export function getTokenizer(name) {
         Object.entries(tokenizerDef.definitions)
           .map(([name, definition]) => `(?<${name}>${definition.pattern})`)
           .join('|'),
-        'g'
+        tokenizerDef.flags||'g'
     );
     /**
      * @param {String} code
