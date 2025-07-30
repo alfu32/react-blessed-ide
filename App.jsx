@@ -20,11 +20,11 @@ export function App(props){
   const [currentEditorText, setCurrentEditorText] = useState('');
   const [activeTab, setActiveTab] = useState('Project');
   const [treeData, setTreeData]   = useState([]);
-  const [gitStatus, setGitStatus] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [openedFiles, setOpenedFiles] = useState({});
   const [fileContent, setFileContent]   = useState('');
   const [rootDir, setRootDir]   = useState(process.cwd());
+  const [gitStatus, setGitStatus] = useState([]);
   const [workspace, setWorkspace]   = useState(new Workspace());
   useEffect(() => {
     workspace.init(rootDir)
@@ -126,7 +126,7 @@ export function App(props){
                   </Grid>
               </Tab>
               <Tab name='Git'>
-                  <box key={3} label={'Git'} height={9} border={{ type: 'line' }}>
+                  <box key={3} label={'Git Status'} height={9} border={{ type: 'line' }}>
                       <list
                           mouse
                           keys

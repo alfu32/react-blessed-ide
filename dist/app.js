@@ -1029,11 +1029,11 @@ function App(props) {
   const [currentEditorText, setCurrentEditorText] = React.useState("");
   const [activeTab, setActiveTab] = React.useState("Project");
   const [treeData, setTreeData] = React.useState([]);
-  const [gitStatus, setGitStatus] = React.useState([]);
   const [selectedFile, setSelectedFile] = React.useState(null);
   const [openedFiles, setOpenedFiles] = React.useState({});
   const [fileContent, setFileContent] = React.useState("");
   const [rootDir, setRootDir] = React.useState(process.cwd());
+  const [gitStatus, setGitStatus] = React.useState([]);
   const [workspace, setWorkspace] = React.useState(new Workspace$1());
   React.useEffect(() => {
     workspace.init(rootDir).then((wk) => workspace.open(workspace.rootNode)).then((t) => {
@@ -1130,7 +1130,7 @@ function App(props) {
           )
         ] }) }),
         /* @__PURE__ */ jsxRuntime_js.jsxs(Tab, { name: "Git", children: [
-          /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Git", height: 9, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+          /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Git Status", height: 9, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
             "list",
             {
               mouse: true,

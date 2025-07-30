@@ -17,21 +17,3 @@ Warning: Encountered two children with the same key, `3`. Keys should be unique 
     at element
     at Grid (/home/devlin/Development/term-blessed-react/node_modules/react-blessed-contrib-17/dist/index.js:135:24)
     at App (/home/devlin/Development/term-blessed-react/dist/app.js:1027:39)
-Warning: Encountered two children with the same key, `5`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
-    at box
-    at element
-    at Grid (/home/devlin/Development/term-blessed-react/node_modules/react-blessed-contrib-17/dist/index.js:135:24)
-    at box
-    at VTabs (/home/devlin/Development/term-blessed-react/dist/app.js:394:18)
-    at element
-    at Grid (/home/devlin/Development/term-blessed-react/node_modules/react-blessed-contrib-17/dist/index.js:135:24)
-    at App (/home/devlin/Development/term-blessed-react/dist/app.js:1027:39)
-Warning: Encountered two children with the same key, `3`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
-    at box
-    at element
-    at Grid (/home/devlin/Development/term-blessed-react/node_modules/react-blessed-contrib-17/dist/index.js:135:24)
-    at box
-    at VTabs (/home/devlin/Development/term-blessed-react/dist/app.js:394:18)
-    at element
-    at Grid (/home/devlin/Development/term-blessed-react/node_modules/react-blessed-contrib-17/dist/index.js:135:24)
-    at App (/home/devlin/Development/term-blessed-react/dist/app.js:1027:39)

@@ -6,3 +6,15 @@ export async function getStatus(cwd) {
   const { stdout } = await exec('git status --porcelain', { cwd });
   return stdout.split('\n').filter(Boolean);
 }
+export async function getCommits(cwd) {
+  const { stdout } = await exec('git log --pretty=format:"%h %s" --abbrev=8 | tee', { cwd });
+  return stdout.split('\n').filter(Boolean);
+}
+export async function getBranch(cwd) {
+  const { stdout } = await exec('git branch --show-current', { cwd });
+  return stdout.split('\n').filter(Boolean);
+}
+export async function getCurrentTag(cwd) {
+  const { stdout } = await exec('git describe --tags --exact-match 2>/dev/null || echo "none"', { cwd });
+  return stdout.split('\n').filter(Boolean);
+}
