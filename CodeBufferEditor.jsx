@@ -197,7 +197,3 @@ export function CodeBufferEditor({
     </box>
   );
 }
-
-
-
-

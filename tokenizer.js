@@ -66,9 +66,9 @@ export const namedTokenizers={
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
     }},
     jsx:{name:'jsx',definitions:{
-        ReactToken:   {style: {fg:'yellow'},pattern:'use[A-Z][a-z]*'},
+        ReactToken:   {style: {fg:'#FFDD00'},pattern:'\\buse[A-Z][a-z]*\\b'},
         Keyword:      {style: {fg:'magenta'},pattern:'\\b(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)\\b'},
-        JsxTag:       {style: {fg:'yellow'},pattern:'\\<(\\/){0,1}[a-zA-Z-]*\\>'},
+        JsxTag:       {style: {fg:'#FFDD00'},pattern:'\\<(\\/){0,1}[a-zA-Z-]*\\>'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
