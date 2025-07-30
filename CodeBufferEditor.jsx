@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {MemoryBufferEditor} from './MemoryBufferEditor';
 import { BoxElement as box, TextElement as text } from 'react-blessed';
 import {safeStringify} from "./util";
-
+//	/	/	/
 export function CodeBufferEditor({
     filePath,
     onKeypress=(ch,key) =>{},
@@ -82,7 +82,7 @@ export function CodeBufferEditor({
             focused
             left={(size.cols>>1) - 8} top={(size.rows>>1)-1} width={16} height={3} 
             style={{bg:'#eeee00',fg:'#111111'}}
-            content={'No File Loaded'}
+            content={'\n No File Loaded'}
           />
         )
     }
@@ -141,6 +141,9 @@ export function CodeBufferEditor({
 
   // 3) On keypress, update editor then re-render
   const setCursorPosition = (screenEvent) => {
+    if(!editor){
+      return;
+    }
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
     const {xi,yi} = boxRef.current.lpos;
     const {x,y} = screenEvent;

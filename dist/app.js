@@ -846,7 +846,7 @@ function CodeBufferEditor({
           width: 16,
           height: 3,
           style: { bg: "#eeee00", fg: "#111111" },
-          content: "No File Loaded"
+          content: "\n No File Loaded"
         },
         `0-0-no-file`
       );
@@ -946,6 +946,9 @@ function CodeBufferEditor({
     setEditor(editor.copy());
   };
   const setCursorPosition = (screenEvent) => {
+    if (!editor) {
+      return;
+    }
     const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY)) + 1;
     const { xi, yi } = boxRef.current.lpos;
     const { x, y } = screenEvent;
