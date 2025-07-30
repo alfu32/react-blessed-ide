@@ -1,11 +1,11 @@
 import fs from 'fs';
 import { getTokenizer } from './tokenizer.js';
-
+// something new
 export class FileBufferEditor {
   /**
    * @param {string} filePath
    * @param {{rows:number, cols:number}} windowSize
-   */
+  **/
   constructor(filePath, windowSize) {
     this.filePath        = filePath;
     this.windowRows      = windowSize.rows;
@@ -18,9 +18,9 @@ export class FileBufferEditor {
     this.cursorChar      = '#';
   }
 
-  // ── private ────────────────────────────────────────────────────────────
-
-  _ensureCursorInView() {
+  // ── private ─public───────────────────────────────────────────────────────────
+  //  aaha
+  _ensureCursorInView() {
     if (this.row < this.windowStartRow) {
       this.windowStartRow = this.row;
     } else if (this.row >= this.windowStartRow + this.windowRows) {

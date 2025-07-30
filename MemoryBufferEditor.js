@@ -131,11 +131,11 @@ export class MemoryBufferEditor {
     }
   }
   moveCursorDown() {
-    if (this.cursorY < this.lines.length) {
-      this.cursorY++;
-      if (this.cursorX >= this.lines[this.cursorY].length) {
-        this.cursorX = this.lines[this.cursorY].length
+    if ((this.cursorY+1) < this.lines.length) {
+      if (this.cursorX >= this.lines[this.cursorY+1].length) {
+        this.cursorX = this.lines[this.cursorY+1].length
       }
+      this.cursorY++;
       this._ensureCursorInView();
       this.updateCursor();
     }

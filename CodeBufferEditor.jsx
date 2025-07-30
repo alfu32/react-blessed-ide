@@ -1,5 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {MemoryBufferEditor} from './MemoryBufferEditor';
+import { BoxElement as box, TextElement as text } from 'react-blessed';
+import {safeStringify} from "./util";
 
 export function CodeBufferEditor({
     filePath,
@@ -11,6 +13,8 @@ export function CodeBufferEditor({
   /**
    * @constant {[MemoryBufferEditor,(ed:MemoryBufferEditor)=>void]} [editor, setEditor]
    */
+
+	
   const [editor, setEditor] = useState(null);
   const [size, setSize]     = useState({ rows: 10, cols: 30 });
 
@@ -51,23 +55,18 @@ export function CodeBufferEditor({
   const cursor = ()=>{
     if(!editor){
         return (
-          <box key={`0-1-no-file`} 
-            mouse
-            keys
-            input
-            clickable
-            focused
+          <box key={`0-1-no-file`}
             left={4} top={1} width={1} height={1}
             style={{blink:true}}
             content={'_'}
           />
         )
     }
-    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
+    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
     editor.updateCursor()
-    return <box key={`cursor`} 
+    return <box key={`cursor-${Date.now()}`}
       left={editor.cursorX-editor.viewportX+padLength+1} top={editor.cursorY-editor.viewportY} width={1} height={1}
-      style={{...editor.cursorStyle,underline: true,bold:true}}
+      style={{...editor.cursorStyle,underline: true,bold:true,inverse:true}}
       tags={false}
       content={editor.cursorChar}
     />
@@ -82,23 +81,23 @@ export function CodeBufferEditor({
             clickable
             focused
             left={(size.cols>>1) - 8} top={(size.rows>>1)-1} width={16} height={3} 
-            style={{bg:'yellow',fg:'#111111'}} 
+            style={{bg:'#eeee00',fg:'#111111'}}
             content={'No File Loaded'}
           />
         )
     }
     
-    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
+    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
     editor.updateTokens()
     const lines = editor.renderViewport();
     const { cursorY, cursorX } = editor.getCursorWindowCoords();
     return Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber]
-      const lineNumberText = `${String(lineNumber).padStart(padLength, ' ')}`
+      const lineNumberText = `${String(lineNumber).padStart(padLength, '0')}`
       const lineNumberBox = (
           <box key={`${lineNumber}-lineNumber`}
                left={0} top={k} width={padLength} height={1}
-               style={{bg: 'black', fg: 'blue', inverse: editor.cursorY == lineNumber}}
+               style={{bg: '#222222', fg: '#33aabb', inverse: editor.cursorY == lineNumber}}
                content={lineNumberText}
           />)
       return line.reduce((a, t) => {
@@ -121,14 +120,20 @@ export function CodeBufferEditor({
         return
     }
     switch (key.name) {
-      case 'up':    editor.moveCursorUp();    break;
-      case 'down':  editor.moveCursorDown();  break;
-      case 'left':  editor.moveCursorLeft();  break;
-      case 'right': editor.moveCursorRight(); break;
+      case 'up':      editor.moveCursorUp();    break;
+      case 'down':    editor.moveCursorDown();  break;
+      case 'left':    editor.moveCursorLeft();  break;
+      case 'right':   editor.moveCursorRight(); break;
+      case 'home':    editor.cursorX=0;    break;
+      case 'end':      editor.cursorX=editor.lines[editor.cursorY].length;    break;
+      case 'pageup':    editor.moveCursorVertically(-editor.viewportHeight);    break;
+      case 'pagedown':    editor.moveCursorVertically(editor.viewportHeight);    break;
       case 'backspace': editor.backspace().save();  onChange(); break;
       case 'delete':    editor.delete().save();  onChange();      break;
+      case 'return':    editor.insert("\n");editor.moveCursorDown();editor.save();  onChange();      break;
+      case 'tab':    editor.insert("\t").save();  onChange();      break;
       default:
-        if (ch && ch.length === 1){ editor.insert(ch).save();  onChange();}
+        if (ch && ch.length > 0){ editor.insert(ch).save();  onChange();}
     }
     setEditor(editor.copy())
     // refresh();
@@ -136,12 +141,24 @@ export function CodeBufferEditor({
 
   // 3) On keypress, update editor then re-render
   const setCursorPosition = (screenEvent) => {
-    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))
+    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
     const {xi,yi} = boxRef.current.lpos;
     const {x,y} = screenEvent;
     editor.setCursor(x-xi-padLength-1-1+editor.viewportX,y-yi-1+editor.viewportY)
     setEditor(editor.copy())
   };
+
+  const mouseAction=(event) =>{
+    switch(event.action){
+      case 'mousemove':break;
+      case 'mousedown':break;
+      case 'mouseup':break;
+      case 'wheelup':editor.moveCursorUp();setEditor(editor.copy());break;
+      case 'wheeldown':editor.moveCursorDown();setEditor(editor.copy());break;
+      default: throw new Error(safeStringify(event)); break;
+    }
+
+  }
   return (
     <box
       ref={boxRef}
@@ -157,8 +174,13 @@ export function CodeBufferEditor({
       scrollable={false}
       onKeypress={internalOnKeypress}
       onClick={setCursorPosition}
+      onMouse={mouseAction}
       label={`Editing: ${filePath}`}
     >
+      {/* status
+      onClick={setCursorPosition}
+      onScroll={scrollCursor}
+      */}
       {tokenList()}
       {/* status */}
       <box
@@ -175,3 +197,7 @@ export function CodeBufferEditor({
     </box>
   );
 }
+
+
+
+

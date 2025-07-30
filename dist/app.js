@@ -457,7 +457,7 @@ const namedTokenizers = {
     Whitespace: { style: { fg: "white" }, pattern: "\\s+" }
   } },
   js: { name: "js", definitions: {
-    Keyword: { style: { fg: "magenta" }, pattern: "(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)" },
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)\\b" },
     Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
@@ -467,7 +467,7 @@ const namedTokenizers = {
   } },
   jsx: { name: "jsx", definitions: {
     ReactToken: { style: { fg: "yellow" }, pattern: "use[A-Z][a-z]*" },
-    Keyword: { style: { fg: "magenta" }, pattern: "(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)" },
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)\\b" },
     JsxTag: { style: { fg: "yellow" }, pattern: "\\<(\\/){0,1}[a-zA-Z-]*\\>" },
     Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
@@ -477,7 +477,7 @@ const namedTokenizers = {
     Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" }
   } },
   c: { name: "c", definitions: {
-    Keyword: { style: { fg: "magenta" }, pattern: "(int|const|char|long|if|else|for|while|return)" },
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(int|const|char|long|if|else|for|while|return)\\b" },
     Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
@@ -620,11 +620,11 @@ class MemoryBufferEditor {
     }
   }
   moveCursorDown() {
-    if (this.cursorY < this.lines.length) {
-      this.cursorY++;
-      if (this.cursorX >= this.lines[this.cursorY].length) {
-        this.cursorX = this.lines[this.cursorY].length;
+    if (this.cursorY + 1 < this.lines.length) {
+      if (this.cursorX >= this.lines[this.cursorY + 1].length) {
+        this.cursorX = this.lines[this.cursorY + 1].length;
       }
+      this.cursorY++;
       this._ensureCursorInView();
       this.updateCursor();
     }
@@ -740,6 +740,28 @@ class MemoryBufferEditor {
     return JSON.stringify(json).replace(/"/gi, "");
   }
 }
+function safeStringify(obj) {
+  const seen = /* @__PURE__ */ new WeakSet();
+  return JSON.stringify(obj, (key, value) => {
+    switch (key) {
+      case "screen":
+        return "[screen]";
+      case "parent":
+        return "[parent]";
+      case "lines":
+        return "[lines]";
+      case "children":
+        return "[children]";
+    }
+    if (typeof value === "object" && value !== null) {
+      if (seen.has(value)) {
+        return;
+      }
+      seen.add(value);
+    }
+    return value;
+  }, 2);
+}
 function CodeBufferEditor({
   filePath,
   onKeypress = (ch, key) => {
@@ -762,14 +784,14 @@ function CodeBufferEditor({
     }
   }, [filePath]);
   React.useEffect(() => {
-    const box = boxRef.current;
-    if (!box) return;
+    const box2 = boxRef.current;
+    if (!box2) return;
     const update = () => {
-      setSize({ cols: box.width, rows: box.height - 2 });
+      setSize({ cols: box2.width, rows: box2.height - 2 });
     };
     update();
-    box.on("resize", update);
-    return () => box.removeListener("resize", update);
+    box2.on("resize", update);
+    return () => box2.removeListener("resize", update);
   }, []);
   React.useEffect(() => {
     if (editor) {
@@ -783,11 +805,6 @@ function CodeBufferEditor({
       return /* @__PURE__ */ jsxRuntime_js.jsx(
         "box",
         {
-          mouse: true,
-          keys: true,
-          input: true,
-          clickable: true,
-          focused: true,
           left: 4,
           top: 1,
           width: 1,
@@ -798,7 +815,7 @@ function CodeBufferEditor({
         `0-1-no-file`
       );
     }
-    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY));
+    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY)) + 1;
     editor.updateCursor();
     return /* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
@@ -807,11 +824,11 @@ function CodeBufferEditor({
         top: editor.cursorY - editor.viewportY,
         width: 1,
         height: 1,
-        style: { ...editor.cursorStyle, underline: true, bold: true },
+        style: { ...editor.cursorStyle, underline: true, bold: true, inverse: true },
         tags: false,
         content: editor.cursorChar
       },
-      `cursor`
+      `cursor-${Date.now()}`
     );
   };
   const tokenList = () => {
@@ -828,19 +845,19 @@ function CodeBufferEditor({
           top: (size.rows >> 1) - 1,
           width: 16,
           height: 3,
-          style: { bg: "yellow", fg: "#111111" },
+          style: { bg: "#eeee00", fg: "#111111" },
           content: "No File Loaded"
         },
         `0-0-no-file`
       );
     }
-    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY));
+    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY)) + 1;
     editor.updateTokens();
     const lines = editor.renderViewport();
     const { cursorY, cursorX } = editor.getCursorWindowCoords();
     return Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber];
-      const lineNumberText = `${String(lineNumber).padStart(padLength, " ")}`;
+      const lineNumberText = `${String(lineNumber).padStart(padLength, "0")}`;
       const lineNumberBox = /* @__PURE__ */ jsxRuntime_js.jsx(
         "box",
         {
@@ -848,7 +865,7 @@ function CodeBufferEditor({
           top: k,
           width: padLength,
           height: 1,
-          style: { bg: "black", fg: "blue", inverse: editor.cursorY == lineNumber },
+          style: { bg: "#222222", fg: "#33aabb", inverse: editor.cursorY == lineNumber },
           content: lineNumberText
         },
         `${lineNumber}-lineNumber`
@@ -890,6 +907,18 @@ function CodeBufferEditor({
       case "right":
         editor.moveCursorRight();
         break;
+      case "home":
+        editor.cursorX = 0;
+        break;
+      case "end":
+        editor.cursorX = editor.lines[editor.cursorY].length;
+        break;
+      case "pageup":
+        editor.moveCursorVertically(-editor.viewportHeight);
+        break;
+      case "pagedown":
+        editor.moveCursorVertically(editor.viewportHeight);
+        break;
       case "backspace":
         editor.backspace().save();
         onChange();
@@ -898,8 +927,18 @@ function CodeBufferEditor({
         editor.delete().save();
         onChange();
         break;
+      case "return":
+        editor.insert("\n");
+        editor.moveCursorDown();
+        editor.save();
+        onChange();
+        break;
+      case "tab":
+        editor.insert("	").save();
+        onChange();
+        break;
       default:
-        if (ch && ch.length === 1) {
+        if (ch && ch.length > 0) {
           editor.insert(ch).save();
           onChange();
         }
@@ -907,11 +946,31 @@ function CodeBufferEditor({
     setEditor(editor.copy());
   };
   const setCursorPosition = (screenEvent) => {
-    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY));
+    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY)) + 1;
     const { xi, yi } = boxRef.current.lpos;
     const { x, y } = screenEvent;
     editor.setCursor(x - xi - padLength - 1 - 1 + editor.viewportX, y - yi - 1 + editor.viewportY);
     setEditor(editor.copy());
+  };
+  const mouseAction = (event) => {
+    switch (event.action) {
+      case "mousemove":
+        break;
+      case "mousedown":
+        break;
+      case "mouseup":
+        break;
+      case "wheelup":
+        editor.moveCursorUp();
+        setEditor(editor.copy());
+        break;
+      case "wheeldown":
+        editor.moveCursorDown();
+        setEditor(editor.copy());
+        break;
+      default:
+        throw new Error(safeStringify(event));
+    }
   };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(
     "box",
@@ -929,6 +988,7 @@ function CodeBufferEditor({
       scrollable: false,
       onKeypress: internalOnKeypress,
       onClick: setCursorPosition,
+      onMouse: mouseAction,
       label: `Editing: ${filePath}`,
       children: [
         tokenList(),

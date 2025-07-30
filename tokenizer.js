@@ -57,7 +57,7 @@ export const namedTokenizers={
         Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
     }},
     js:{name:'js',definitions:{
-        Keyword:      {style: {fg:'magenta'},pattern:'(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)'},
+        Keyword:      {style: {fg:'magenta'},pattern:'\\b(this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)\\b'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
@@ -67,7 +67,7 @@ export const namedTokenizers={
     }},
     jsx:{name:'jsx',definitions:{
         ReactToken:   {style: {fg:'yellow'},pattern:'use[A-Z][a-z]*'},
-        Keyword:      {style: {fg:'magenta'},pattern:'(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)'},
+        Keyword:      {style: {fg:'magenta'},pattern:'\\b(const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw)\\b'},
         JsxTag:       {style: {fg:'yellow'},pattern:'\\<(\\/){0,1}[a-zA-Z-]*\\>'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
@@ -77,7 +77,7 @@ export const namedTokenizers={
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
     }},
     c:{name:'c',definitions:{
-        Keyword:      {style: {fg:'magenta'},pattern:'(int|const|char|long|if|else|for|while|return)'},
+        Keyword:      {style: {fg:'magenta'},pattern:'\\b(int|const|char|long|if|else|for|while|return)\\b'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
