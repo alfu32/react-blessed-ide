@@ -2,7 +2,8 @@ import React, {useEffect, useRef, useState} from 'react';
 import {MemoryBufferEditor} from './MemoryBufferEditor';
 import { BoxElement as box, TextElement as text } from 'react-blessed';
 import {safeStringify} from "./util";
-//	/	/	/
+
+
 export function CodeBufferEditor({
     filePath,
     onKeypress=(ch,key) =>{},
@@ -65,7 +66,7 @@ export function CodeBufferEditor({
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
     editor.updateCursor()
     return <box key={`cursor-${Date.now()}`}
-      left={editor.cursorX-editor.viewportX+padLength+1} top={editor.cursorY-editor.viewportY} width={1} height={1}
+      left={editor.cursorX-editor.viewportX+padLength+1+ 1} top={editor.cursorY-editor.viewportY} width={1} height={1}
       style={{...editor.cursorStyle,underline: true,bold:true,inverse:true}}
       tags={false}
       content={editor.cursorChar}
@@ -93,17 +94,17 @@ export function CodeBufferEditor({
     const { cursorY, cursorX } = editor.getCursorWindowCoords();
     return Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber]
-      const lineNumberText = `${String(lineNumber).padStart(padLength, '0')}`
+      const lineNumberText = `${String(lineNumber).padStart(padLength, ' ')}`
       const lineNumberBox = (
           <box key={`${lineNumber}-lineNumber`}
-               left={0} top={k} width={padLength} height={1}
+               left={0} top={k} width={padLength + 1} height={1}
                style={{bg: '#222222', fg: '#33aabb', inverse: editor.cursorY == lineNumber}}
-               content={lineNumberText}
+               content={lineNumberText+'│'}
           />)
       return line.reduce((a, t) => {
         a.push(
             <box key={`${t.x}-${t.y}`}
-                 left={t.x + padLength + 1} top={t.y - editor.viewportY} width={t.text.length} height={1}
+                 left={t.x + padLength + 1 + 1} top={t.y - editor.viewportY} width={t.text.length} height={1}
                  style={t.style}
                  content={t.text}
             />
@@ -133,7 +134,14 @@ export function CodeBufferEditor({
       case 'return':    editor.insert("\n");editor.moveCursorDown();editor.save();  onChange();      break;
       case 'tab':    editor.insert("\t").save();  onChange();      break;
       default:
-        if (ch && ch.length > 0){ editor.insert(ch).save();  onChange();}
+        if (ch && ch.length > 0){
+          if(key.name && key.name.length === 1) {
+            editor.insert(ch).save();
+            onChange();
+          } else {
+
+          }
+        }
     }
     setEditor(editor.copy())
     // refresh();

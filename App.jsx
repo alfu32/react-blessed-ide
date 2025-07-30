@@ -4,7 +4,7 @@ import {getStatus} from './services/GitService';
 import {Workspace,INode} from './services/WorkspaceService';
 import FileTree from './FileTree';
 import ModalDialog from './ModalDialog.jsx';
-import { BoxElement as box, TextElement as text,ListElement as list } from 'react-blessed';
+import { BoxElement as box, TextElement as text,ListElement as list,ButtonElement as button } from 'react-blessed';
 import { Grid,GridItem } from 'react-blessed-contrib-17'
 import FolderPickerDialog from "./FolderPickerDialog";
 import {Tab, VTabs} from "./VTabs";
@@ -126,8 +126,63 @@ export function App(props){
                   </Grid>
               </Tab>
               <Tab name='Git'>
-                  <box key={3} label={'Git'}>
+                  <box key={3} label={'Git'} height={9} border={{ type: 'line' }}>
                       <list
+                          mouse
+                          keys
+                          input
+                          clickable
+                          focused
+                          scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
+                          items={gitStatus}
+                          keys mouse style={{selected: {bg: 'blue'}}}
+                          onSelect={onFilePathSelect}
+                          label={'Status'}
+                      />
+                  </box>
+                  <textarea
+                      key={4} top={9}  height={9}
+                      mouse
+                      keys
+                      input
+                      clickable
+                      focused
+                      label={'Comment'}
+                      border={{ type: 'line' }}
+                      inputOnFocus={true}/>
+                  <button
+                      key={5} top={18} left={'0%'} height={3} width={'48%'}
+                      mouse
+                      keys
+                      input
+                      clickable
+                      focused
+                      valign={'middle'}
+                      align={'center'}
+                      style={{bg:'#ffaa00',fg:'#333333'}}
+                      border={{ type: 'line',bg:'#ffaa00',fg:'#333333' }}
+                      content={'commit'}
+                  />
+                  <button
+                      key={5} top={18} left={'52%'} height={3} width={'48%'}
+                      mouse
+                      keys
+                      input
+                      clickable
+                      focused
+                      valign={'middle'}
+                      align={'center'}
+                      style={{bg:'#ffaa00',fg:'#333333'}}
+                      border={{ type: 'line',bg:'#ffaa00',fg:'#333333' }}
+                      content={'revert'}
+                  />
+                  <box key={3} label={'Commits'} top={21} border={{ type: 'line' }}>
+                      <list
+                          mouse
+                          keys
+                          input
+                          clickable
+                          focused
                           scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                           items={gitStatus}
                           keys mouse style={{selected: {bg: 'blue'}}}

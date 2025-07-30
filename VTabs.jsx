@@ -14,27 +14,28 @@ export function VTabs({ children, ...boxProps}) {
         .filter(child => React.isValidElement(child) && child.props.name);
 
     const [activeIndex, setActiveIndex] = useState(0);
-    const styleActive={fg:'black',underline:true,bg:'orange'}
-    const styleInactive={}
+    const tabSelectorStyle={fg:'#ffaa00',bg:'#333333'}
 
     return (
         <box {...boxProps}>
         <Grid rows={1} cols={6} hideBorder>
             {/* Tab list */}
             <box row={0} col={0} rowSpan={1} colSpan={1}>
-                {tabs.map((tab, i) => (
-                    <box
-                        key={tab.props.name}
-                        top={i}
-                        mouse
-                        clickable
-                        bold={activeIndex === i}
-                        onClick={() => setActiveIndex(i)}
-                        style={activeIndex === i ? styleActive : styleInactive}
-                    >
-                        {activeIndex === i ? `> ${tab.props.name}` : `  ${tab.props.name}`}
-                    </box>
-                ))}
+                {tabs.map((tab, i) => {
+                    return (
+                        <box
+                            key={tab.props.name}
+                            top={i * 3}
+                            height={3}
+                            tags={false}
+                            mouse
+                            clickable
+                            onClick={() => setActiveIndex(i)}
+                            style={{...tabSelectorStyle, inverse: (activeIndex == i)}}
+                            content={'\n '+tab.props.name}
+                        />
+                    )
+                })}
             </box>
 
             {/* Active tab panel */}

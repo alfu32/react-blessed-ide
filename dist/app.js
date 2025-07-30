@@ -394,22 +394,24 @@ function FolderPickerDialog({
 function VTabs({ children, ...boxProps }) {
   const tabs = React.Children.toArray(children).filter((child) => React.isValidElement(child) && child.props.name);
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const styleActive = { fg: "black", underline: true, bg: "orange" };
-  const styleInactive = {};
+  const tabSelectorStyle = { fg: "#ffaa00", bg: "#333333" };
   return /* @__PURE__ */ jsxRuntime_js.jsx("box", { ...boxProps, children: /* @__PURE__ */ jsxRuntime_js.jsxs(reactBlessedContrib17.Grid, { rows: 1, cols: 6, hideBorder: true, children: [
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { row: 0, col: 0, rowSpan: 1, colSpan: 1, children: tabs.map((tab, i) => /* @__PURE__ */ jsxRuntime_js.jsx(
-      "box",
-      {
-        top: i,
-        mouse: true,
-        clickable: true,
-        bold: activeIndex === i,
-        onClick: () => setActiveIndex(i),
-        style: activeIndex === i ? styleActive : styleInactive,
-        children: activeIndex === i ? `> ${tab.props.name}` : `  ${tab.props.name}`
-      },
-      tab.props.name
-    )) }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { row: 0, col: 0, rowSpan: 1, colSpan: 1, children: tabs.map((tab, i) => {
+      return /* @__PURE__ */ jsxRuntime_js.jsx(
+        "box",
+        {
+          top: i * 3,
+          height: 3,
+          tags: false,
+          mouse: true,
+          clickable: true,
+          onClick: () => setActiveIndex(i),
+          style: { ...tabSelectorStyle, inverse: activeIndex == i },
+          content: "\n " + tab.props.name
+        },
+        tab.props.name
+      );
+    }) }),
     /* @__PURE__ */ jsxRuntime_js.jsx("box", { row: 0, col: 1, rowSpan: 1, colSpan: 5, children: tabs[activeIndex].props.children })
   ] }) });
 }
@@ -826,7 +828,7 @@ function CodeBufferEditor({
     return /* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
       {
-        left: editor.cursorX - editor.viewportX + padLength + 1,
+        left: editor.cursorX - editor.viewportX + padLength + 1 + 1,
         top: editor.cursorY - editor.viewportY,
         width: 1,
         height: 1,
@@ -863,16 +865,16 @@ function CodeBufferEditor({
     const { cursorY, cursorX } = editor.getCursorWindowCoords();
     return Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber];
-      const lineNumberText = `${String(lineNumber).padStart(padLength, "0")}`;
+      const lineNumberText = `${String(lineNumber).padStart(padLength, " ")}`;
       const lineNumberBox = /* @__PURE__ */ jsxRuntime_js.jsx(
         "box",
         {
           left: 0,
           top: k,
-          width: padLength,
+          width: padLength + 1,
           height: 1,
           style: { bg: "#222222", fg: "#33aabb", inverse: editor.cursorY == lineNumber },
-          content: lineNumberText
+          content: lineNumberText + "│"
         },
         `${lineNumber}-lineNumber`
       );
@@ -881,7 +883,7 @@ function CodeBufferEditor({
           /* @__PURE__ */ jsxRuntime_js.jsx(
             "box",
             {
-              left: t.x + padLength + 1,
+              left: t.x + padLength + 1 + 1,
               top: t.y - editor.viewportY,
               width: t.text.length,
               height: 1,
@@ -945,8 +947,10 @@ function CodeBufferEditor({
         break;
       default:
         if (ch && ch.length > 0) {
-          editor.insert(ch).save();
-          onChange();
+          if (key.name && key.name.length === 1) {
+            editor.insert(ch).save();
+            onChange();
+          }
         }
     }
     setEditor(editor.copy());
@@ -1125,18 +1129,98 @@ function App(props) {
             2
           )
         ] }) }),
-        /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Git", children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Git", children: /* @__PURE__ */ jsxRuntime_js.jsx(
-          "list",
-          {
-            scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
-            items: gitStatus,
-            keys: true,
-            mouse: true,
-            style: { selected: { bg: "blue" } },
-            onSelect: onFilePathSelect,
-            label: "Status"
-          }
-        ) }, 3) })
+        /* @__PURE__ */ jsxRuntime_js.jsxs(Tab, { name: "Git", children: [
+          /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Git", height: 9, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+            "list",
+            {
+              mouse: true,
+              keys: true,
+              input: true,
+              clickable: true,
+              focused: true,
+              scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
+              items: gitStatus,
+              keys: true,
+              mouse: true,
+              style: { selected: { bg: "blue" } },
+              onSelect: onFilePathSelect,
+              label: "Status"
+            }
+          ) }, 3),
+          /* @__PURE__ */ jsxRuntime_js.jsx(
+            "textarea",
+            {
+              top: 9,
+              height: 9,
+              mouse: true,
+              keys: true,
+              input: true,
+              clickable: true,
+              focused: true,
+              label: "Comment",
+              border: { type: "line" },
+              inputOnFocus: true
+            },
+            4
+          ),
+          /* @__PURE__ */ jsxRuntime_js.jsx(
+            "button",
+            {
+              top: 18,
+              left: "0%",
+              height: 3,
+              width: "48%",
+              mouse: true,
+              keys: true,
+              input: true,
+              clickable: true,
+              focused: true,
+              valign: "middle",
+              align: "center",
+              style: { bg: "#ffaa00", fg: "#333333" },
+              border: { type: "line", bg: "#ffaa00", fg: "#333333" },
+              content: "commit"
+            },
+            5
+          ),
+          /* @__PURE__ */ jsxRuntime_js.jsx(
+            "button",
+            {
+              top: 18,
+              left: "52%",
+              height: 3,
+              width: "48%",
+              mouse: true,
+              keys: true,
+              input: true,
+              clickable: true,
+              focused: true,
+              valign: "middle",
+              align: "center",
+              style: { bg: "#ffaa00", fg: "#333333" },
+              border: { type: "line", bg: "#ffaa00", fg: "#333333" },
+              content: "revert"
+            },
+            5
+          ),
+          /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Commits", top: 21, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+            "list",
+            {
+              mouse: true,
+              keys: true,
+              input: true,
+              clickable: true,
+              focused: true,
+              scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
+              items: gitStatus,
+              keys: true,
+              mouse: true,
+              style: { selected: { bg: "blue" } },
+              onSelect: onFilePathSelect,
+              label: "Status"
+            }
+          ) }, 3)
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntime_js.jsx(
         CodeBufferEditor,
