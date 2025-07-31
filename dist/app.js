@@ -976,6 +976,9 @@ function CodeBufferEditor({
       default:
         if (ch && ch.length > 0) {
           if (key.name && key.name.length === 1) {
+            editor.insert(key.name).save();
+            onChange();
+          } else {
             editor.insert(ch).save();
             onChange();
           }
