@@ -1,5 +1,5 @@
 // components/GitPanel.js
-import React, {Component, useEffect, useState} from 'react';
+import React, {Component, useEffect, useRef, useState} from 'react';
 import {
     ListElement as list,
     BoxElement as box,
@@ -10,6 +10,7 @@ import {
 import {Workspace} from "./services/WorkspaceService";
 import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,gitStage,gitUnstage,gitCommit,gitPush} from "./services/GitService";
 import ModalDialog from "./ModalDialog";
+import {SimpleTextEditor} from "./SimpleTextEditor";
 
 export function GitPanel({
         rootDir,
@@ -17,13 +18,12 @@ export function GitPanel({
         ...boxProps
     }) {
     const [message, setMessage] = useState(false);
-    const [workspace, setWorkspace]   = useState(new Workspace());
     const [gitStatus, setGitStatus] = useState([]);
     const [gitCommits, setGitCommits] = useState([]);
     const [gitBranch, setGitBranch] = useState("");
     const [gitCurrentTag, setGitCurrentTag] = useState("");
     const [gitRemotes, setGitRemotes] = useState([]);
-    const [commitMessage, setCommitMessage] = useState("");
+    const [commitMessage, setCommitMessage] = useState(null);
     const sortFilesFn = (a,b) => a.substring(3)>b.substring(3)?1:(a.substring(3)===b.substring(3)?0:-1)
     async function refreshAll() {
         const result = await Promise.all([
@@ -78,11 +78,8 @@ export function GitPanel({
     };
     const onCommitSelect = (event) => {
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
-        setCommitMessage(event.content.substring(9))
-    };
-    const onCommitMessageChanged = (event) => {
-        // setMessage(`commit selected ${event.content} ${process.cwd()}`)
-        setCommitMessage(event.content)
+        const msg=event.content.substring(9)
+        setCommitMessage(msg)
     };
     const commitStagedFiles = (event) => {
         if(commitMessage.trim() === ""){
@@ -96,6 +93,9 @@ export function GitPanel({
         }
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
     };
+    const commitMessageChanged=(bufferEditor) => {
+        setCommitMessage(bufferEditor.buffer)
+    }
     const status = `{cyan-fg}${(gitRemotes[0]||{}).name}{/cyan-fg}/{red-fg}${gitBranch}{/red-fg}({yellow-fg}${gitCurrentTag}{/yellow-fg})`
     const statusLen=`${(gitRemotes[0]||{}).name}/${gitBranch}(${gitCurrentTag})`.length
     return (
@@ -115,17 +115,12 @@ export function GitPanel({
             </box>
             <box content={status} top={0} left={9} width={statusLen} height={1} tags={true}/>
             <box content={rootDir} top={8} left={2} width={rootDir.length} height={1}/>
-            <textarea
+            <SimpleTextEditor
                 top={9}  height={9}
-                input
-                focused
-                scrollable
-                alwaysScroll
-                content={commitMessage}
                 label={'Commit Message'}
+                initialText={commitMessage}
                 border={{ type: 'line' }}
-                inputOnFocus={true}
-                onChange={onCommitMessageChanged}
+                onChange={commitMessageChanged}
             />
             <button
                 top={18} left={'0%'} height={3} width={'48%'}
@@ -138,7 +133,7 @@ export function GitPanel({
                 align={'center'}
                 style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
                 onClick={commitStagedFiles}
-                content={'\ncommit\n'}
+                content={'\ncommit\n'+commitMessage}
             />
             <button
                 top={18} left={'52%'} height={3} width={'48%'}
