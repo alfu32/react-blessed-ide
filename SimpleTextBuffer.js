@@ -78,6 +78,9 @@ export class SimpleTextBuffer {
             x:linesTo[linesTo.length-1].length
         }
     }
+    setCursor(x,y){
+        this.cursorIndex=this.cursorCoordsToIndex({x,y})
+    }
 
     /**
      *

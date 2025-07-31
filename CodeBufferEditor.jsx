@@ -169,7 +169,6 @@ export function CodeBufferEditor({
       case 'wheeldown':editor.moveCursorDown();setEditor(editor.copy());break;
       default: throw new Error(safeStringify(event)); break;
     }
-
   }
   return (
     <box
