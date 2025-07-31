@@ -14,7 +14,7 @@ export function VTabs({ children, ...boxProps}) {
         .filter(child => React.isValidElement(child) && child.props.name);
 
     const [activeIndex, setActiveIndex] = useState(0);
-    const tabSelectorStyle={fg:'#ffaa00',bg:'#333333'}
+    const tabSelectorStyle={fg:'#ffaa00',bg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}
 
     return (
         <box {...boxProps}>

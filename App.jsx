@@ -12,6 +12,7 @@ import {TextEditor} from "./TextEditor";
 import {CodeEditor} from "./CodeEditor";
 import {LayoutCatcher} from "./LayoutCatcher";
 import {CodeBufferEditor} from './CodeBufferEditor'
+import {GitPanel} from "./GitPanel";
 
 
 export function App(props){
@@ -38,7 +39,6 @@ export function App(props){
           //   td
           // })}`)
         })
-    getStatus(rootDir).then(setGitStatus)
   }, []);
 
 
@@ -126,70 +126,72 @@ export function App(props){
                   </Grid>
               </Tab>
               <Tab name='Git'>
-                  <box key={3} label={'Git Status'} height={9} border={{ type: 'line' }}>
+                  <GitPanel rootDir={rootDir}/>
+                  {/* <box key={3} label={'Git Status'} height={9} border={{type: 'line'}}>
                       <list
                           mouse
                           keys
                           input
                           clickable
                           focused
-                          scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
+                          scrollbar={{ch: '=', track: {fg: 'blue', bg: 'grey'}}}
                           items={gitStatus}
                           keys mouse style={{selected: {bg: 'blue'}}}
                           onSelect={onFilePathSelect}
                           label={'Status'}
                       />
                   </box>
-                  <textarea
-                      key={4} top={9}  height={9}
+                      <textarea
+                      key={4} top={9} height={9}
+                              mouse
+                              keys
+                              input
+                              clickable
+                              focused
+                              label={'Comment'}
+                              border={{type: 'line'}}
+                              inputOnFocus={true}/>
+              <button
+                  key={5} top={18} left={'0%'} height={3} width={'48%'}
+                  mouse
+                  keys
+                  input
+                  clickable
+                  focused
+                  valign={'middle'}
+                  align={'center'}
+                  style={{bg: '#ffaa00', fg: '#333333'}}
+                  border={{type: 'line', bg: '#ffaa00', fg: '#333333'}}
+                  content={'commit'}
+              />
+              <button
+                  key={5} top={18} left={'52%'} height={3} width={'48%'}
+                  mouse
+                  keys
+                  input
+                  clickable
+                  focused
+                  valign={'middle'}
+                  align={'center'}
+                  style={{bg: '#ffaa00', fg: '#333333'}}
+                  border={{type: 'line', bg: '#ffaa00', fg: '#333333'}}
+                  content={'revert'}
+              />
+              <box key={3} label={'Commits'} top={21} border={{type: 'line'}}>
+                  <list
                       mouse
                       keys
                       input
                       clickable
                       focused
-                      label={'Comment'}
-                      border={{ type: 'line' }}
-                      inputOnFocus={true}/>
-                  <button
-                      key={5} top={18} left={'0%'} height={3} width={'48%'}
-                      mouse
-                      keys
-                      input
-                      clickable
-                      focused
-                      valign={'middle'}
-                      align={'center'}
-                      style={{bg:'#ffaa00',fg:'#333333'}}
-                      border={{ type: 'line',bg:'#ffaa00',fg:'#333333' }}
-                      content={'commit'}
+                      scrollbar={{ch: '=', track: {fg: 'blue', bg: 'grey'}}}
+                      items={gitStatus}
+                      keys mouse style={{selected: {bg: 'blue'}}}
+                      onSelect={onFilePathSelect}
+                      label={'Status'}
                   />
-                  <button
-                      key={5} top={18} left={'52%'} height={3} width={'48%'}
-                      mouse
-                      keys
-                      input
-                      clickable
-                      focused
-                      valign={'middle'}
-                      align={'center'}
-                      style={{bg:'#ffaa00',fg:'#333333'}}
-                      border={{ type: 'line',bg:'#ffaa00',fg:'#333333' }}
-                      content={'revert'}
-                  />
-                  <box key={3} label={'Commits'} top={21} border={{ type: 'line' }}>
-                      <list
-                          mouse
-                          keys
-                          input
-                          clickable
-                          focused
-                          scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
-                          items={gitStatus}
-                          keys mouse style={{selected: {bg: 'blue'}}}
-                          onSelect={onFilePathSelect}
-                          label={'Status'}
-                      />
-                  </box>
+              </box>*/
+              }
               </Tab>
           </VTabs>
           {/* Center panel */}

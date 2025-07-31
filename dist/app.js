@@ -14,7 +14,35 @@ const util = require("util");
 const cp = require("child_process");
 const exec = util.promisify(cp.exec);
 async function getStatus(cwd) {
-  const { stdout } = await exec("git status --porcelain", { cwd });
+  const { stdout } = await exec(`git status --porcelain`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function getCommits(cwd) {
+  const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=8 | tee`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function getBranch(cwd) {
+  const { stdout } = await exec(`git branch --show-current`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function getCurrentTag(cwd) {
+  const { stdout } = await exec(`git describe --tags --exact-match 2>/dev/null || echo "none"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function getRemotes(cwd) {
+  const { stdout } = await exec(`git remote -v`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitStage(cwd, filePath) {
+  const { stdout } = await exec(`git add -f "${filePath}"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitUnstage(cwd, filePath) {
+  const { stdout } = await exec(`git restore --staged "${filePath}"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitCommit(cwd, commitMessage) {
+  const { stdout } = await exec(`git commit -m "${commitMessage}"`, { cwd });
   return stdout.split("\n").filter(Boolean);
 }
 class INode {
@@ -394,7 +422,7 @@ function FolderPickerDialog({
 function VTabs({ children, ...boxProps }) {
   const tabs = React.Children.toArray(children).filter((child) => React.isValidElement(child) && child.props.name);
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const tabSelectorStyle = { fg: "#ffaa00", bg: "#333333" };
+  const tabSelectorStyle = { fg: "#ffaa00", bg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } };
   return /* @__PURE__ */ jsxRuntime_js.jsx("box", { ...boxProps, children: /* @__PURE__ */ jsxRuntime_js.jsxs(reactBlessedContrib17.Grid, { rows: 1, cols: 6, hideBorder: true, children: [
     /* @__PURE__ */ jsxRuntime_js.jsx("box", { row: 0, col: 0, rowSpan: 1, colSpan: 1, children: tabs.map((tab, i) => {
       return /* @__PURE__ */ jsxRuntime_js.jsx(
@@ -1023,6 +1051,180 @@ function CodeBufferEditor({
     }
   );
 }
+function GitPanel({
+  rootDir,
+  onFileSelect,
+  ...boxProps
+}) {
+  const [message, setMessage] = React.useState(false);
+  const [workspace, setWorkspace] = React.useState(new Workspace$1());
+  const [gitStatus, setGitStatus] = React.useState([]);
+  const [gitCommits, setGitCommits] = React.useState([]);
+  const [gitBranch, setGitBranch] = React.useState("");
+  const [gitCurrentTag, setGitCurrentTag] = React.useState("");
+  const [gitRemotes, setGitRemotes] = React.useState([]);
+  const [commitMessage, setCommitMessage] = React.useState("");
+  const sortFilesFn = (a, b) => a.substring(3) > b.substring(3) ? 1 : a.substring(3) === b.substring(3) ? 0 : -1;
+  async function refreshAll() {
+    const result = await Promise.all([
+      getStatus(rootDir),
+      getCommits(rootDir),
+      getBranch(rootDir),
+      getCurrentTag(rootDir),
+      getRemotes(rootDir)
+    ]);
+    setGitStatus(Array.from(result[0]).toSorted(sortFilesFn));
+    setGitCommits(result[1]);
+    setGitBranch(result[2]);
+    setGitCurrentTag(result[3]);
+    setGitRemotes(Array.from(result[4]).map((v) => {
+      const tk = v.split(/\s+/gi);
+      return {
+        name: tk[0],
+        url: tk[1],
+        kind: tk[2]
+      };
+    }));
+  }
+  React.useEffect(() => {
+    refreshAll();
+  }, []);
+  const onFilePathSelect = (event) => {
+    const staged = event.content.substring(0, 1);
+    const changed = event.content.substring(1, 2);
+    const file = event.content.substring(3);
+    if (staged === " " || staged === "?" || changed !== " " && staged === changed) {
+      gitStage(rootDir, file).then((result) => {
+        return getStatus(rootDir);
+      }).then((result) => {
+        setGitStatus(result.toSorted(sortFilesFn));
+      }).catch((error) => {
+        setMessage(`git stage "${file} error (${error})"`);
+      });
+    } else if (changed === " " || changed === "?") {
+      gitUnstage(rootDir, file).then((result) => {
+        return getStatus(rootDir);
+      }).then((result) => {
+        setGitStatus(result.toSorted(sortFilesFn));
+      }).catch((error) => {
+        setMessage(`git unstaged "${file} error (${error})"`);
+      });
+    }
+  };
+  const onCommitSelect = (event) => {
+    setCommitMessage(event.content.substring(9));
+  };
+  const onCommitMessageChanged = (event) => {
+    setCommitMessage(event.content);
+  };
+  const commitStagedFiles = (event) => {
+    if (commitMessage.trim() === "") {
+      setMessage(`commit message cannot be empty`);
+    } else {
+      gitCommit(rootDir, commitMessage).then((result) => {
+        return refreshAll();
+      }).then((result) => {
+        setMessage(`git commit -m "${commitMessage}"`);
+      });
+    }
+  };
+  const status = `{cyan-fg}${(gitRemotes[0] || {}).name}{/cyan-fg}/{red-fg}${gitBranch}{/red-fg}({yellow-fg}${gitCurrentTag}{/yellow-fg})`;
+  const statusLen = `${(gitRemotes[0] || {}).name}/${gitBranch}(${gitCurrentTag})`.length;
+  return /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: `Status`, height: 9, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+      "list",
+      {
+        mouse: true,
+        keys: true,
+        input: true,
+        clickable: true,
+        focused: true,
+        scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
+        items: gitStatus,
+        style: { selected: { bg: "blue" } },
+        onSelect: onFilePathSelect
+      }
+    ) }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: status, top: 0, left: 9, width: statusLen, height: 1, tags: true }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: rootDir, top: 8, left: 2, width: rootDir.length, height: 1 }),
+    /* @__PURE__ */ jsxRuntime_js.jsx(
+      "textarea",
+      {
+        top: 9,
+        height: 9,
+        input: true,
+        focused: true,
+        scrollable: true,
+        alwaysScroll: true,
+        content: commitMessage,
+        label: "Commit Message",
+        border: { type: "line" },
+        inputOnFocus: true,
+        onChange: onCommitMessageChanged
+      }
+    ),
+    /* @__PURE__ */ jsxRuntime_js.jsx(
+      "button",
+      {
+        top: 18,
+        left: "0%",
+        height: 3,
+        width: "48%",
+        mouse: true,
+        keys: true,
+        input: true,
+        clickable: true,
+        focused: true,
+        valign: "middle",
+        align: "center",
+        style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+        onClick: commitStagedFiles,
+        content: "\ncommit\n"
+      }
+    ),
+    /* @__PURE__ */ jsxRuntime_js.jsx(
+      "button",
+      {
+        top: 18,
+        left: "52%",
+        height: 3,
+        width: "48%",
+        mouse: true,
+        keys: true,
+        input: true,
+        clickable: true,
+        focused: true,
+        valign: "middle",
+        align: "center",
+        style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+        content: "\nrevert\n"
+      }
+    ),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Commits", top: 21, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+      "list",
+      {
+        mouse: true,
+        keys: true,
+        input: true,
+        clickable: true,
+        focused: true,
+        scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
+        items: gitCommits,
+        style: { selected: { bg: "blue" } },
+        onSelect: onCommitSelect,
+        label: "Status"
+      }
+    ) }),
+    message && /* @__PURE__ */ jsxRuntime_js.jsx(
+      ModalDialog,
+      {
+        title: "Message",
+        onClose: () => setMessage(false),
+        children: /* @__PURE__ */ jsxRuntime_js.jsx("text", { children: message })
+      }
+    )
+  ] });
+}
 function App(props) {
   const [message, setMessage] = React.useState(false);
   const [pickFolder, setPickFolder] = React.useState(false);
@@ -1042,11 +1244,7 @@ function App(props) {
       setWorkspace(wk);
       setTreeData(td);
     });
-    getStatus(rootDir).then(setGitStatus);
   }, []);
-  const onFilePathSelect = (event) => {
-    setMessage(`file path selected ${event.content} ${process.cwd()}`);
-  };
   const selectFile = (node) => {
     setSelectedFile(node.fullPath);
     const newOpenedFiles = { ...openedFiles };
@@ -1129,98 +1327,7 @@ function App(props) {
             2
           )
         ] }) }),
-        /* @__PURE__ */ jsxRuntime_js.jsxs(Tab, { name: "Git", children: [
-          /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Git Status", height: 9, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
-            "list",
-            {
-              mouse: true,
-              keys: true,
-              input: true,
-              clickable: true,
-              focused: true,
-              scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
-              items: gitStatus,
-              keys: true,
-              mouse: true,
-              style: { selected: { bg: "blue" } },
-              onSelect: onFilePathSelect,
-              label: "Status"
-            }
-          ) }, 3),
-          /* @__PURE__ */ jsxRuntime_js.jsx(
-            "textarea",
-            {
-              top: 9,
-              height: 9,
-              mouse: true,
-              keys: true,
-              input: true,
-              clickable: true,
-              focused: true,
-              label: "Comment",
-              border: { type: "line" },
-              inputOnFocus: true
-            },
-            4
-          ),
-          /* @__PURE__ */ jsxRuntime_js.jsx(
-            "button",
-            {
-              top: 18,
-              left: "0%",
-              height: 3,
-              width: "48%",
-              mouse: true,
-              keys: true,
-              input: true,
-              clickable: true,
-              focused: true,
-              valign: "middle",
-              align: "center",
-              style: { bg: "#ffaa00", fg: "#333333" },
-              border: { type: "line", bg: "#ffaa00", fg: "#333333" },
-              content: "commit"
-            },
-            5
-          ),
-          /* @__PURE__ */ jsxRuntime_js.jsx(
-            "button",
-            {
-              top: 18,
-              left: "52%",
-              height: 3,
-              width: "48%",
-              mouse: true,
-              keys: true,
-              input: true,
-              clickable: true,
-              focused: true,
-              valign: "middle",
-              align: "center",
-              style: { bg: "#ffaa00", fg: "#333333" },
-              border: { type: "line", bg: "#ffaa00", fg: "#333333" },
-              content: "revert"
-            },
-            5
-          ),
-          /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Commits", top: 21, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
-            "list",
-            {
-              mouse: true,
-              keys: true,
-              input: true,
-              clickable: true,
-              focused: true,
-              scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
-              items: gitStatus,
-              keys: true,
-              mouse: true,
-              style: { selected: { bg: "blue" } },
-              onSelect: onFilePathSelect,
-              label: "Status"
-            }
-          ) }, 3)
-        ] })
+        /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Git", children: /* @__PURE__ */ jsxRuntime_js.jsx(GitPanel, { rootDir }) })
       ] }),
       /* @__PURE__ */ jsxRuntime_js.jsx(
         CodeBufferEditor,

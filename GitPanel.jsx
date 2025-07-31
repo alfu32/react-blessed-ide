@@ -8,7 +8,7 @@ import {
     TextElement as text
 } from 'react-blessed';
 import {Workspace} from "./services/WorkspaceService";
-import {getStatus,getCommits,getBranch,getCurrentTag} from "./services/GitService";
+import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,gitStage,gitUnstage,gitCommit,gitPush} from "./services/GitService";
 import ModalDialog from "./ModalDialog";
 
 export function GitPanel({
@@ -22,30 +22,85 @@ export function GitPanel({
     const [gitCommits, setGitCommits] = useState([]);
     const [gitBranch, setGitBranch] = useState("");
     const [gitCurrentTag, setGitCurrentTag] = useState("");
-    useEffect(() => {
-        Promise.all([
+    const [gitRemotes, setGitRemotes] = useState([]);
+    const [commitMessage, setCommitMessage] = useState("");
+    const sortFilesFn = (a,b) => a.substring(3)>b.substring(3)?1:(a.substring(3)===b.substring(3)?0:-1)
+    async function refreshAll() {
+        const result = await Promise.all([
             getStatus(rootDir),
             getCommits(rootDir),
             getBranch(rootDir),
             getCurrentTag(rootDir),
+            getRemotes(rootDir),
         ])
-        .then((result)=> {
-            setGitStatus(result[0])
-            setGitCommits(result[1])
-            setGitBranch(result[2])
-            setGitCurrentTag(result[3])
-        })
+        setGitStatus(Array.from(result[0]).toSorted(sortFilesFn))
+        setGitCommits(result[1])
+        setGitBranch(result[2])
+        setGitCurrentTag(result[3])
+        setGitRemotes(Array.from(result[4]).map(v =>{
+            const tk = v.split(/\s+/gi)
+            return {
+                name: tk[0],
+                url: tk[1],
+                kind: tk[2],
+            }
+        }))
+    }
+    useEffect(() => {
+        refreshAll()
     }, []);
     const onFilePathSelect = (event) => {
-        setMessage(`file path selected ${event.content} ${process.cwd()}`)
+        const staged = event.content.substring(0,1)
+        const changed = event.content.substring(1,2)
+
+        const file = event.content.substring(3);
+        if (staged === ' ' || staged === '?' || (changed !== ' ' && staged === changed)) {
+            // setMessage(`git stage "${file}"`)
+            gitStage(rootDir, file).then(result => {
+                // setMessage(`git staged "${file} (${result})"`)
+                return getStatus(rootDir)
+            }).then(result => {
+                setGitStatus(result.toSorted(sortFilesFn))
+            }).catch(error => {
+                setMessage(`git stage "${file} error (${error})"`)
+            });
+        }else if (changed === ' ' || changed === '?') {
+            // setMessage(`git unstage "${file}"`)
+            gitUnstage(rootDir, file).then(result => {
+                // setMessage(`git unstaged "${file} (${result})"`)
+                return getStatus(rootDir)
+            }).then(result => {
+                setGitStatus(result.toSorted(sortFilesFn))
+            }).catch(error => {
+                setMessage(`git unstaged "${file} error (${error})"`)
+            });
+        }
     };
     const onCommitSelect = (event) => {
-        setMessage(`commit selected ${event.content} ${process.cwd()}`)
+        // setMessage(`commit selected ${event.content} ${process.cwd()}`)
+        setCommitMessage(event.content.substring(9))
     };
-
+    const onCommitMessageChanged = (event) => {
+        // setMessage(`commit selected ${event.content} ${process.cwd()}`)
+        setCommitMessage(event.content)
+    };
+    const commitStagedFiles = (event) => {
+        if(commitMessage.trim() === ""){
+            setMessage(`commit message cannot be empty`)
+        }else{
+            gitCommit(rootDir, commitMessage).then(result => {
+                return refreshAll()
+            }).then(result => {
+                setMessage(`git commit -m "${commitMessage}"`)
+            })
+        }
+        // setMessage(`commit selected ${event.content} ${process.cwd()}`)
+    };
+    const status = `{cyan-fg}${(gitRemotes[0]||{}).name}{/cyan-fg}/{red-fg}${gitBranch}{/red-fg}({yellow-fg}${gitCurrentTag}{/yellow-fg})`
+    const statusLen=`${(gitRemotes[0]||{}).name}/${gitBranch}(${gitCurrentTag})`.length
     return (
         <box {...boxProps}>
-            <box key={3} label={'Git'} height={9} border={{ type: 'line' }}>
+            <box label={`Status`} height={9} border={{ type: 'line' }}>
                 <list
                     mouse
                     keys
@@ -54,23 +109,26 @@ export function GitPanel({
                     focused
                     scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                     items={gitStatus}
-                    keys mouse style={{selected: {bg: 'blue'}}}
+                    style={{selected: {bg: 'blue'}}}
                     onSelect={onFilePathSelect}
-                    label={'Status'}
                 />
             </box>
+            <box content={status} top={0} left={9} width={statusLen} height={1} tags={true}/>
+            <box content={rootDir} top={8} left={2} width={rootDir.length} height={1}/>
             <textarea
-                key={4} top={9}  height={9}
-                mouse
-                keys
+                top={9}  height={9}
                 input
-                clickable
                 focused
-                label={'Comment'}
+                scrollable
+                alwaysScroll
+                content={commitMessage}
+                label={'Commit Message'}
                 border={{ type: 'line' }}
-                inputOnFocus={true}/>
+                inputOnFocus={true}
+                onChange={onCommitMessageChanged}
+            />
             <button
-                key={5} top={18} left={'0%'} height={3} width={'48%'}
+                top={18} left={'0%'} height={3} width={'48%'}
                 mouse
                 keys
                 input
@@ -78,12 +136,12 @@ export function GitPanel({
                 focused
                 valign={'middle'}
                 align={'center'}
-                style={{bg:'#ffaa00',fg:'#333333'}}
-                border={{ type: 'line',bg:'#ffaa00',fg:'#333333' }}
-                content={'commit'}
+                style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
+                onClick={commitStagedFiles}
+                content={'\ncommit\n'}
             />
             <button
-                key={5} top={18} left={'52%'} height={3} width={'48%'}
+                top={18} left={'52%'} height={3} width={'48%'}
                 mouse
                 keys
                 input
@@ -91,11 +149,10 @@ export function GitPanel({
                 focused
                 valign={'middle'}
                 align={'center'}
-                style={{bg:'#ffaa00',fg:'#333333'}}
-                border={{ type: 'line',bg:'#ffaa00',fg:'#333333' }}
-                content={'revert'}
+                style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
+                content={'\nrevert\n'}
             />
-            <box key={3} label={'Commits'} top={21} border={{ type: 'line' }}>
+            <box label={'Commits'} top={21} border={{ type: 'line' }}>
                 <list
                     mouse
                     keys
@@ -104,7 +161,7 @@ export function GitPanel({
                     focused
                     scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                     items={gitCommits}
-                    keys mouse style={{selected: {bg: 'blue'}}}
+                    style={{selected: {bg: 'blue'}}}
                     onSelect={onCommitSelect}
                     label={'Status'}
                 />
