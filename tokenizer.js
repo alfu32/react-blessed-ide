@@ -57,7 +57,7 @@ export const namedTokenizers={
         Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
     }},
     js:{name:'js',flags:'mg',definitions:{
-        Keyword:      {style: {fg:'magenta'},pattern:'\\b(from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b'},
+        Keyword:      {style: {fg:'magenta'},pattern:'\\b(as|from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b'},
         Number:       {style: {fg:'red'},pattern:'\\d+(?:\\.\\d+)?'},
         Comment:      {style: {fg:'#779977'},pattern:'//.*$'},
         // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
@@ -69,7 +69,7 @@ export const namedTokenizers={
     }},
     jsx:{name:'jsx',flags:'mg',definitions:{
         ReactToken:   {style: {fg:'#FFDD00'},pattern:'\\buse[A-Z][a-z]*\\b'},
-        Keyword:      {style: {fg:'magenta'},pattern:'\\b(from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b'},
+        Keyword:      {style: {fg:'magenta'},pattern:'\\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b'},
         JsxTag:       {style: {fg:'#FFDD00'},pattern:'\\<(\\/){0,1}[a-zA-Z-]*\\>'},
         Comment:      {style: {fg:'#779977'},pattern:'//.*$'},
         // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},

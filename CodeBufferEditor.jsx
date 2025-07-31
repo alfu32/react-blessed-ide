@@ -197,8 +197,8 @@ export function CodeBufferEditor({
       <box
         key={`status`}
         top={size.rows}
-        left={-1}
-        width={size.cols}
+        left={2}
+        width={size.cols-6}
         height={1}
         content={editor?.getStatus()}
         tags={false}
