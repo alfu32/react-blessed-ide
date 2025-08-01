@@ -15,7 +15,7 @@ import {CodeBufferEditor} from './CodeBufferEditor'
 import {GitPanel} from "./GitPanel";
 
 
-export function App(props){
+export function App(props){// Some Coment 
   const [message, setMessage] = useState(false);
   const [pickFolder, setPickFolder] = useState(false);
   const [currentEditorText, setCurrentEditorText] = useState('');

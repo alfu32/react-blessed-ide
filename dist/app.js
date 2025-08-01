@@ -532,8 +532,9 @@ const namedTokenizers = {
     Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()[\\]{}.,;]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" }
+    punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
   } },
   js: { name: "js", flags: "mg", definitions: {
     Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
@@ -542,9 +543,10 @@ const namedTokenizers = {
     // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()[\\]{}.,;]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
     Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" }
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
   } },
   jsx: { name: "jsx", flags: "mg", definitions: {
     ReactToken: { style: { fg: "#FFDD00" }, pattern: "\\buse[A-Z][a-z]*\\b" },
@@ -555,9 +557,10 @@ const namedTokenizers = {
     Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()[\\]{}.,;]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
     Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" }
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
   } },
   c: { name: "c", flags: "mg", definitions: {
     Keyword: { style: { fg: "magenta" }, pattern: "\\b(int|const|char|long|if|else|for|while|return|switch|case|break|continue)\\b" },
@@ -566,9 +569,10 @@ const namedTokenizers = {
     // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
     String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
     Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()[\\]{}.,;]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
     Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" }
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
   } }
 };
 function getTokenizer(name) {
@@ -1002,7 +1006,10 @@ function CodeBufferEditor({
         break;
       default:
         if (ch && ch.length > 0) {
-          if (key.name && key.name.length === 1) {
+          if (key.sequence && key.sequence.length === 1) {
+            editor.insert(key.sequence).save();
+            onChange();
+          } else if (key.name && key.name.length === 1) {
             editor.insert(key.name).save();
             onChange();
           } else {
