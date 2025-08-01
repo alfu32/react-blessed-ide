@@ -11,8 +11,13 @@ export class Semver {
      * @return {Semver}
      */
     static from(v){
-        const [major,minor,patch] = v.split('.')
-        return new Semver(major,minor,patch)
+        try {
+            const [major, minor, patch] = (v || '0.0.0').split('.')
+            return new Semver(major, minor, patch)
+        }catch(e){
+            const [major, minor, patch] = '0.0.0'.split('.')
+            return new Semver(major, minor, patch)
+        }
     }
     constructor(major,minor,patch) {
         this.major = major
@@ -38,7 +43,7 @@ export class Semver {
      * @return {Semver}
      */
     nextMinor(){
-        return new Semver(this.major,(this.minor+1).toString(), "0")
+        return new Semver(this.major,(parseInt(this.minor)+1).toString(), "0")
     }
     prevMinor(){
         let v = parseInt(this.minor)

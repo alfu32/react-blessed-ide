@@ -43,10 +43,10 @@ export function SemverControl({initial,onChange,...boxProps}){
     }
     return (<box {...boxProps}>
         <box mouse focused clickable onClick={decMajor} left={1} height={1} width={1}  content={'v'}/>
-        <box mouse focused clickable onClick={incMajor} left={2} height={1} width={1} content={semver.major}/>
-        <box mouse focused clickable onClick={decMinor} left={3} height={1} width={1}  content={'.'}/>
-        <box mouse focused clickable onClick={incMinor} left={4} height={1} width={1}  content={semver.minor}/>
-        <box mouse focused clickable onClick={decPatch} left={5} height={1} width={1} content={'.'}/>
-        <box mouse focused clickable onClick={incPatch} left={6} height={1} width={1} content={semver.patch}/>
+        <box mouse focused clickable onClick={incMajor} left={2} height={1} width={semver.major.length} content={semver.major}/>
+        <box mouse focused clickable onClick={decMinor} left={2+semver.major.length} height={1} width={1}  content={'.'}/>
+        <box mouse focused clickable onClick={incMinor} left={3+semver.major.length} height={1} width={semver.minor.length}  content={semver.minor}/>
+        <box mouse focused clickable onClick={decPatch} left={3+semver.major.length+semver.minor.length} height={1} width={1} content={'.'}/>
+        <box mouse focused clickable onClick={incPatch} left={4+semver.major.length+semver.minor.length} height={1} width={semver.patch.length} content={semver.patch}/>
     </box>)
 }
