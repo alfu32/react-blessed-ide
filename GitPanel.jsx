@@ -8,7 +8,7 @@ import {
     TextElement as text
 } from 'react-blessed';
 import {Workspace} from "./services/WorkspaceService";
-import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,getTags,gitStage,gitUnstage,gitCommit,gitPush} from "./services/GitService";
+import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,getTags,gitStage,gitUnstage,gitCommit,gitTag,gitPush} from "./services/GitService";
 import ModalDialog from "./ModalDialog";
 import {SimpleTextEditor} from "./SimpleTextEditor";
 import {SemverControl} from "./Semver.jsx";
@@ -105,10 +105,10 @@ export function GitPanel({
         if(commitMessage.trim() === ""){
             setMessage(`commit message cannot be empty`)
         }else{
-            gitCommit(rootDir, commitMessage).then(result => {
+            gitTag(rootDir, gitCurrentTag).then(result => {
                 return refreshAll()
             }).then(result => {
-                setMessage(`git commit -m "${commitMessage}"`)
+                setMessage(`git tag -m "${gitCurrentTag}"`)
             })
         }
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
@@ -117,6 +117,7 @@ export function GitPanel({
         if(commitMessage.trim() === ""){
             setMessage(`commit message cannot be empty`)
         }else{
+            setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`)
             gitPush(rootDir, gitRemotes[0],gitBranch).then(result => {
                 setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`)
             })

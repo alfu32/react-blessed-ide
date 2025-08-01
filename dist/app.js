@@ -57,8 +57,12 @@ async function gitCommit(cwd, commitMessage) {
   const { stdout } = await exec(`git commit -m "${commitMessage}"`, { cwd });
   return stdout.split("\n").filter(Boolean);
 }
+async function gitTag(cwd, tag) {
+  const { stdout } = await exec(`git tag "${tag}"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
 async function gitPush(cwd, remote, branch) {
-  const { stdout } = await exec(`git push ${remote} ${branch}`, { cwd });
+  const { stdout } = await exec(`git push "${remote}" "${branch}"`, { cwd });
   return stdout.split("\n").filter(Boolean);
 }
 class INode {
@@ -1463,6 +1467,9 @@ class Semver {
 }
 function SemverControl({ initial, onChange, ...boxProps }) {
   const [semver, setSemver] = React.useState(Semver.from(initial));
+  React.useEffect(() => {
+    setSemver(Semver.from(initial));
+  }, [initial]);
   const decMajor = () => {
     const newSemver = semver.prevMajor();
     onChange(newSemver);
@@ -1586,10 +1593,10 @@ function GitPanel({
     if (commitMessage.trim() === "") {
       setMessage(`commit message cannot be empty`);
     } else {
-      gitCommit(rootDir, commitMessage).then((result) => {
+      gitTag(rootDir, gitCurrentTag).then((result) => {
         return refreshAll();
       }).then((result) => {
-        setMessage(`git commit -m "${commitMessage}"`);
+        setMessage(`git tag -m "${gitCurrentTag}"`);
       });
     }
   };
@@ -1597,6 +1604,7 @@ function GitPanel({
     if (commitMessage.trim() === "") {
       setMessage(`commit message cannot be empty`);
     } else {
+      setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`);
       gitPush(rootDir, gitRemotes[0], gitBranch).then((result) => {
         setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`);
       });

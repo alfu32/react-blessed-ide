@@ -11,6 +11,9 @@ import {Semver} from "./Semver.js";
 
 export function SemverControl({initial,onChange,...boxProps}){
     const [semver, setSemver] = useState(Semver.from(initial));
+    useEffect(()=>{
+        setSemver(Semver.from(initial));
+    },[initial])
     const decMajor=()=>{
         const newSemver=semver.prevMajor()
         onChange(newSemver)

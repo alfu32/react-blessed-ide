@@ -46,7 +46,11 @@ export async function gitCommit(cwd,commitMessage) {
   const { stdout } = await exec(`git commit -m "${commitMessage}"`, { cwd });
   return stdout.split('\n').filter(Boolean);
 }
+export async function gitTag(cwd,tag) {
+  const { stdout } = await exec(`git tag "${tag}"`, { cwd });
+  return stdout.split('\n').filter(Boolean);
+}
 export async function gitPush(cwd,remote,branch) {
-  const { stdout } = await exec(`git push ${remote} ${branch}`, { cwd });
+  const { stdout } = await exec(`git push "${remote}" "${branch}"`, { cwd });
   return stdout.split('\n').filter(Boolean);
 }
