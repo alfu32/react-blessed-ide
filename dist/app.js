@@ -1820,6 +1820,11 @@ function App(props) {
                     const k = Object.keys(openedFiles)[idx];
                     const inode = openedFiles[k];
                     selectFile(inode);
+                  },
+                  onSelectItem: (_, idx) => {
+                    const k = Object.keys(openedFiles)[idx];
+                    const inode = openedFiles[k];
+                    selectFile(inode);
                   }
                 }
               )
