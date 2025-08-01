@@ -249,7 +249,31 @@ let Workspace$1 = class Workspace2 {
     return wks;
   }
 };
+function safeStringify(obj, space = void 0) {
+  const seen = /* @__PURE__ */ new WeakSet();
+  return JSON.stringify(obj, (key, value) => {
+    switch (key) {
+      // case "content": return "[content]"
+      case "screen":
+        return "[screen]";
+      case "parent":
+        return "[parent]";
+      case "lines":
+        return "[lines]";
+      case "children":
+        return "[children]";
+    }
+    if (typeof value === "object" && value !== null) {
+      if (seen.has(value)) {
+        return;
+      }
+      seen.add(value);
+    }
+    return value;
+  }, space);
+}
 function FileTree({ workspace, treeData, onDirSelect, onFileSelect, label }) {
+  const [selected, setSelected] = React.useState(null);
   let lines = (treeData || []).map((v, i, a) => {
     return v.toText();
   });
@@ -258,7 +282,11 @@ function FileTree({ workspace, treeData, onDirSelect, onFileSelect, label }) {
     if (node.type.indexOf("d") > -1) {
       onDirSelect(node);
     } else {
-      onFileSelect(node);
+      if (selected !== null && selected === node) {
+        onFileSelect(node);
+      } else {
+        setSelected(node);
+      }
     }
   };
   return (
@@ -266,17 +294,18 @@ function FileTree({ workspace, treeData, onDirSelect, onFileSelect, label }) {
     //     <text>{workspacePath}</text>
     //     <text>{JSON.stringify(items,null,' ')}</text>
     // </>
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { label, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: `${label}-${safeStringify(selected)}`, children: /* @__PURE__ */ jsxRuntime_js.jsx(
       "list",
       {
         scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
-        top: 0,
+        top: 1,
         bottom: 1,
         items: lines,
         keys: true,
         mouse: true,
         style: { selected: { bg: "blue" } },
         onSelect: itemSelect,
+        onSelectItem: itemSelect,
         label
       }
     ) })
@@ -795,29 +824,6 @@ class MemoryBufferEditor {
     json.cursor[`${this.cursorY}-${this.viewportY}`] = this.cursorY - this.viewportY;
     return JSON.stringify(json).replace(/"/gi, "");
   }
-}
-function safeStringify(obj, space = void 0) {
-  const seen = /* @__PURE__ */ new WeakSet();
-  return JSON.stringify(obj, (key, value) => {
-    switch (key) {
-      // case "content": return "[content]"
-      case "screen":
-        return "[screen]";
-      case "parent":
-        return "[parent]";
-      case "lines":
-        return "[lines]";
-      case "children":
-        return "[children]";
-    }
-    if (typeof value === "object" && value !== null) {
-      if (seen.has(value)) {
-        return;
-      }
-      seen.add(value);
-    }
-    return value;
-  }, space);
 }
 function CodeBufferEditor({
   filePath,
@@ -1623,7 +1629,7 @@ function GitPanel({
         items: gitStatus,
         style: { selected: { bg: "blue" } },
         onSelect: onFilePathSelect,
-        onClick: true
+        onSelectItem: onFilePathSelect
       }
     ) }),
     /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: status, top: 0, left: 16, width: statusLen, height: 1, tags: true }),
@@ -1725,6 +1731,7 @@ tag ${gitCurrentTag}
         scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
         items: gitCommits,
         style: { selected: { bg: "blue" } },
+        onSelect: onCommitSelect,
         onSelectItem: onCommitSelect,
         label: "Status"
       }

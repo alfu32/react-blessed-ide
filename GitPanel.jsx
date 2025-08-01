@@ -136,7 +136,7 @@ export function GitPanel({
                     items={gitStatus}
                     style={{selected: {bg: 'blue'}}}
                     onSelect={onFilePathSelect}
-                    onClick
+                    onSelectItem={onFilePathSelect}
                 />
             </box>
             <box content={status} top={0} left={16} width={statusLen} height={1} tags={true}/>
@@ -207,6 +207,7 @@ export function GitPanel({
                     scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                     items={gitCommits}
                     style={{selected: {bg: 'blue'}}}
+                    onSelect={onCommitSelect}
                     onSelectItem={onCommitSelect}
                     label={'Status'}
                 />
