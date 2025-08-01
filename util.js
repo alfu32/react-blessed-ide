@@ -2,7 +2,7 @@ export function safeStringify(obj,space=undefined) {
     const seen = new WeakSet();
     return JSON.stringify(obj, (key, value) => {
         switch(key){
-            case "content": return "[content]"
+            // case "content": return "[content]"
             case "screen": return "[screen]"
             case "parent": return "[parent]"
             case "lines": return "[lines]"

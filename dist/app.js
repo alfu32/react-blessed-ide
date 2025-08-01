@@ -796,8 +796,7 @@ function safeStringify(obj, space = void 0) {
   const seen = /* @__PURE__ */ new WeakSet();
   return JSON.stringify(obj, (key, value) => {
     switch (key) {
-      case "content":
-        return "[content]";
+      // case "content": return "[content]"
       case "screen":
         return "[screen]";
       case "parent":
