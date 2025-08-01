@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const ignore = require("ignore");
 const reactBlessedContrib17 = require("react-blessed-contrib-17");
+require("vite");
 require("blessed/lib/widgets/message.js");
 const util = require("util");
 const cp = require("child_process");
@@ -18,8 +19,15 @@ async function getStatus(cwd) {
   return stdout.split("\n").filter(Boolean);
 }
 async function getCommits(cwd) {
-  const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=8 | tee`, { cwd });
-  return stdout.split("\n").filter(Boolean);
+  const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=40 | tee`, { cwd });
+  const lines = stdout.split("\n").filter(Boolean);
+  return await Promise.all(lines.map(async (v) => {
+    v.split(/\s/gi);
+    const id = v.substring(0, 40);
+    const message = v.substring(41);
+    const { stdout: tags } = await exec(`git tag --points-at ${id}`, { cwd });
+    return `${id.substring(0, 8)}│${(tags ? tags.trim("\n") : "").padEnd(9, " ")}│${message.trim("\n")}`;
+  }));
 }
 async function getBranch(cwd) {
   const { stdout } = await exec(`git branch --show-current`, { cwd });
@@ -33,6 +41,10 @@ async function getRemotes(cwd) {
   const { stdout } = await exec(`git remote -v`, { cwd });
   return stdout.split("\n").filter(Boolean);
 }
+async function getTags(cwd) {
+  const { stdout } = await exec(`git remote -v`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
 async function gitStage(cwd, filePath) {
   const { stdout } = await exec(`git add -f "${filePath}"`, { cwd });
   return stdout.split("\n").filter(Boolean);
@@ -43,6 +55,10 @@ async function gitUnstage(cwd, filePath) {
 }
 async function gitCommit(cwd, commitMessage) {
   const { stdout } = await exec(`git commit -m "${commitMessage}"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitPush(cwd, remote, branch) {
+  const { stdout } = await exec(`git push ${remote} ${branch}`, { cwd });
   return stdout.split("\n").filter(Boolean);
 }
 class INode {
@@ -1225,7 +1241,7 @@ class SimpleTextBuffer {
    * @return {SimpleTextBuffer}
    */
   moveCursorRight() {
-    if (this.cursorIndex < this.buffer.length - 1) {
+    if (this.cursorIndex < this.buffer.length) {
       this.cursorIndex += 1;
       this._dispatchEvents("cursorChanged", this);
     }
@@ -1248,7 +1264,7 @@ class SimpleTextBuffer {
   toEnd() {
     let { x, y } = this.cursorIndexToCoords(this.cursorIndex);
     const line = this.buffer.split("\n")[y];
-    this.cursorIndex = this.cursorCoordsToIndex({ x: line.length - 1, y });
+    this.cursorIndex = this.cursorCoordsToIndex({ x: line.length, y });
     this._dispatchEvents("cursorChanged", this);
     return this;
   }
@@ -1257,12 +1273,14 @@ class SimpleTextBuffer {
    * @return {SimpleTextBuffer}
    */
   backspace() {
-    this.cursorIndex -= 1;
-    const before = this.buffer.substring(0, this.cursorIndex + 1);
-    const after = this.buffer.substring(this.cursorIndex + 2);
-    this.buffer = before + after;
-    this._dispatchEvents("bufferChanged", this);
-    this._dispatchEvents("cursorChanged", this);
+    if (this.cursorIndex > 0) {
+      this.cursorIndex -= 1;
+      this._dispatchEvents("cursorChanged", this);
+      const before = this.buffer.substring(0, this.cursorIndex);
+      const after = this.buffer.substring(this.cursorIndex + 1);
+      this.buffer = before + after;
+      this._dispatchEvents("bufferChanged", this);
+    }
     return this;
   }
   /**
@@ -1282,8 +1300,8 @@ class SimpleTextBuffer {
    */
   insert(ch) {
     this.cursorIndex += 1;
-    const before = this.buffer.substring(0, this.cursorIndex);
-    const after = this.buffer.substring(this.cursorIndex);
+    const before = this.buffer.substring(0, this.cursorIndex - 1);
+    const after = this.buffer.substring(this.cursorIndex - 1);
     this.buffer = before + ch + after;
     this._dispatchEvents("bufferChanged", this);
     this._dispatchEvents("cursorChanged", this);
@@ -1302,8 +1320,15 @@ class SimpleTextBuffer {
 }
 function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
   const boxRef = React.useRef(null);
-  const [editor, setEditor] = React.useState(new SimpleTextBuffer("... commit message"));
+  const [editor, setEditor] = React.useState(new SimpleTextBuffer(initialText || "... commit message"));
   let changedTimeout = 0;
+  React.useEffect(() => {
+    if (!editor) {
+      return;
+    }
+    editor.buffer = initialText || "... commit msg";
+    setEditor(editor.copy());
+  }, [initialText]);
   const internalOnKeyPress = (ch, key) => {
     editor.onKey(ch, key);
     clearTimeout(changedTimeout);
@@ -1340,7 +1365,7 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
         left: x,
         width: 1,
         height: 1,
-        style: { fg: "#333333", bg: "#775500", underline: true },
+        style: { inverse: true, underline: true },
         content
       },
       `editor-cursor-${Date.now()}`
@@ -1370,6 +1395,108 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
     }
   );
 }
+class Semver {
+  major = 0;
+  minor = 0;
+  patch = 0;
+  /**
+   *
+   * @param {string} v
+   * @return {Semver}
+   */
+  static from(v) {
+    const [major, minor, patch] = v.split(".");
+    return new Semver(major, minor, patch);
+  }
+  constructor(major, minor, patch) {
+    this.major = major;
+    this.minor = minor;
+    this.patch = patch;
+  }
+  /**
+   *
+   * @return {Semver}
+   */
+  nextMajor() {
+    return new Semver((parseInt(this.major) + 1).toString(), "0", "0");
+  }
+  prevMajor() {
+    let v = parseInt(this.major);
+    v = v > 0 ? v - 1 : v;
+    return new Semver(v.toString(), "0", "0");
+  }
+  /**
+   *
+   * @return {Semver}
+   */
+  nextMinor() {
+    return new Semver(this.major, (this.minor + 1).toString(), "0");
+  }
+  prevMinor() {
+    let v = parseInt(this.minor);
+    v = v > 0 ? v - 1 : v;
+    return new Semver(this.major, v.toString(), "0");
+  }
+  /**
+   *
+   * @return {Semver}
+   */
+  nextPatch() {
+    return new Semver(this.major, this.minor, (parseInt(this.patch) + 1).toString());
+  }
+  prevPatch() {
+    let v = parseInt(this.patch);
+    v = v > 0 ? v - 1 : v;
+    return new Semver(this.major, this.minor, v.toString());
+  }
+  toString() {
+    return `${this.major}.${this.minor}.${this.patch}`;
+  }
+  copy() {
+    return new Semver(this.major, this.minor, this.patch);
+  }
+}
+function SemverControl({ initial, onChange, ...boxProps }) {
+  const [semver, setSemver] = React.useState(Semver.from(initial));
+  const decMajor = () => {
+    const newSemver = semver.prevMajor();
+    onChange(newSemver);
+    setSemver(newSemver);
+  };
+  const incMajor = () => {
+    const newSemver = semver.nextMajor();
+    onChange(newSemver);
+    setSemver(newSemver);
+  };
+  const decMinor = () => {
+    const newSemver = semver.prevMinor();
+    onChange(newSemver);
+    setSemver(newSemver);
+  };
+  const incMinor = () => {
+    const newSemver = semver.nextMinor();
+    onChange(newSemver);
+    setSemver(newSemver);
+  };
+  const decPatch = () => {
+    const newSemver = semver.prevPatch();
+    onChange(newSemver);
+    setSemver(newSemver);
+  };
+  const incPatch = () => {
+    const newSemver = semver.nextPatch();
+    onChange(newSemver);
+    setSemver(newSemver);
+  };
+  return /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: decMajor, left: 1, height: 1, width: 1, content: "v" }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incMajor, left: 2, height: 1, width: 1, content: semver.major }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: decMinor, left: 3, height: 1, width: 1, content: "." }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incMinor, left: 4, height: 1, width: 1, content: semver.minor }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: decPatch, left: 5, height: 1, width: 1, content: "." }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incPatch, left: 6, height: 1, width: 1, content: semver.patch })
+  ] });
+}
 function GitPanel({
   rootDir,
   onFileSelect,
@@ -1389,7 +1516,8 @@ function GitPanel({
       getCommits(rootDir),
       getBranch(rootDir),
       getCurrentTag(rootDir),
-      getRemotes(rootDir)
+      getRemotes(rootDir),
+      getTags(rootDir)
     ]);
     setGitStatus(Array.from(result[0]).toSorted(sortFilesFn));
     setGitCommits(result[1]);
@@ -1430,7 +1558,7 @@ function GitPanel({
     }
   };
   const onCommitSelect = (event) => {
-    const msg = event.content.substring(9);
+    const msg = event.content.substring(19);
     setCommitMessage(msg);
   };
   const commitStagedFiles = (event) => {
@@ -1441,6 +1569,15 @@ function GitPanel({
         return refreshAll();
       }).then((result) => {
         setMessage(`git commit -m "${commitMessage}"`);
+      });
+    }
+  };
+  const pushCommits = (event) => {
+    if (commitMessage.trim() === "") {
+      setMessage(`commit message cannot be empty`);
+    } else {
+      gitPush(rootDir, gitRemotes[0], gitBranch).then((result) => {
+        setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`);
       });
     }
   };
@@ -1464,7 +1601,20 @@ function GitPanel({
         onSelect: onFilePathSelect
       }
     ) }),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: status, top: 0, left: 9, width: statusLen, height: 1, tags: true }),
+    /* @__PURE__ */ jsxRuntime_js.jsx(
+      SemverControl,
+      {
+        top: 0,
+        left: 8,
+        width: 6,
+        height: 1,
+        initial: "1.2.3",
+        onChange: (s) => {
+          setMessage(s.toString());
+        }
+      }
+    ),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: status, top: 0, left: 16, width: statusLen, height: 1, tags: true }),
     /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: rootDir, top: 8, left: 2, width: rootDir.length, height: 1 }),
     /* @__PURE__ */ jsxRuntime_js.jsx(
       SimpleTextEditor,
@@ -1511,7 +1661,8 @@ function GitPanel({
         valign: "middle",
         align: "center",
         style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
-        content: "\nrevert\n"
+        onClick: pushCommits,
+        content: "\npush\n"
       }
     ),
     /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Commits", top: 21, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(

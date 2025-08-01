@@ -7,8 +7,16 @@ export async function getStatus(cwd) {
   return stdout.split('\n').filter(Boolean);
 }
 export async function getCommits(cwd) {
-  const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=8 | tee`, { cwd });
-  return stdout.split('\n').filter(Boolean);
+  const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=40 | tee`, { cwd });
+  const lines = stdout.split('\n').filter(Boolean)
+  return await Promise.all(lines.map(async v => {
+    const tk=v.split(/\s/gi)
+    const id = v.substring(0,40)
+    const message = v.substring(41)
+    const { stdout:tags } = await exec(`git tag --points-at ${id}`, { cwd });
+    return `${id.substring(0,8)}│${(tags?tags.trim("\n"):"").padEnd(9,' ')}│${message.trim("\n")}`
+    // return `${id.substring(0,8)} ${message}`
+  }));
 }
 export async function getBranch(cwd) {
   const { stdout } = await exec(`git branch --show-current`, { cwd });
@@ -19,6 +27,10 @@ export async function getCurrentTag(cwd) {
   return stdout.split('\n').filter(Boolean);
 }
 export async function getRemotes(cwd) {
+  const { stdout } = await exec(`git remote -v`, { cwd });
+  return stdout.split('\n').filter(Boolean);
+}
+export async function getTags(cwd) {
   const { stdout } = await exec(`git remote -v`, { cwd });
   return stdout.split('\n').filter(Boolean);
 }

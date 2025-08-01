@@ -8,9 +8,10 @@ import {
     TextElement as text
 } from 'react-blessed';
 import {Workspace} from "./services/WorkspaceService";
-import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,gitStage,gitUnstage,gitCommit,gitPush} from "./services/GitService";
+import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,getTags,gitStage,gitUnstage,gitCommit,gitPush} from "./services/GitService";
 import ModalDialog from "./ModalDialog";
 import {SimpleTextEditor} from "./SimpleTextEditor";
+import {SemverControl} from "./Semver.jsx";
 
 export function GitPanel({
         rootDir,
@@ -32,6 +33,7 @@ export function GitPanel({
             getBranch(rootDir),
             getCurrentTag(rootDir),
             getRemotes(rootDir),
+            getTags(rootDir),
         ])
         setGitStatus(Array.from(result[0]).toSorted(sortFilesFn))
         setGitCommits(result[1])
@@ -78,7 +80,7 @@ export function GitPanel({
     };
     const onCommitSelect = (event) => {
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
-        const msg=event.content.substring(9)
+        const msg=event.content.substring(19)
         setCommitMessage(msg)
     };
     const commitStagedFiles = (event) => {
@@ -89,6 +91,16 @@ export function GitPanel({
                 return refreshAll()
             }).then(result => {
                 setMessage(`git commit -m "${commitMessage}"`)
+            })
+        }
+        // setMessage(`commit selected ${event.content} ${process.cwd()}`)
+    };
+    const pushCommits = (event) => {
+        if(commitMessage.trim() === ""){
+            setMessage(`commit message cannot be empty`)
+        }else{
+            gitPush(rootDir, gitRemotes[0],gitBranch).then(result => {
+                setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`)
             })
         }
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
@@ -113,7 +125,14 @@ export function GitPanel({
                     onSelect={onFilePathSelect}
                 />
             </box>
-            <box content={status} top={0} left={9} width={statusLen} height={1} tags={true}/>
+            <SemverControl
+                top={0} left={8} width={6} height={1}
+                initial={'1.2.3'}
+                onChange={(s) => {
+                    setMessage(s.toString())
+                }}
+            />
+            <box content={status} top={0} left={16} width={statusLen} height={1} tags={true}/>
             <box content={rootDir} top={8} left={2} width={rootDir.length} height={1}/>
             <SimpleTextEditor
                 top={9}  height={9}
@@ -145,7 +164,8 @@ export function GitPanel({
                 valign={'middle'}
                 align={'center'}
                 style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
-                content={'\nrevert\n'}
+                onClick={pushCommits}
+                content={'\npush\n'}
             />
             <box label={'Commits'} top={21} border={{ type: 'line' }}>
                 <list
