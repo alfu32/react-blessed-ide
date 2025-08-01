@@ -42,7 +42,7 @@ async function getRemotes(cwd) {
   return stdout.split("\n").filter(Boolean);
 }
 async function getTags(cwd) {
-  const { stdout } = await exec(`git remote -v`, { cwd });
+  const { stdout } = await exec(`git tag | tee`, { cwd });
   return stdout.split("\n").filter(Boolean);
 }
 async function gitStage(cwd, filePath) {
@@ -62,7 +62,7 @@ async function gitTag(cwd, tag) {
   return stdout.split("\n").filter(Boolean);
 }
 async function gitPush(cwd, remote, branch) {
-  const { stdout } = await exec(`git push "${remote}" "${branch}"`, { cwd });
+  const { stdout } = await exec(`git push "${remote}" "${branch}" --tags`, { cwd });
   return stdout.split("\n").filter(Boolean);
 }
 class INode {
@@ -1519,6 +1519,7 @@ function GitPanel({
   const [gitCommits, setGitCommits] = React.useState([]);
   const [gitBranch, setGitBranch] = React.useState("");
   const [gitCurrentTag, setGitCurrentTag] = React.useState("");
+  const [gitTags, setGitTags] = React.useState([]);
   const [gitRemotes, setGitRemotes] = React.useState([]);
   const [commitMessage, setCommitMessage] = React.useState(null);
   const sortFilesFn = (a, b) => a.substring(3) > b.substring(3) ? 1 : a.substring(3) === b.substring(3) ? 0 : -1;
@@ -1543,6 +1544,7 @@ function GitPanel({
         kind: tk[2]
       };
     }));
+    setGitTags(result[5]);
   }
   React.useEffect(() => {
     refreshAll();
@@ -1590,25 +1592,18 @@ function GitPanel({
     }
   };
   const tagLastCommit = (event) => {
-    if (commitMessage.trim() === "") {
-      setMessage(`commit message cannot be empty`);
-    } else {
-      gitTag(rootDir, gitCurrentTag).then((result) => {
-        return refreshAll();
-      }).then((result) => {
-        setMessage(`git tag -m "${gitCurrentTag}"`);
-      });
-    }
+    gitTag(rootDir, gitCurrentTag).then((result) => {
+      return refreshAll();
+    }).then((result) => {
+      setMessage(`git tag -m "${gitCurrentTag}"`);
+    });
   };
   const pushCommits = (event) => {
-    if (commitMessage.trim() === "") {
-      setMessage(`commit message cannot be empty`);
-    } else {
-      setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`);
-      gitPush(rootDir, gitRemotes[0], gitBranch).then((result) => {
-        setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`);
-      });
-    }
+    setMessage(`git push "${gitRemotes[0].name}" "${gitBranch}"`);
+    gitPush(rootDir, gitRemotes[0].name, gitBranch).then((result) => {
+      setMessage(`git push "${gitRemotes[0].name}" "${gitBranch}"`);
+    });
+    setMessage(`commit selected ${event.content} ${process.cwd()}`);
   };
   const commitMessageChanged = (bufferEditor) => {
     setCommitMessage(bufferEditor.buffer);

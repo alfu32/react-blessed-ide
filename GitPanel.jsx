@@ -24,6 +24,7 @@ export function GitPanel({
     const [gitCommits, setGitCommits] = useState([]);
     const [gitBranch, setGitBranch] = useState("");
     const [gitCurrentTag, setGitCurrentTag] = useState("");
+    const [gitTags, setGitTags] = useState([]);
     const [gitRemotes, setGitRemotes] = useState([]);
     const [commitMessage, setCommitMessage] = useState(null);
     const sortFilesFn = (a,b) => a.substring(3)>b.substring(3)?1:(a.substring(3)===b.substring(3)?0:-1)
@@ -48,6 +49,7 @@ export function GitPanel({
                 kind: tk[2],
             }
         }))
+        setGitTags(result[5])
     }
     useEffect(() => {
         refreshAll()
@@ -102,27 +104,19 @@ export function GitPanel({
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
     };
     const tagLastCommit = (event) => {
-        if(commitMessage.trim() === ""){
-            setMessage(`commit message cannot be empty`)
-        }else{
-            gitTag(rootDir, gitCurrentTag).then(result => {
-                return refreshAll()
-            }).then(result => {
-                setMessage(`git tag -m "${gitCurrentTag}"`)
-            })
-        }
+        gitTag(rootDir, gitCurrentTag).then(result => {
+            return refreshAll()
+        }).then(result => {
+            setMessage(`git tag -m "${gitCurrentTag}"`)
+        })
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
     };
     const pushCommits = (event) => {
-        if(commitMessage.trim() === ""){
-            setMessage(`commit message cannot be empty`)
-        }else{
-            setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`)
-            gitPush(rootDir, gitRemotes[0],gitBranch).then(result => {
-                setMessage(`git push "${gitRemotes[0]}" "${gitBranch}"`)
-            })
-        }
-        // setMessage(`commit selected ${event.content} ${process.cwd()}`)
+        setMessage(`git push "${gitRemotes[0].name}" "${gitBranch}"`)
+        gitPush(rootDir, gitRemotes[0].name,gitBranch).then(result => {
+            setMessage(`git push "${gitRemotes[0].name}" "${gitBranch}"`)
+        })
+        setMessage(`commit selected ${event.content} ${process.cwd()}`)
     };
     const commitMessageChanged=(bufferEditor) => {
         setCommitMessage(bufferEditor.buffer)

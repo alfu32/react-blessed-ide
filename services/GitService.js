@@ -31,7 +31,7 @@ export async function getRemotes(cwd) {
   return stdout.split('\n').filter(Boolean);
 }
 export async function getTags(cwd) {
-  const { stdout } = await exec(`git remote -v`, { cwd });
+  const { stdout } = await exec(`git tag | tee`, { cwd });
   return stdout.split('\n').filter(Boolean);
 }
 export async function gitStage(cwd, filePath) {
@@ -51,6 +51,6 @@ export async function gitTag(cwd,tag) {
   return stdout.split('\n').filter(Boolean);
 }
 export async function gitPush(cwd,remote,branch) {
-  const { stdout } = await exec(`git push "${remote}" "${branch}"`, { cwd });
+  const { stdout } = await exec(`git push "${remote}" "${branch}" --tags`, { cwd });
   return stdout.split('\n').filter(Boolean);
 }
