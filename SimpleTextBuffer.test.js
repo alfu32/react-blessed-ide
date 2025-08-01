@@ -111,3 +111,6 @@ testCursorMovement();
 testHomeEnd();
 testEditOps();
 testCopy();
+
+const aaa="that hasnt translated in any kind of action and what i think its interesting that these are large scale agreements".match(/.{20}/gi)
+console.log(aaa.join("\n"));

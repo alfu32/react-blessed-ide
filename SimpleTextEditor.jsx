@@ -91,8 +91,8 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
             onKeypress={internalOnKeyPress}
             onClick={setCursorPosition}
             {...boxProps}
-            label={`${boxProps.label||'Editing'} ${JSON.stringify(editor.cursorCoords())} ${editor.cursorIndex}`}
         >
+            {/*label = {`${boxProps.label || 'Editing'} ${JSON.stringify(editor.cursorCoords())} ${editor.cursorIndex}`}*/}
             {renderLines()}
             {renderCursor()}
         </box>)

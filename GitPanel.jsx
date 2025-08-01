@@ -12,6 +12,7 @@ import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,getTags,gitStage
 import ModalDialog from "./ModalDialog";
 import {SimpleTextEditor} from "./SimpleTextEditor";
 import {SemverControl} from "./Semver.jsx";
+import {safeStringify} from "./util";
 
 export function GitPanel({
         rootDir,
@@ -80,10 +81,27 @@ export function GitPanel({
     };
     const onCommitSelect = (event) => {
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
+        const {x,y} = event
+        const tag=event.content.substring(9,18).trim()
         const msg=event.content.substring(19)
         setCommitMessage(msg)
+        if(tag.length>=5) {
+            setGitCurrentTag(tag)
+        }
     };
     const commitStagedFiles = (event) => {
+        if(commitMessage.trim() === ""){
+            setMessage(`commit message cannot be empty`)
+        }else{
+            gitCommit(rootDir, commitMessage).then(result => {
+                return refreshAll()
+            }).then(result => {
+                setMessage(`git commit -m "${commitMessage}"`)
+            })
+        }
+        // setMessage(`commit selected ${event.content} ${process.cwd()}`)
+    };
+    const tagLastCommit = (event) => {
         if(commitMessage.trim() === ""){
             setMessage(`commit message cannot be empty`)
         }else{
@@ -123,15 +141,9 @@ export function GitPanel({
                     items={gitStatus}
                     style={{selected: {bg: 'blue'}}}
                     onSelect={onFilePathSelect}
+                    onClick
                 />
             </box>
-            <SemverControl
-                top={0} left={8} width={6} height={1}
-                initial={'1.2.3'}
-                onChange={(s) => {
-                    setMessage(s.toString())
-                }}
-            />
             <box content={status} top={0} left={16} width={statusLen} height={1} tags={true}/>
             <box content={rootDir} top={8} left={2} width={rootDir.length} height={1}/>
             <SimpleTextEditor
@@ -141,8 +153,15 @@ export function GitPanel({
                 border={{ type: 'line' }}
                 onChange={commitMessageChanged}
             />
+            <SemverControl
+                top={9} left={16} width={9} height={1}
+                initial={gitCurrentTag}
+                onChange={(s) => {
+                    setGitCurrentTag(s.toString())
+                }}
+            />
             <button
-                top={18} left={'0%'} height={3} width={'48%'}
+                top={18} left={'0%'} height={3} width={'30%'}
                 mouse
                 keys
                 input
@@ -152,10 +171,23 @@ export function GitPanel({
                 align={'center'}
                 style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
                 onClick={commitStagedFiles}
-                content={'\ncommit\n'+commitMessage}
+                content={'\ncommit\n'}
             />
             <button
-                top={18} left={'52%'} height={3} width={'48%'}
+                top={18} left={'35%'} height={3} width={'30%'}
+                mouse
+                keys
+                input
+                clickable
+                focused
+                valign={'middle'}
+                align={'center'}
+                style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
+                onClick={tagLastCommit}
+                content={`\ntag ${gitCurrentTag}\n`}
+            />
+            <button
+                top={18} left={'70%'} height={3} width={'30%'}
                 mouse
                 keys
                 input
@@ -167,7 +199,10 @@ export function GitPanel({
                 onClick={pushCommits}
                 content={'\npush\n'}
             />
-            <box label={'Commits'} top={21} border={{ type: 'line' }}>
+            <box label={'Commits'} top={21} border={{ type: 'line' }} onMouse={(event)=>{
+                const {x,y}=event;
+                setCommitMessage(safeStringify({x,y}))
+            }}>
                 <list
                     mouse
                     keys
@@ -177,7 +212,7 @@ export function GitPanel({
                     scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                     items={gitCommits}
                     style={{selected: {bg: 'blue'}}}
-                    onSelect={onCommitSelect}
+                    onSelectItem={onCommitSelect}
                     label={'Status'}
                 />
             </box>

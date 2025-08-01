@@ -792,10 +792,12 @@ class MemoryBufferEditor {
     return JSON.stringify(json).replace(/"/gi, "");
   }
 }
-function safeStringify(obj) {
+function safeStringify(obj, space = void 0) {
   const seen = /* @__PURE__ */ new WeakSet();
   return JSON.stringify(obj, (key, value) => {
     switch (key) {
+      case "content":
+        return "[content]";
       case "screen":
         return "[screen]";
       case "parent":
@@ -812,7 +814,7 @@ function safeStringify(obj) {
       seen.add(value);
     }
     return value;
-  }, 2);
+  }, space);
 }
 function CodeBufferEditor({
   filePath,
@@ -1387,7 +1389,6 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
       onKeypress: internalOnKeyPress,
       onClick: setCursorPosition,
       ...boxProps,
-      label: `${boxProps.label || "Editing"} ${JSON.stringify(editor.cursorCoords())} ${editor.cursorIndex}`,
       children: [
         renderLines(),
         renderCursor()
@@ -1405,8 +1406,13 @@ class Semver {
    * @return {Semver}
    */
   static from(v) {
-    const [major, minor, patch] = v.split(".");
-    return new Semver(major, minor, patch);
+    try {
+      const [major, minor, patch] = (v || "0.0.0").split(".");
+      return new Semver(major, minor, patch);
+    } catch (e) {
+      const [major, minor, patch] = "0.0.0".split(".");
+      return new Semver(major, minor, patch);
+    }
   }
   constructor(major, minor, patch) {
     this.major = major;
@@ -1430,7 +1436,7 @@ class Semver {
    * @return {Semver}
    */
   nextMinor() {
-    return new Semver(this.major, (this.minor + 1).toString(), "0");
+    return new Semver(this.major, (parseInt(this.minor) + 1).toString(), "0");
   }
   prevMinor() {
     let v = parseInt(this.minor);
@@ -1490,11 +1496,11 @@ function SemverControl({ initial, onChange, ...boxProps }) {
   };
   return /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [
     /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: decMajor, left: 1, height: 1, width: 1, content: "v" }),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incMajor, left: 2, height: 1, width: 1, content: semver.major }),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: decMinor, left: 3, height: 1, width: 1, content: "." }),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incMinor, left: 4, height: 1, width: 1, content: semver.minor }),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: decPatch, left: 5, height: 1, width: 1, content: "." }),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incPatch, left: 6, height: 1, width: 1, content: semver.patch })
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incMajor, left: 2, height: 1, width: semver.major.length, content: semver.major }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: decMinor, left: 2 + semver.major.length, height: 1, width: 1, content: "." }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incMinor, left: 3 + semver.major.length, height: 1, width: semver.minor.length, content: semver.minor }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: decPatch, left: 3 + semver.major.length + semver.minor.length, height: 1, width: 1, content: "." }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { mouse: true, focused: true, clickable: true, onClick: incPatch, left: 4 + semver.major.length + semver.minor.length, height: 1, width: semver.patch.length, content: semver.patch })
   ] });
 }
 function GitPanel({
@@ -1558,10 +1564,26 @@ function GitPanel({
     }
   };
   const onCommitSelect = (event) => {
+    const { x, y } = event;
+    const tag = event.content.substring(9, 18).trim();
     const msg = event.content.substring(19);
     setCommitMessage(msg);
+    if (tag.length >= 5) {
+      setGitCurrentTag(tag);
+    }
   };
   const commitStagedFiles = (event) => {
+    if (commitMessage.trim() === "") {
+      setMessage(`commit message cannot be empty`);
+    } else {
+      gitCommit(rootDir, commitMessage).then((result) => {
+        return refreshAll();
+      }).then((result) => {
+        setMessage(`git commit -m "${commitMessage}"`);
+      });
+    }
+  };
+  const tagLastCommit = (event) => {
     if (commitMessage.trim() === "") {
       setMessage(`commit message cannot be empty`);
     } else {
@@ -1598,22 +1620,10 @@ function GitPanel({
         scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
         items: gitStatus,
         style: { selected: { bg: "blue" } },
-        onSelect: onFilePathSelect
+        onSelect: onFilePathSelect,
+        onClick: true
       }
     ) }),
-    /* @__PURE__ */ jsxRuntime_js.jsx(
-      SemverControl,
-      {
-        top: 0,
-        left: 8,
-        width: 6,
-        height: 1,
-        initial: "1.2.3",
-        onChange: (s) => {
-          setMessage(s.toString());
-        }
-      }
-    ),
     /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: status, top: 0, left: 16, width: statusLen, height: 1, tags: true }),
     /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: rootDir, top: 8, left: 2, width: rootDir.length, height: 1 }),
     /* @__PURE__ */ jsxRuntime_js.jsx(
@@ -1628,12 +1638,25 @@ function GitPanel({
       }
     ),
     /* @__PURE__ */ jsxRuntime_js.jsx(
+      SemverControl,
+      {
+        top: 9,
+        left: 16,
+        width: 9,
+        height: 1,
+        initial: gitCurrentTag,
+        onChange: (s) => {
+          setGitCurrentTag(s.toString());
+        }
+      }
+    ),
+    /* @__PURE__ */ jsxRuntime_js.jsx(
       "button",
       {
         top: 18,
         left: "0%",
         height: 3,
-        width: "48%",
+        width: "30%",
         mouse: true,
         keys: true,
         input: true,
@@ -1643,16 +1666,37 @@ function GitPanel({
         align: "center",
         style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
         onClick: commitStagedFiles,
-        content: "\ncommit\n" + commitMessage
+        content: "\ncommit\n"
       }
     ),
     /* @__PURE__ */ jsxRuntime_js.jsx(
       "button",
       {
         top: 18,
-        left: "52%",
+        left: "35%",
         height: 3,
-        width: "48%",
+        width: "30%",
+        mouse: true,
+        keys: true,
+        input: true,
+        clickable: true,
+        focused: true,
+        valign: "middle",
+        align: "center",
+        style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+        onClick: tagLastCommit,
+        content: `
+tag ${gitCurrentTag}
+`
+      }
+    ),
+    /* @__PURE__ */ jsxRuntime_js.jsx(
+      "button",
+      {
+        top: 18,
+        left: "70%",
+        height: 3,
+        width: "30%",
         mouse: true,
         keys: true,
         input: true,
@@ -1665,7 +1709,10 @@ function GitPanel({
         content: "\npush\n"
       }
     ),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Commits", top: 21, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: "Commits", top: 21, border: { type: "line" }, onMouse: (event) => {
+      const { x, y } = event;
+      setCommitMessage(safeStringify({ x, y }));
+    }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
       "list",
       {
         mouse: true,
@@ -1676,7 +1723,7 @@ function GitPanel({
         scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
         items: gitCommits,
         style: { selected: { bg: "blue" } },
-        onSelect: onCommitSelect,
+        onSelectItem: onCommitSelect,
         label: "Status"
       }
     ) }),
