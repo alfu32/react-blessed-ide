@@ -169,7 +169,7 @@ export class SimpleTextBuffer {
      * @return {SimpleTextBuffer}
      */
     moveCursorRight(){
-        if(this.cursorIndex<this.buffer.length-1){
+        if(this.cursorIndex<this.buffer.length){
             this.cursorIndex+=1
             this._dispatchEvents("cursorChanged",this)
         }
@@ -194,7 +194,7 @@ export class SimpleTextBuffer {
     toEnd(){
         let {x,y} = this.cursorIndexToCoords(this.cursorIndex)
         const line=this.buffer.split("\n")[y]
-        this.cursorIndex=this.cursorCoordsToIndex({x:line.length-1,y:y})
+        this.cursorIndex=this.cursorCoordsToIndex({x:line.length,y:y})
         this._dispatchEvents("cursorChanged",this)
         return this
     }
@@ -204,12 +204,14 @@ export class SimpleTextBuffer {
      * @return {SimpleTextBuffer}
      */
     backspace(){
-        this.cursorIndex-=1
-        const before=this.buffer.substring(0,this.cursorIndex+1)
-        const after=this.buffer.substring(this.cursorIndex+2)
-        this.buffer=before+after
-        this._dispatchEvents("bufferChanged",this)
-        this._dispatchEvents("cursorChanged",this)
+        if(this.cursorIndex>0){
+            this.cursorIndex -= 1
+            this._dispatchEvents("cursorChanged", this)
+            const before=this.buffer.substring(0,this.cursorIndex)
+            const after=this.buffer.substring(this.cursorIndex+1)
+            this.buffer=before+after
+            this._dispatchEvents("bufferChanged",this)
+        }
         return this
     }
     /**
@@ -229,8 +231,8 @@ export class SimpleTextBuffer {
      */
     insert(ch){
         this.cursorIndex+=1
-        const before=this.buffer.substring(0,this.cursorIndex)
-        const after=this.buffer.substring(this.cursorIndex)
+        const before=this.buffer.substring(0,this.cursorIndex-1)
+        const after=this.buffer.substring(this.cursorIndex-1)
         this.buffer=before+ch+after
         this._dispatchEvents("bufferChanged",this)
         this._dispatchEvents("cursorChanged",this)

@@ -11,8 +11,15 @@ import {SimpleTextBuffer} from "./SimpleTextBuffer.js";
 
 export function SimpleTextEditor({initialText, onChange,...boxProps}) {
     const boxRef = useRef(null);
-    const [editor, setEditor] = useState(new SimpleTextBuffer("... commit message"));
+    const [editor, setEditor] = useState(new SimpleTextBuffer(initialText||"... commit message"));
     let changedTimeout=0
+    useEffect(()=>{
+        if(!editor){
+            return;
+        }
+        editor.buffer=initialText||"... commit msg"
+        setEditor(editor.copy())
+    },[initialText])
 
     const internalOnKeyPress=(ch,key)=>{
         editor.onKey(ch,key)
@@ -52,7 +59,7 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
             top={y}
             left={x}
             width={1} height={1}
-            style={{fg:"#333333",bg:"#775500",underline:true}}
+            style={{inverse:true,underline:true}}
             content={content}
         />)
     }
@@ -65,7 +72,7 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
             top={y}
             left={x}
             width={1} height={1}
-            style={{fg:"#333333",bg:"#775500",underline:true}}
+            style={{inverse:true,underline:true}}
             content={content}
         />)
     }
