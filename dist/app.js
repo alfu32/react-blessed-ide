@@ -1092,6 +1092,10 @@ class SimpleTextBuffer {
   buffer = "";
   cursorIndex = 0;
   listeners = { "cursorChanged": [], "bufferChanged": [] };
+  viewportHeight = 7;
+  viewportWidth = 30;
+  viewportX = 0;
+  viewportY = 0;
   /**
    *
    * @param {string} buffer
@@ -1127,6 +1131,17 @@ class SimpleTextBuffer {
     }
     this.listeners[eventType] = toKeep;
   }
+  slideViewportToCursor() {
+    let { x, y } = this.cursorCoords();
+    let { viewportHeight: vh, viewportWidth: vw, viewportX: vx, viewportY: vy } = this;
+    if (y < vy) {
+      vy = y;
+    }
+    if (y >= vy + vh) {
+      vy += 3;
+    }
+    this.viewportY = vy;
+  }
   /**
    *
    * @return {string[]}
@@ -1149,7 +1164,7 @@ class SimpleTextBuffer {
    * @return {{y: number, x: number}}
    */
   cursorIndexToCoords(index) {
-    const linesTo = this.buffer.substring(0, index).split("\n");
+    const linesTo = this.buffer.substring(0, parseInt(index)).split("\n");
     return {
       y: linesTo.length - 1,
       x: linesTo[linesTo.length - 1].length
@@ -1177,42 +1192,42 @@ class SimpleTextBuffer {
   onKey(ch, key) {
     switch (key.name) {
       case "up":
-        this.moveCursorUp();
+        this.moveCursorUp().slideViewportToCursor();
         break;
       case "down":
-        this.moveCursorDown();
+        this.moveCursorDown().slideViewportToCursor();
         break;
       case "left":
-        this.moveCursorLeft();
+        this.moveCursorLeft().slideViewportToCursor();
         break;
       case "right":
-        this.moveCursorRight();
+        this.moveCursorRight().slideViewportToCursor();
         break;
       case "home":
-        this.toHome();
+        this.toHome().slideViewportToCursor();
         break;
       case "end":
-        this.toEnd();
+        this.toEnd().slideViewportToCursor();
         break;
       case "backspace":
-        this.backspace();
+        this.backspace().slideViewportToCursor();
         break;
       case "delete":
-        this.delete();
+        this.delete().slideViewportToCursor();
         break;
       case "return":
         this.insert("\n");
-        this.moveCursorDown();
+        this.moveCursorDown().slideViewportToCursor();
         break;
       case "tab":
-        this.insert("	");
+        this.insert("	").slideViewportToCursor();
         break;
       default:
         if (ch && ch.length > 0) {
           if (key.name && key.name.length === 1) {
-            this.insert(key.name);
+            this.insert(key.name).slideViewportToCursor();
           } else {
-            this.insert(ch);
+            this.insert(ch).slideViewportToCursor();
           }
         }
     }
@@ -1338,15 +1353,38 @@ class SimpleTextBuffer {
 }
 function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
   const boxRef = React.useRef(null);
-  const [editor, setEditor] = React.useState(new SimpleTextBuffer(initialText || "... commit message"));
+  const [editor, setEditor] = React.useState(null);
+  const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
+  const [size, setSize] = React.useState({ rows: 10, cols: 30 });
   let changedTimeout = 0;
   React.useEffect(() => {
-    if (!editor) {
-      return;
+    let newEditor = editor;
+    if (!newEditor) {
+      newEditor = new SimpleTextBuffer(initialText || "...");
+    } else {
+      newEditor.buffer = initialText || "...";
     }
-    editor.buffer = initialText || "... commit msg";
-    setEditor(editor.copy());
+    newEditor.viewportHeight = size.rows - 1;
+    newEditor.viewportWidth = size.cols;
+    setEditor(newEditor.copy());
   }, [initialText]);
+  React.useEffect(() => {
+    const box2 = boxRef.current;
+    if (!box2) return;
+    const update = () => {
+      setSize({ cols: box2.width, rows: box2.height - 2 });
+    };
+    update();
+    box2.on("resize", update);
+    return () => box2.removeListener("resize", update);
+  }, []);
+  React.useEffect(() => {
+    if (editor) {
+      editor.viewportWidth = size.cols;
+      editor.viewportHeight = size.rows;
+      setEditor(editor.copy());
+    }
+  }, [size]);
   const internalOnKeyPress = (ch, key) => {
     editor.onKey(ch, key);
     clearTimeout(changedTimeout);
@@ -1356,9 +1394,44 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
     }, 80);
   };
   const setCursorPosition = (screenEvent) => {
+    if (!editor) {
+      return;
+    }
+    const { xi, yi } = boxRef.current.lpos;
+    const { x, y } = screenEvent;
+    editor.setCursor(x - xi - 1 + editor.viewportX, y - yi - 1 + editor.viewportY);
+    setEditor(editor.copy());
+  };
+  const mouseAction = (event) => {
+    const { x, y } = event;
+    switch (event.action) {
+      case "mousemove":
+        break;
+      case "mousedown":
+        break;
+      case "mouseup":
+        break;
+      case "wheelup":
+        editor.moveCursorUp().slideViewportToCursor();
+        setEditor(editor.copy());
+        break;
+      case "wheeldown":
+        editor.moveCursorDown().slideViewportToCursor();
+        setEditor(editor.copy());
+        break;
+      default:
+        throw new Error(safeStringify(event));
+    }
+    setMouseCoords({ x, y });
   };
   const renderLines = () => {
-    return editor.renderToLines().map((line, index) => {
+    if (!editor) {
+      return;
+    }
+    const { viewportY: vy, viewportWidth: vh } = editor;
+    return editor.renderToLines().filter((l, y) => {
+      return y >= vy && y <= vy + vh;
+    }).map((line, index) => {
       return /* @__PURE__ */ jsxRuntime_js.jsx(
         "box",
         {
@@ -1373,6 +1446,9 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
     });
   };
   const renderCursor = () => {
+    if (!editor) {
+      return;
+    }
     const i = editor.cursorIndex;
     const { x, y } = editor.cursorCoords();
     const content = editor.buffer.substring(i, i + 1);
@@ -1389,10 +1465,44 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
       `editor-cursor-${Date.now()}`
     );
   };
+  const renderStatus = () => {
+    if (!editor) {
+      return;
+    }
+    const i = editor.cursorIndex;
+    const { x: cx, y: cy } = editor.cursorCoords();
+    const { x: mx, y: my } = mouseCoords;
+    let cursorContent = editor.buffer.substring(i, i + 1);
+    let content = cursorContent;
+    if (boxRef.current && boxRef.current.lpos) {
+      const { xi, yi } = boxRef.current.lpos;
+      const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor;
+      const feedback = {
+        C: `${cx},${cy},[${ci}]=${cursorContent}`,
+        B: `${xi},${yi}`,
+        V: `${vx},${vy},${vw},${vh}`,
+        M: `A${mx},${my}R${mx - xi - 1},${my - yi - 1}`
+      };
+      content = safeStringify(feedback).replace(/[{} "]/gi, "");
+    }
+    return /* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        top: 7,
+        left: 2,
+        width: content.length,
+        height: 1,
+        style: { inverse: true, underline: true },
+        content
+      },
+      `editor-status-${Date.now()}`
+    );
+  };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(
     "box",
     {
       ref: boxRef,
+      ...boxProps,
       mouse: true,
       keys: true,
       input: true,
@@ -1404,10 +1514,11 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
       scrollable: false,
       onKeypress: internalOnKeyPress,
       onClick: setCursorPosition,
-      ...boxProps,
+      onMouse: mouseAction,
       children: [
         renderLines(),
-        renderCursor()
+        renderCursor(),
+        renderStatus()
       ]
     }
   );
@@ -1860,7 +1971,7 @@ function App(props) {
             2
           )
         ] }) }),
-        /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Git", children: /* @__PURE__ */ jsxRuntime_js.jsx(GitPanel, { rootDir }) })
+        /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Git", children: /* @__PURE__ */ jsxRuntime_js.jsx(GitPanel, { rootDir, row: 0, col: 1, rowSpan: 1, colSpan: 5 }) })
       ] }),
       /* @__PURE__ */ jsxRuntime_js.jsx(
         CodeBufferEditor,

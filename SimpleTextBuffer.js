@@ -9,6 +9,10 @@ export class SimpleTextBuffer {
     buffer=""
     cursorIndex=0
     listeners={"cursorChanged":[],"bufferChanged":[]}
+    viewportHeight=7
+    viewportWidth=30
+    viewportX=0
+    viewportY=0
 
     /**
      *
@@ -47,7 +51,23 @@ export class SimpleTextBuffer {
         }
         this.listeners[eventType]=toKeep
     }
-
+    slideViewportToCursor(){
+        let {x,y} = this.cursorCoords()
+        let {viewportHeight:vh, viewportWidth:vw, viewportX:vx, viewportY:vy}=this
+        let willThrow=false
+        if (y<vy){
+            vy=y
+            willThrow=true
+        }
+        if(y>=(vy+vh)){
+            vy+=3
+            willThrow=true
+        }
+        this.viewportY=vy
+        // if(willThrow) {
+        //     throw 'my arms up'
+        // }
+    }
     /**
      *
      * @return {string[]}
@@ -71,7 +91,7 @@ export class SimpleTextBuffer {
      * @return {{y: number, x: number}}
      */
     cursorIndexToCoords(index){
-        const linesTo=this.buffer.substring(0,index).split("\n");
+        const linesTo=this.buffer.substring(0,parseInt(index)).split("\n");
         //console.log({linesTo})
         return {
             y:linesTo.length-1,
@@ -102,22 +122,22 @@ export class SimpleTextBuffer {
      */
     onKey(ch,key){
         switch (key.name) {
-            case 'up':      this.moveCursorUp();    break;
-            case 'down':    this.moveCursorDown();  break;
-            case 'left':    this.moveCursorLeft();  break;
-            case 'right':   this.moveCursorRight(); break;
-            case 'home':    this.toHome() ;break;
-            case 'end':      this.toEnd() ;break;
-            case 'backspace': this.backspace();  break;
-            case 'delete':    this.delete();  break;
-            case 'return':    this.insert("\n");this.moveCursorDown(); break;
-            case 'tab':    this.insert("\t");  break;
+            case 'up':      this.moveCursorUp().slideViewportToCursor() ;    break;
+            case 'down':    this.moveCursorDown().slideViewportToCursor() ;  break;
+            case 'left':    this.moveCursorLeft().slideViewportToCursor() ;  break;
+            case 'right':   this.moveCursorRight().slideViewportToCursor() ; break;
+            case 'home':    this.toHome().slideViewportToCursor() ;break;
+            case 'end':      this.toEnd().slideViewportToCursor() ;break;
+            case 'backspace': this.backspace().slideViewportToCursor() ;  break;
+            case 'delete':    this.delete().slideViewportToCursor() ;  break;
+            case 'return':    this.insert("\n");this.moveCursorDown().slideViewportToCursor() ; break;
+            case 'tab':    this.insert("\t").slideViewportToCursor() ;  break;
             default:
                 if (ch && ch.length > 0){
                     if(key.name && key.name.length === 1) {
-                        this.insert(key.name)
+                        this.insert(key.name).slideViewportToCursor()
                     } else {
-                        this.insert(ch)
+                        this.insert(ch).slideViewportToCursor()
                     }
                 }
         }
@@ -134,7 +154,6 @@ export class SimpleTextBuffer {
             this.cursorIndex=this.cursorCoordsToIndex({x:x,y:y-1})
             this._dispatchEvents("cursorChanged",this)
         }
-
         return this
     }
 

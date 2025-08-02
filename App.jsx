@@ -131,7 +131,7 @@ export function App(props){// Some Coment
                   </Grid>
               </Tab>
               <Tab name='Git'>
-                  <GitPanel rootDir={rootDir}/>
+                  <GitPanel rootDir={rootDir} row={0} col={1} rowSpan={1} colSpan={5}/>
                   {/* <box key={3} label={'Git Status'} height={9} border={{type: 'line'}}>
                       <list
                           mouse
