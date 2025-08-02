@@ -1469,14 +1469,13 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
     if (!editor) {
       return;
     }
-    const i = editor.cursorIndex;
+    const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor;
     const { x: cx, y: cy } = editor.cursorCoords();
     const { x: mx, y: my } = mouseCoords;
-    let cursorContent = editor.buffer.substring(i, i + 1);
+    let cursorContent = editor.buffer.substring(ci, ci + 1);
     let content = cursorContent;
     if (boxRef.current && boxRef.current.lpos) {
       const { xi, yi } = boxRef.current.lpos;
-      const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor;
       const feedback = {
         C: `${cx},${cy},[${ci}]=${cursorContent}`,
         B: `${xi},${yi}`,
