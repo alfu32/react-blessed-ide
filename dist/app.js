@@ -10,60 +10,8 @@ const path = require("path");
 const ignore = require("ignore");
 const reactBlessedContrib17 = require("react-blessed-contrib-17");
 require("vite");
+const reactErrorBoundary = require("react-error-boundary");
 require("blessed/lib/widgets/message.js");
-const util = require("util");
-const cp = require("child_process");
-const exec = util.promisify(cp.exec);
-async function getStatus(cwd) {
-  const { stdout } = await exec(`git status --porcelain`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function getCommits(cwd) {
-  const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=40 | tee`, { cwd });
-  const lines = stdout.split("\n").filter(Boolean);
-  return await Promise.all(lines.map(async (v) => {
-    const id = v.substring(0, 40);
-    const message = v.substring(41);
-    const { stdout: tags } = await exec(`git tag --points-at ${id}`, { cwd });
-    return `${id.substring(0, 8)}│${(tags ? tags.trim("\n") : "").padEnd(9, " ")}│${message}`;
-  }));
-}
-async function getBranch(cwd) {
-  const { stdout } = await exec(`git branch --show-current`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function getCurrentTag(cwd) {
-  const { stdout } = await exec(`git describe --tags --exact-match 2>/dev/null || echo "none"`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function getRemotes(cwd) {
-  const { stdout } = await exec(`git remote -v`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function getTags(cwd) {
-  const { stdout } = await exec(`git tag | tee`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function gitStage(cwd, filePath) {
-  const { stdout } = await exec(`git add -f "${filePath}"`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function gitUnstage(cwd, filePath) {
-  const { stdout } = await exec(`git restore --staged "${filePath}"`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function gitCommit(cwd, commitMessage) {
-  const { stdout } = await exec(`git commit -m "${commitMessage}"`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function gitTag(cwd, tag) {
-  const { stdout } = await exec(`git tag "${tag}"`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
-async function gitPush(cwd, remote, branch) {
-  const { stdout } = await exec(`git push "${remote}" "${branch}" --tags`, { cwd });
-  return stdout.split("\n").filter(Boolean);
-}
 class INode {
   id = 0;
   /// (file stat ino)
@@ -129,7 +77,15 @@ class INode {
     this.relPath = path.relative(rootDir, this.fullPath);
     this.isOpen = false;
     this.children = [];
-    this.entries = this.type.indexOf("d") > -1 ? await fs.promises.readdir(this.fullPath) : [];
+    if (this.type.indexOf("d") > -1) {
+      try {
+        this.entries = await fs.promises.readdir(this.fullPath);
+      } catch (err) {
+        this.entries = [];
+      }
+    } else {
+      this.entries = [];
+    }
     return this;
   }
   /**
@@ -436,7 +392,18 @@ function FolderPickerDialog({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 2, left: 1, right: 1, bottom: 1, scrollable: true, keys: true, mouse: true, alwaysScroll: true, children: /* @__PURE__ */ jsxRuntime_js.jsx(FileTree, { top: 1, bottom: 0, workspace, treeData, onDirSelect: selectDir, onFileSelect: selectFile }) }),
+        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 2, left: 1, right: 1, bottom: 1, scrollable: true, keys: true, mouse: true, alwaysScroll: true, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+          FileTree,
+          {
+            top: 1,
+            bottom: 0,
+            workspace,
+            treeData,
+            onDirSelect: selectDir,
+            onFileSelect: selectFile,
+            label: "Project"
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntime_js.jsxs("box", { top: 3, height: 1, children: [
           /* @__PURE__ */ jsxRuntime_js.jsx(
             "text",
@@ -1089,6 +1056,59 @@ function CodeBufferEditor({
       ]
     }
   );
+}
+const util = require("util");
+const cp = require("child_process");
+const exec = util.promisify(cp.exec);
+async function getStatus(cwd) {
+  const { stdout } = await exec(`git status --porcelain`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function getCommits(cwd) {
+  const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=40 | tee`, { cwd });
+  const lines = stdout.split("\n").filter(Boolean);
+  return await Promise.all(lines.map(async (v) => {
+    const id = v.substring(0, 40);
+    const message = v.substring(41);
+    const { stdout: tags } = await exec(`git tag --points-at ${id}`, { cwd });
+    return `${id.substring(0, 8)}│${(tags ? tags.trim("\n") : "").padEnd(9, " ")}│${message}`;
+  }));
+}
+async function getBranch(cwd) {
+  const { stdout } = await exec(`git branch --show-current`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function getCurrentTag(cwd) {
+  const { stdout } = await exec(`git describe --tags --exact-match 2>/dev/null || echo "none"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function getRemotes(cwd) {
+  const { stdout } = await exec(`git remote -v`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function getTags(cwd) {
+  const { stdout } = await exec(`git tag | tee`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitStage(cwd, filePath) {
+  const { stdout } = await exec(`git add -f "${filePath}"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitUnstage(cwd, filePath) {
+  const { stdout } = await exec(`git restore --staged "${filePath}"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitCommit(cwd, commitMessage) {
+  const { stdout } = await exec(`git commit -m "${commitMessage}"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitTag(cwd, tag) {
+  const { stdout } = await exec(`git tag "${tag}"`, { cwd });
+  return stdout.split("\n").filter(Boolean);
+}
+async function gitPush(cwd, remote, branch) {
+  const { stdout } = await exec(`git push "${remote}" "${branch}" --tags`, { cwd });
+  return stdout.split("\n").filter(Boolean);
 }
 class SimpleTextBuffer {
   buffer = "";
@@ -1902,11 +1922,44 @@ tag ${gitCurrentTag}
     )
   ] });
 }
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return /* @__PURE__ */ jsxRuntime_js.jsxs(
+    "box",
+    {
+      top: "center",
+      left: "center",
+      width: "75%",
+      height: "75%",
+      border: { type: "line" },
+      style: { fg: "red" },
+      children: [
+        /* @__PURE__ */ jsxRuntime_js.jsx(
+          "button",
+          {
+            right: 0,
+            top: 0,
+            width: 9,
+            height: 1,
+            mouse: true,
+            clickable: true,
+            onPress: resetErrorBoundary,
+            valign: "middle",
+            align: "center",
+            style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+            content: "close"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 2, left: 0, children: `Something went wrong:
+${error.message}
+${error.stack}` })
+      ]
+    }
+  );
+}
 function App(props) {
   const [message, setMessage] = React.useState(false);
   const [pickFolder, setPickFolder] = React.useState(false);
   const [currentEditorText, setCurrentEditorText] = React.useState("");
-  const [activeTab, setActiveTab] = React.useState("Project");
   const [treeData, setTreeData] = React.useState([]);
   const [selectedFile, setSelectedFile] = React.useState(null);
   const [openedFiles, setOpenedFiles] = React.useState({});
@@ -2067,19 +2120,31 @@ function App(props) {
     message && /* @__PURE__ */ jsxRuntime_js.jsx(
       ModalDialog,
       {
+        label: "Message",
         title: "Message",
         onClose: () => setMessage(false),
         children: /* @__PURE__ */ jsxRuntime_js.jsx("text", { children: message })
       }
     ),
     pickFolder && /* @__PURE__ */ jsxRuntime_js.jsx(
-      FolderPickerDialog,
+      reactErrorBoundary.ErrorBoundary,
       {
-        title: "Message",
-        onClose: () => setMessage(false),
-        onFolderSelect: (inode) => {
-          setMessage(`selected folder ${inode.fullPath}`);
-        }
+        FallbackComponent: ErrorFallback,
+        onReset: () => {
+          setPickFolder(false);
+        },
+        onClose: () => setPickFolder(false),
+        children: /* @__PURE__ */ jsxRuntime_js.jsx(
+          FolderPickerDialog,
+          {
+            label: "Pick Folder",
+            title: "Pick Folder",
+            onClose: () => setMessage(false),
+            onFolderSelect: (inode) => {
+              setMessage(`selected folder ${inode.fullPath}`);
+            }
+          }
+        )
       }
     )
   ] });

@@ -1,6 +1,5 @@
 // App.js
 import React, {Component, useState,useEffect} from 'react';
-import {getStatus} from './services/GitService';
 import {Workspace,INode} from './services/WorkspaceService';
 import FileTree from './FileTree';
 import ModalDialog from './ModalDialog.jsx';
@@ -8,18 +7,16 @@ import { BoxElement as box, TextElement as text,ListElement as list,ButtonElemen
 import { Grid,GridItem } from 'react-blessed-contrib-17'
 import FolderPickerDialog from "./FolderPickerDialog";
 import {Tab, VTabs} from "./VTabs";
-import {TextEditor} from "./TextEditor";
-import {CodeEditor} from "./CodeEditor";
-import {LayoutCatcher} from "./LayoutCatcher";
 import {CodeBufferEditor} from './CodeBufferEditor'
 import {GitPanel} from "./GitPanel";
+import { ErrorBoundary } from 'react-error-boundary'
+import {ErrorFallback} from './ErrorFallback';
 
 
 export function App(props){// Some Coment 
   const [message, setMessage] = useState(false);
   const [pickFolder, setPickFolder] = useState(false);
   const [currentEditorText, setCurrentEditorText] = useState('');
-  const [activeTab, setActiveTab] = useState('Project');
   const [treeData, setTreeData]   = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [openedFiles, setOpenedFiles] = useState({});
@@ -150,83 +147,9 @@ export function App(props){// Some Coment
               </Tab>
               <Tab name='Git'>
                   <GitPanel rootDir={rootDir} row={0} col={1} rowSpan={1} colSpan={5}/>
-                  {/* <box key={3} label={'Git Status'} height={9} border={{type: 'line'}}>
-                      <list
-                          mouse
-                          keys
-                          input
-                          clickable
-                          focused
-                          scrollbar={{ch: '=', track: {fg: 'blue', bg: 'grey'}}}
-                          items={gitStatus}
-                          keys mouse style={{selected: {bg: 'blue'}}}
-                          onSelect={onFilePathSelect}
-                          label={'Status'}
-                      />
-                  </box>
-                      <textarea
-                      key={4} top={9} height={9}
-                              mouse
-                              keys
-                              input
-                              clickable
-                              focused
-                              label={'Comment'}
-                              border={{type: 'line'}}
-                              inputOnFocus={true}/>
-              <button
-                  key={5} top={18} left={'0%'} height={3} width={'48%'}
-                  mouse
-                  keys
-                  input
-                  clickable
-                  focused
-                  valign={'middle'}
-                  align={'center'}
-                  style={{bg: '#ffaa00', fg: '#333333'}}
-                  border={{type: 'line', bg: '#ffaa00', fg: '#333333'}}
-                  content={'commit'}
-              />
-              <button
-                  key={5} top={18} left={'52%'} height={3} width={'48%'}
-                  mouse
-                  keys
-                  input
-                  clickable
-                  focused
-                  valign={'middle'}
-                  align={'center'}
-                  style={{bg: '#ffaa00', fg: '#333333'}}
-                  border={{type: 'line', bg: '#ffaa00', fg: '#333333'}}
-                  content={'revert'}
-              />
-              <box key={3} label={'Commits'} top={21} border={{type: 'line'}}>
-                  <list
-                      mouse
-                      keys
-                      input
-                      clickable
-                      focused
-                      scrollbar={{ch: '=', track: {fg: 'blue', bg: 'grey'}}}
-                      items={gitStatus}
-                      keys mouse style={{selected: {bg: 'blue'}}}
-                      onSelect={onFilePathSelect}
-                      label={'Status'}
-                  />
-              </box>*/
-              }
               </Tab>
           </VTabs>
           {/* Center panel */}
-          {/**<CodeEditor row={0} col={5} rowSpan={6} colSpan={10}
-                      border={{ type: 'line' }}
-                      label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
-                      initialText={fileContent||""}
-                      onKeypress={onCodeEditKeyPress}
-                      onSave={onTextEditorSave}
-                      onCancel={onTextEditorCancel}
-                      onChange={onCurrentEditorChange}
-          />**/}
           <CodeBufferEditor row={0} col={5} rowSpan={6} colSpan={10}
                       border={{ type: 'line' }}
                       label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
@@ -250,21 +173,31 @@ export function App(props){// Some Coment
         </Grid>
         {message && (
             <ModalDialog
+                label={'Message'}
                 title="Message"
                 onClose={() => setMessage(false)}
             >
               <text>{message}</text>
             </ModalDialog>
         )}
-        {pickFolder && (
+        {pickFolder &&
+            (<ErrorBoundary
+                FallbackComponent={ErrorFallback}
+                onReset={() => {
+                    setPickFolder(false)
+                }}
+                onClose={() => setPickFolder(false)}
+            >
             <FolderPickerDialog
-                title="Message"
+                label={'Pick Folder'}
+                title="Pick Folder"
                 onClose={() => setMessage(false)}
                 onFolderSelect={(inode)=>{
                     setMessage(`selected folder ${inode.fullPath}`)
                 }}
             />
-        )}
+            </ErrorBoundary>)
+        }
     </>
   );
 }

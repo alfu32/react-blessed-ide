@@ -92,7 +92,14 @@ export default function FolderPickerDialog({
 
             {/* Content area */}
             <box top={2} left={1} right={1} bottom={1} scrollable keys mouse alwaysScroll>
-                <FileTree top={1} bottom={0} workspace={workspace} treeData={treeData} onDirSelect={selectDir} onFileSelect={selectFile}/>
+                <FileTree
+                    top={1} bottom={0}
+                    workspace={workspace}
+                    treeData={treeData}
+                    onDirSelect={selectDir}
+                    onFileSelect={selectFile}
+                    label={'Project'}
+                />
             </box>
             <box top={3} height={1}>
                 <text

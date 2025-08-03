@@ -8,9 +8,9 @@
     "vt:build": "vite build --ssr",
     "vt:start": "node dist/app.js",
     "vt:watch": "vite build --watch",
-    "start":         "node dist/index.js",
-    "vt:dev":   "concurrently \"npm run vt:watch\" \"nodemon --watch dist/app.js --exec \\\"npm run vt:start\\\"\""
-},
+    "start": "node dist/index.js",
+    "vt:dev": "concurrently \"npm run vt:watch\" \"nodemon --watch dist/app.js --exec \\\"npm run vt:start\\\"\""
+  },
   "author": "",
   "license": "ISC",
   "description": "",
@@ -22,7 +22,8 @@
     "ignore": "^7.0.5",
     "raf": "^3.4.1",
     "react-blessed": "^0.7.2",
-    "react-blessed-contrib-17": "^0.2.3"
+    "react-blessed-contrib-17": "^0.2.3",
+    "react-error-boundary": "^6.0.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.12.10",

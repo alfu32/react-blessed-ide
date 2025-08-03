@@ -66,7 +66,15 @@ export class INode{
     this.relPath = path.relative(rootDir, this.fullPath);
     this.isOpen=false
     this.children=[]
-    this.entries=this.type.indexOf('d')>-1?await fs.readdir(this.fullPath):[];
+    if(this.type.indexOf('d')>-1){
+      try{
+        this.entries = await fs.readdir(this.fullPath)
+      }catch(err){
+        this.entries=[]
+      }
+    } else {
+      this.entries=[]
+    }
     return this
   }
 
