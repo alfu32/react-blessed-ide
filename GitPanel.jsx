@@ -2,6 +2,7 @@
 import React, {Component, useEffect, useRef, useState} from 'react';
 import {
     ListElement as list,
+    TableElement as table,
     BoxElement as box,
     ButtonElement as button,
     TextareaElement as textarea,
@@ -27,6 +28,8 @@ export function GitPanel({
     const [gitTags, setGitTags] = useState([]);
     const [gitRemotes, setGitRemotes] = useState([]);
     const [commitMessage, setCommitMessage] = useState(null);
+    const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
+
     const sortFilesFn = (a,b) => a.substring(3)>b.substring(3)?1:(a.substring(3)===b.substring(3)?0:-1)
     async function refreshAll() {
         const result = await Promise.all([
@@ -57,6 +60,7 @@ export function GitPanel({
     const onFilePathSelect = (event) => {
         const staged = event.content.substring(0,1)
         const changed = event.content.substring(1,2)
+        const {x,y} = mouseCoords
 
         const file = event.content.substring(3);
         if (staged === ' ' || staged === '?' || (changed !== ' ' && staged === changed)) {
@@ -80,13 +84,14 @@ export function GitPanel({
                 setMessage(`git unstaged "${file} error (${error})"`)
             });
         }
+        // setMessage(`mouse @ ${x},${y}`)
     };
     const onCommitSelect = (event) => {
         // setMessage(`commit selected ${event.content} ${process.cwd()}`)
-        const {x,y} = event
         const tag=event.content.substring(9,18).trim()
         const msg=event.content.substring(19)
         setCommitMessage(msg)
+
         if(tag.length>=5) {
             setGitCurrentTag(tag)
         }
@@ -121,11 +126,24 @@ export function GitPanel({
     const commitMessageChanged=(bufferEditor) => {
         setCommitMessage(bufferEditor.buffer)
     }
+    const mouseAction=(event) =>{
+        const {x,y} = event
+
+        switch(event.action){
+            case 'mousemove':break;
+            case 'mousedown':break;
+            case 'mouseup':break;
+            case 'wheelup':editor.moveCursorUp().slideViewportToCursor();setEditor(editor.copy());break;
+            case 'wheeldown':editor.moveCursorDown().slideViewportToCursor();setEditor(editor.copy());break;
+            default: throw new Error(safeStringify(event)); break;
+        }
+        setMouseCoords({x,y});
+    }
     const status = `{cyan-fg}${(gitRemotes[0]||{}).name}{/cyan-fg}/{red-fg}${gitBranch}{/red-fg}({yellow-fg}${gitCurrentTag}{/yellow-fg})`
     const statusLen=`${(gitRemotes[0]||{}).name}/${gitBranch}(${gitCurrentTag})`.length
     return (
         <box {...boxProps}>
-            <box label={`Status`} height={9} border={{ type: 'line' }}>
+            <box label={``} height={9} border={{ type: 'line' }}>
                 <list
                     mouse
                     keys
@@ -137,19 +155,21 @@ export function GitPanel({
                     style={{selected: {bg: 'blue'}}}
                     onSelect={onFilePathSelect}
                     onSelectItem={onFilePathSelect}
+                    onMouse={mouseAction}
                 />
+                <box top={-1} left={25} width={7} height={1} content={`{${mouseCoords.x},${mouseCoords.y}}`}/>
             </box>
-            <box content={status} top={0} left={16} width={statusLen} height={1} tags={true}/>
-            <box content={rootDir} top={8} left={2} width={rootDir.length} height={1}/>
+            <box content={status} top={0} left={3} width={statusLen} height={1} tags={true}/>
+            <box content={rootDir} top={8} left={3} width={rootDir.length} height={1}/>
             <SimpleTextEditor
                 top={9}  height={9}
-                label={'Commit Message'}
+                label={'Message'}
                 initialText={commitMessage}
                 border={{ type: 'line' }}
                 onChange={commitMessageChanged}
             />
             <SemverControl
-                top={9} left={16} width={9} height={1}
+                top={9} left={31} width={9} height={1}
                 initial={gitCurrentTag}
                 onChange={(s) => {
                     setGitCurrentTag(s.toString())

@@ -12,7 +12,7 @@ import {safeStringify} from "./util";
  * @returns {JSX.Element}
  * @constructor
  */
-export default function FileTree({workspace,treeData, onDirSelect, onFileSelect,label}){
+export default function FileTree({children,workspace,treeData, onDirSelect, onFileSelect,label,...boxProps}){
     const [selected, setSelected] = React.useState(null);
     // let treeData = workspace.flatten()
     let lines = (treeData||[]).map((v,i,a) => {
@@ -36,11 +36,11 @@ export default function FileTree({workspace,treeData, onDirSelect, onFileSelect,
         //     <text>{workspacePath}</text>
         //     <text>{JSON.stringify(items,null,' ')}</text>
         // </>
-        <box label={`${label}-${safeStringify(selected)}`}>
+        <box {...boxProps}>
             <list
                 scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                 top={1}
-                bottom={1}
+                bottom={4}
                 items={lines}
                 keys mouse
                 style={{ selected: { bg: 'blue' } }}
@@ -48,6 +48,7 @@ export default function FileTree({workspace,treeData, onDirSelect, onFileSelect,
                 onSelectItem={itemSelect}
                 label={label}
             />
+            {children||[]}
         </box>
     );
 }

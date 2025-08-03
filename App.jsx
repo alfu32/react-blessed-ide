@@ -121,12 +121,30 @@ export function App(props){// Some Coment
                        label={'Project'}>
 
                       <FileTree
+                          top={0}
+                          bottom={0}
                           workspace={workspace}
                           treeData={treeData}
                           onDirSelect={selectDir}
                           onFileSelect={selectFile}
                           label={'Project'}
-                      />
+                      >
+                          <button
+                              mouse
+                              keys
+                              input
+                              clickable
+                              focused
+                              bottom={0}
+                              height={3}
+                              valign={'middle'}
+                              align={'center'}
+                              style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
+                              onClick={() => {
+                                  setPickFolder(true)
+                              }}
+                              content={'ClickMe'}/>
+                      </FileTree>
                   </box>
                   </Grid>
               </Tab>

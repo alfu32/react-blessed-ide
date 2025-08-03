@@ -2,6 +2,7 @@
 import React, { useEffect, useRef,useState } from 'react';
 import { BoxElement as box, TextElement as text } from 'react-blessed';
 import FileTree from "./FileTree";
+import {Workspace} from "./services/WorkspaceService";
 
 export default function FolderPickerDialog({
     title = 'Dialog',

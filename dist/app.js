@@ -22,11 +22,10 @@ async function getCommits(cwd) {
   const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=40 | tee`, { cwd });
   const lines = stdout.split("\n").filter(Boolean);
   return await Promise.all(lines.map(async (v) => {
-    v.split(/\s/gi);
     const id = v.substring(0, 40);
     const message = v.substring(41);
     const { stdout: tags } = await exec(`git tag --points-at ${id}`, { cwd });
-    return `${id.substring(0, 8)}│${(tags ? tags.trim("\n") : "").padEnd(9, " ")}│${message.trim("\n")}`;
+    return `${id.substring(0, 8)}│${(tags ? tags.trim("\n") : "").padEnd(9, " ")}│${message}`;
   }));
 }
 async function getBranch(cwd) {
@@ -188,7 +187,7 @@ class INode {
     return this;
   }
 }
-let Workspace$1 = class Workspace2 {
+class Workspace {
   rootDir = "";
   rootNode = new INode();
   async loadIgnore() {
@@ -242,13 +241,13 @@ let Workspace$1 = class Workspace2 {
    * @returns {Workspace}
    */
   copy() {
-    let wks = new Workspace2();
+    let wks = new Workspace();
     wks.rootDir = this.rootDir;
     wks.rootNode = this.rootNode;
     wks.ig = this.ig;
     return wks;
   }
-};
+}
 function safeStringify(obj, space = void 0) {
   const seen = /* @__PURE__ */ new WeakSet();
   return JSON.stringify(obj, (key, value) => {
@@ -272,7 +271,7 @@ function safeStringify(obj, space = void 0) {
     return value;
   }, space);
 }
-function FileTree({ workspace, treeData, onDirSelect, onFileSelect, label }) {
+function FileTree({ children, workspace, treeData, onDirSelect, onFileSelect, label, ...boxProps }) {
   const [selected, setSelected] = React.useState(null);
   let lines = (treeData || []).map((v, i, a) => {
     return v.toText();
@@ -294,21 +293,24 @@ function FileTree({ workspace, treeData, onDirSelect, onFileSelect, label }) {
     //     <text>{workspacePath}</text>
     //     <text>{JSON.stringify(items,null,' ')}</text>
     // </>
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: `${label}-${safeStringify(selected)}`, children: /* @__PURE__ */ jsxRuntime_js.jsx(
-      "list",
-      {
-        scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
-        top: 1,
-        bottom: 1,
-        items: lines,
-        keys: true,
-        mouse: true,
-        style: { selected: { bg: "blue" } },
-        onSelect: itemSelect,
-        onSelectItem: itemSelect,
-        label
-      }
-    ) })
+    /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [
+      /* @__PURE__ */ jsxRuntime_js.jsx(
+        "list",
+        {
+          scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
+          top: 1,
+          bottom: 4,
+          items: lines,
+          keys: true,
+          mouse: true,
+          style: { selected: { bg: "blue" } },
+          onSelect: itemSelect,
+          onSelectItem: itemSelect,
+          label
+        }
+      ),
+      children || []
+    ] })
   );
 }
 function ModalDialog({
@@ -838,16 +840,16 @@ function CodeBufferEditor({
   ...boxProps
 }) {
   const boxRef = React.useRef();
-  const [editor, setEditor] = React.useState(null);
+  const [editor2, setEditor2] = React.useState(null);
   const [size, setSize] = React.useState({ rows: 10, cols: 30 });
   React.useEffect(() => {
     if (filePath) {
       const ed = new MemoryBufferEditor(filePath, { rows: size.rows, cols: size.cols });
       ed.viewportHeight = size.rows - 1;
       ed.viewportWidth = size.cols;
-      setEditor(ed);
+      setEditor2(ed);
     } else {
-      setEditor(null);
+      setEditor2(null);
     }
   }, [filePath]);
   React.useEffect(() => {
@@ -861,14 +863,14 @@ function CodeBufferEditor({
     return () => box2.removeListener("resize", update);
   }, []);
   React.useEffect(() => {
-    if (editor) {
-      editor.viewportWidth = size.cols;
-      editor.viewportHeight = size.rows;
-      setEditor(editor.copy());
+    if (editor2) {
+      editor2.viewportWidth = size.cols;
+      editor2.viewportHeight = size.rows;
+      setEditor2(editor2.copy());
     }
   }, [size]);
   const cursor = () => {
-    if (!editor) {
+    if (!editor2) {
       return /* @__PURE__ */ jsxRuntime_js.jsx(
         "box",
         {
@@ -882,24 +884,24 @@ function CodeBufferEditor({
         `0-1-no-file`
       );
     }
-    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY)) + 1;
-    editor.updateCursor();
+    const padLength = Math.ceil(Math.log10(editor2.viewportHeight + editor2.viewportY)) + 1;
+    editor2.updateCursor();
     return /* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
       {
-        left: editor.cursorX - editor.viewportX + padLength + 1 + 1,
-        top: editor.cursorY - editor.viewportY,
+        left: editor2.cursorX - editor2.viewportX + padLength + 1 + 1,
+        top: editor2.cursorY - editor2.viewportY,
         width: 1,
         height: 1,
-        style: { ...editor.cursorStyle, underline: true, bold: true, inverse: true },
+        style: { ...editor2.cursorStyle, underline: true, bold: true, inverse: true },
         tags: false,
-        content: editor.cursorChar
+        content: editor2.cursorChar
       },
       `cursor-${Date.now()}`
     );
   };
   const tokenList = () => {
-    if (!editor) {
+    if (!editor2) {
       return /* @__PURE__ */ jsxRuntime_js.jsx(
         "box",
         {
@@ -918,10 +920,10 @@ function CodeBufferEditor({
         `0-0-no-file`
       );
     }
-    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY)) + 1;
-    editor.updateTokens();
-    const lines = editor.renderViewport();
-    const { cursorY, cursorX } = editor.getCursorWindowCoords();
+    const padLength = Math.ceil(Math.log10(editor2.viewportHeight + editor2.viewportY)) + 1;
+    editor2.updateTokens();
+    const lines = editor2.renderViewport();
+    const { cursorY, cursorX } = editor2.getCursorWindowCoords();
     return Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber];
       const lineNumberText = `${String(lineNumber).padStart(padLength, " ")}`;
@@ -932,7 +934,7 @@ function CodeBufferEditor({
           top: k,
           width: padLength + 1,
           height: 1,
-          style: { bg: "#222222", fg: "#33aabb", inverse: editor.cursorY == lineNumber },
+          style: { bg: "#222222", fg: "#33aabb", inverse: editor2.cursorY == lineNumber },
           content: lineNumberText + "│"
         },
         `${lineNumber}-lineNumber`
@@ -943,7 +945,7 @@ function CodeBufferEditor({
             "box",
             {
               left: t.x + padLength + 1 + 1,
-              top: t.y - editor.viewportY,
+              top: t.y - editor2.viewportY,
               width: t.text.length,
               height: 1,
               style: t.style,
@@ -963,72 +965,72 @@ function CodeBufferEditor({
     }
     switch (key.name) {
       case "up":
-        editor.moveCursorUp();
+        editor2.moveCursorUp();
         break;
       case "down":
-        editor.moveCursorDown();
+        editor2.moveCursorDown();
         break;
       case "left":
-        editor.moveCursorLeft();
+        editor2.moveCursorLeft();
         break;
       case "right":
-        editor.moveCursorRight();
+        editor2.moveCursorRight();
         break;
       case "home":
-        editor.cursorX = 0;
+        editor2.cursorX = 0;
         break;
       case "end":
-        editor.cursorX = editor.lines[editor.cursorY].length;
+        editor2.cursorX = editor2.lines[editor2.cursorY].length;
         break;
       case "pageup":
-        editor.moveCursorVertically(-editor.viewportHeight);
+        editor2.moveCursorVertically(-editor2.viewportHeight);
         break;
       case "pagedown":
-        editor.moveCursorVertically(editor.viewportHeight);
+        editor2.moveCursorVertically(editor2.viewportHeight);
         break;
       case "backspace":
-        editor.backspace().save();
+        editor2.backspace().save();
         onChange();
         break;
       case "delete":
-        editor.delete().save();
+        editor2.delete().save();
         onChange();
         break;
       case "return":
-        editor.insert("\n");
-        editor.moveCursorDown();
-        editor.save();
+        editor2.insert("\n");
+        editor2.moveCursorDown();
+        editor2.save();
         onChange();
         break;
       case "tab":
-        editor.insert("	").save();
+        editor2.insert("	").save();
         onChange();
         break;
       default:
         if (ch && ch.length > 0) {
           if (key.sequence && key.sequence.length === 1) {
-            editor.insert(key.sequence).save();
+            editor2.insert(key.sequence).save();
             onChange();
           } else if (key.name && key.name.length === 1) {
-            editor.insert(key.name).save();
+            editor2.insert(key.name).save();
             onChange();
           } else {
-            editor.insert(ch).save();
+            editor2.insert(ch).save();
             onChange();
           }
         }
     }
-    setEditor(editor.copy());
+    setEditor2(editor2.copy());
   };
   const setCursorPosition = (screenEvent) => {
-    if (!editor) {
+    if (!editor2) {
       return;
     }
-    const padLength = Math.ceil(Math.log10(editor.viewportHeight + editor.viewportY)) + 1;
+    const padLength = Math.ceil(Math.log10(editor2.viewportHeight + editor2.viewportY)) + 1;
     const { xi, yi } = boxRef.current.lpos;
     const { x, y } = screenEvent;
-    editor.setCursor(x - xi - padLength - 1 - 1 + editor.viewportX, y - yi - 1 + editor.viewportY);
-    setEditor(editor.copy());
+    editor2.setCursor(x - xi - padLength - 1 - 1 + editor2.viewportX, y - yi - 1 + editor2.viewportY);
+    setEditor2(editor2.copy());
   };
   const mouseAction = (event) => {
     switch (event.action) {
@@ -1039,12 +1041,12 @@ function CodeBufferEditor({
       case "mouseup":
         break;
       case "wheelup":
-        editor.moveCursorUp();
-        setEditor(editor.copy());
+        editor2.moveCursorUp();
+        setEditor2(editor2.copy());
         break;
       case "wheeldown":
-        editor.moveCursorDown();
-        setEditor(editor.copy());
+        editor2.moveCursorDown();
+        setEditor2(editor2.copy());
         break;
       default:
         throw new Error(safeStringify(event));
@@ -1077,7 +1079,7 @@ function CodeBufferEditor({
             left: 2,
             width: size.cols - 6,
             height: 1,
-            content: editor?.getStatus(),
+            content: editor2?.getStatus(),
             tags: false,
             style: { fg: "black", bg: "yellow" }
           },
@@ -1137,8 +1139,8 @@ class SimpleTextBuffer {
     if (y < vy) {
       vy = y;
     }
-    if (y >= vy + vh) {
-      vy += 3;
+    if (y > vy + vh) {
+      vy += 1;
     }
     this.viewportY = vy;
   }
@@ -1192,45 +1194,46 @@ class SimpleTextBuffer {
   onKey(ch, key) {
     switch (key.name) {
       case "up":
-        this.moveCursorUp().slideViewportToCursor();
+        this.moveCursorUp();
         break;
       case "down":
-        this.moveCursorDown().slideViewportToCursor();
+        this.moveCursorDown();
         break;
       case "left":
-        this.moveCursorLeft().slideViewportToCursor();
+        this.moveCursorLeft();
         break;
       case "right":
-        this.moveCursorRight().slideViewportToCursor();
+        this.moveCursorRight();
         break;
       case "home":
-        this.toHome().slideViewportToCursor();
+        this.toHome();
         break;
       case "end":
-        this.toEnd().slideViewportToCursor();
+        this.toEnd();
         break;
       case "backspace":
-        this.backspace().slideViewportToCursor();
+        this.backspace();
         break;
       case "delete":
-        this.delete().slideViewportToCursor();
+        this.delete();
         break;
       case "return":
         this.insert("\n");
-        this.moveCursorDown().slideViewportToCursor();
+        this.moveCursorDown();
         break;
       case "tab":
-        this.insert("	").slideViewportToCursor();
+        this.insert("	");
         break;
       default:
         if (ch && ch.length > 0) {
           if (key.name && key.name.length === 1) {
-            this.insert(key.name).slideViewportToCursor();
+            this.insert(key.name);
           } else {
-            this.insert(ch).slideViewportToCursor();
+            this.insert(ch);
           }
         }
     }
+    this.slideViewportToCursor();
     return this;
   }
   /**
@@ -1348,25 +1351,33 @@ class SimpleTextBuffer {
     const newSimpleTextBuffer = new SimpleTextBuffer();
     newSimpleTextBuffer.buffer = this.buffer;
     newSimpleTextBuffer.cursorIndex = this.cursorIndex;
+    newSimpleTextBuffer.viewportHeight = this.viewportHeight;
+    newSimpleTextBuffer.viewportWidth = this.viewportWidth;
+    newSimpleTextBuffer.viewportX = this.viewportX;
+    newSimpleTextBuffer.viewportY = this.viewportY;
     return newSimpleTextBuffer;
   }
 }
+const defaultText = "asdfasdf,qwerqwer,qrtyutyu,ghjfghj,xcvbxcvbcvb,zxcv,asdasdasdasd,5678567856785678678,123412341234123412341234123".split(",").join("\n");
 function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
   const boxRef = React.useRef(null);
-  const [editor, setEditor] = React.useState(null);
+  const [editor2, setEditor2] = React.useState(null);
   const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
   const [size, setSize] = React.useState({ rows: 10, cols: 30 });
   let changedTimeout = 0;
   React.useEffect(() => {
-    let newEditor = editor;
+    let newEditor = editor2;
     if (!newEditor) {
-      newEditor = new SimpleTextBuffer(initialText || "...");
-    } else {
-      newEditor.buffer = initialText || "...";
+      newEditor = new SimpleTextBuffer(initialText || defaultText);
     }
+    if ((initialText || defaultText).substring(newEditor.cursorIndex) !== newEditor.buffer.substring(newEditor.cursorIndex)) {
+      newEditor.cursorIndex = 0;
+      newEditor.slideViewportToCursor();
+    }
+    newEditor.buffer = initialText || defaultText;
     newEditor.viewportHeight = size.rows - 1;
     newEditor.viewportWidth = size.cols;
-    setEditor(newEditor.copy());
+    setEditor2(newEditor.copy());
   }, [initialText]);
   React.useEffect(() => {
     const box2 = boxRef.current;
@@ -1379,28 +1390,28 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
     return () => box2.removeListener("resize", update);
   }, []);
   React.useEffect(() => {
-    if (editor) {
-      editor.viewportWidth = size.cols;
-      editor.viewportHeight = size.rows;
-      setEditor(editor.copy());
+    if (editor2) {
+      editor2.viewportWidth = size.cols;
+      editor2.viewportHeight = size.rows;
+      setEditor2(editor2.copy());
     }
   }, [size]);
   const internalOnKeyPress = (ch, key) => {
-    editor.onKey(ch, key);
+    editor2.onKey(ch, key);
     clearTimeout(changedTimeout);
     changedTimeout = setTimeout(() => {
-      onChange(editor);
-      setEditor(editor.copy());
+      onChange(editor2);
+      setEditor2(editor2.copy());
     }, 80);
   };
   const setCursorPosition = (screenEvent) => {
-    if (!editor) {
+    if (!editor2) {
       return;
     }
     const { xi, yi } = boxRef.current.lpos;
     const { x, y } = screenEvent;
-    editor.setCursor(x - xi - 1 + editor.viewportX, y - yi - 1 + editor.viewportY);
-    setEditor(editor.copy());
+    editor2.setCursor(x - xi - 1 + editor2.viewportX, y - yi - 1 + editor2.viewportY);
+    setEditor2(editor2.copy());
   };
   const mouseAction = (event) => {
     const { x, y } = event;
@@ -1412,12 +1423,12 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
       case "mouseup":
         break;
       case "wheelup":
-        editor.moveCursorUp().slideViewportToCursor();
-        setEditor(editor.copy());
+        editor2.moveCursorUp().slideViewportToCursor();
+        setEditor2(editor2.copy());
         break;
       case "wheeldown":
-        editor.moveCursorDown().slideViewportToCursor();
-        setEditor(editor.copy());
+        editor2.moveCursorDown().slideViewportToCursor();
+        setEditor2(editor2.copy());
         break;
       default:
         throw new Error(safeStringify(event));
@@ -1425,11 +1436,11 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
     setMouseCoords({ x, y });
   };
   const renderLines = () => {
-    if (!editor) {
+    if (!editor2) {
       return;
     }
-    const { viewportY: vy, viewportWidth: vh } = editor;
-    return editor.renderToLines().filter((l, y) => {
+    const { viewportY: vy, viewportHeight: vh } = editor2;
+    return editor2.renderToLines().filter((l, y) => {
       return y >= vy && y <= vy + vh;
     }).map((line, index) => {
       return /* @__PURE__ */ jsxRuntime_js.jsx(
@@ -1446,17 +1457,18 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
     });
   };
   const renderCursor = () => {
-    if (!editor) {
+    if (!editor2) {
       return;
     }
-    const i = editor.cursorIndex;
-    const { x, y } = editor.cursorCoords();
-    const content = editor.buffer.substring(i, i + 1);
+    const i = editor2.cursorIndex;
+    const { x, y } = editor2.cursorCoords();
+    const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor2;
+    const content = editor2.buffer.substring(i, i + 1);
     return /* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
       {
-        top: y,
-        left: x,
+        top: y - vy,
+        left: x - vx,
         width: 1,
         height: 1,
         style: { inverse: true, underline: true },
@@ -1466,13 +1478,13 @@ function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
     );
   };
   const renderStatus = () => {
-    if (!editor) {
+    if (!editor2) {
       return;
     }
-    const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor;
-    const { x: cx, y: cy } = editor.cursorCoords();
+    const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor2;
+    const { x: cx, y: cy } = editor2.cursorCoords();
     const { x: mx, y: my } = mouseCoords;
-    let cursorContent = editor.buffer.substring(ci, ci + 1);
+    let cursorContent = editor2.buffer.substring(ci, ci + 1);
     let content = cursorContent;
     if (boxRef.current && boxRef.current.lpos) {
       const { xi, yi } = boxRef.current.lpos;
@@ -1645,6 +1657,7 @@ function GitPanel({
   const [gitTags, setGitTags] = React.useState([]);
   const [gitRemotes, setGitRemotes] = React.useState([]);
   const [commitMessage, setCommitMessage] = React.useState(null);
+  const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
   const sortFilesFn = (a, b) => a.substring(3) > b.substring(3) ? 1 : a.substring(3) === b.substring(3) ? 0 : -1;
   async function refreshAll() {
     const result = await Promise.all([
@@ -1675,6 +1688,7 @@ function GitPanel({
   const onFilePathSelect = (event) => {
     const staged = event.content.substring(0, 1);
     const changed = event.content.substring(1, 2);
+    const { x, y } = mouseCoords;
     const file = event.content.substring(3);
     if (staged === " " || staged === "?" || changed !== " " && staged === changed) {
       gitStage(rootDir, file).then((result) => {
@@ -1695,7 +1709,6 @@ function GitPanel({
     }
   };
   const onCommitSelect = (event) => {
-    const { x, y } = event;
     const tag = event.content.substring(9, 18).trim();
     const msg = event.content.substring(19);
     setCommitMessage(msg);
@@ -1731,32 +1744,58 @@ function GitPanel({
   const commitMessageChanged = (bufferEditor) => {
     setCommitMessage(bufferEditor.buffer);
   };
+  const mouseAction = (event) => {
+    const { x, y } = event;
+    switch (event.action) {
+      case "mousemove":
+        break;
+      case "mousedown":
+        break;
+      case "mouseup":
+        break;
+      case "wheelup":
+        editor.moveCursorUp().slideViewportToCursor();
+        setEditor(editor.copy());
+        break;
+      case "wheeldown":
+        editor.moveCursorDown().slideViewportToCursor();
+        setEditor(editor.copy());
+        break;
+      default:
+        throw new Error(safeStringify(event));
+    }
+    setMouseCoords({ x, y });
+  };
   const status = `{cyan-fg}${(gitRemotes[0] || {}).name}{/cyan-fg}/{red-fg}${gitBranch}{/red-fg}({yellow-fg}${gitCurrentTag}{/yellow-fg})`;
   const statusLen = `${(gitRemotes[0] || {}).name}/${gitBranch}(${gitCurrentTag})`.length;
   return /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { label: `Status`, height: 9, border: { type: "line" }, children: /* @__PURE__ */ jsxRuntime_js.jsx(
-      "list",
-      {
-        mouse: true,
-        keys: true,
-        input: true,
-        clickable: true,
-        focused: true,
-        scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
-        items: gitStatus,
-        style: { selected: { bg: "blue" } },
-        onSelect: onFilePathSelect,
-        onSelectItem: onFilePathSelect
-      }
-    ) }),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: status, top: 0, left: 16, width: statusLen, height: 1, tags: true }),
-    /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: rootDir, top: 8, left: 2, width: rootDir.length, height: 1 }),
+    /* @__PURE__ */ jsxRuntime_js.jsxs("box", { label: ``, height: 9, border: { type: "line" }, children: [
+      /* @__PURE__ */ jsxRuntime_js.jsx(
+        "list",
+        {
+          mouse: true,
+          keys: true,
+          input: true,
+          clickable: true,
+          focused: true,
+          scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
+          items: gitStatus,
+          style: { selected: { bg: "blue" } },
+          onSelect: onFilePathSelect,
+          onSelectItem: onFilePathSelect,
+          onMouse: mouseAction
+        }
+      ),
+      /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: -1, left: 25, width: 7, height: 1, content: `{${mouseCoords.x},${mouseCoords.y}}` })
+    ] }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: status, top: 0, left: 3, width: statusLen, height: 1, tags: true }),
+    /* @__PURE__ */ jsxRuntime_js.jsx("box", { content: rootDir, top: 8, left: 3, width: rootDir.length, height: 1 }),
     /* @__PURE__ */ jsxRuntime_js.jsx(
       SimpleTextEditor,
       {
         top: 9,
         height: 9,
-        label: "Commit Message",
+        label: "Message",
         initialText: commitMessage,
         border: { type: "line" },
         onChange: commitMessageChanged
@@ -1766,7 +1805,7 @@ function GitPanel({
       SemverControl,
       {
         top: 9,
-        left: 16,
+        left: 31,
         width: 9,
         height: 1,
         initial: gitCurrentTag,
@@ -1874,7 +1913,7 @@ function App(props) {
   const [fileContent, setFileContent] = React.useState("");
   const [rootDir, setRootDir] = React.useState(process.cwd());
   const [gitStatus, setGitStatus] = React.useState([]);
-  const [workspace, setWorkspace] = React.useState(new Workspace$1());
+  const [workspace, setWorkspace] = React.useState(new Workspace());
   React.useEffect(() => {
     workspace.init(rootDir).then((wk) => workspace.open(workspace.rootNode)).then((t) => {
       const wk = workspace.copy();
@@ -1959,11 +1998,32 @@ function App(props) {
               children: /* @__PURE__ */ jsxRuntime_js.jsx(
                 FileTree,
                 {
+                  top: 0,
+                  bottom: 0,
                   workspace,
                   treeData,
                   onDirSelect: selectDir,
                   onFileSelect: selectFile,
-                  label: "Project"
+                  label: "Project",
+                  children: /* @__PURE__ */ jsxRuntime_js.jsx(
+                    "button",
+                    {
+                      mouse: true,
+                      keys: true,
+                      input: true,
+                      clickable: true,
+                      focused: true,
+                      bottom: 0,
+                      height: 3,
+                      valign: "middle",
+                      align: "center",
+                      style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+                      onClick: () => {
+                        setPickFolder(true);
+                      },
+                      content: "ClickMe"
+                    }
+                  )
                 }
               )
             },
