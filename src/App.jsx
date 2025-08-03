@@ -140,7 +140,7 @@ export function App(props){// Some Coment
                               onClick={() => {
                                   setPickFolder(true)
                               }}
-                              content={'ClickMe'}/>
+                              content={'workspace'}/>
                       </FileTree>
                   </box>
                   </Grid>

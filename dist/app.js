@@ -823,7 +823,7 @@ function FolderPickerDialog({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 2, left: 1, right: 1, bottom: 1, scrollable: true, keys: true, mouse: true, alwaysScroll: true, children: /* @__PURE__ */ jsxRuntime_js.jsx(
+        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 2, left: 1, right: 1, bottom: 1, scrollable: true, keys: true, mouse: true, alwaysScroll: true, children: /* @__PURE__ */ jsxRuntime_js.jsxs(
           FileTree,
           {
             top: 1,
@@ -832,36 +832,54 @@ function FolderPickerDialog({
             treeData,
             onDirSelect: selectDir,
             onFileSelect: selectFile,
-            label: "Project"
+            label: "Project",
+            children: [
+              /* @__PURE__ */ jsxRuntime_js.jsx(
+                "button",
+                {
+                  mouse: true,
+                  keys: true,
+                  input: true,
+                  clickable: true,
+                  focused: true,
+                  left: 0,
+                  bottom: 0,
+                  height: 3,
+                  width: "45%",
+                  valign: "middle",
+                  align: "center",
+                  style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+                  onClick: () => {
+                    onFolderSelect(selected);
+                  },
+                  content: "select"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntime_js.jsx(
+                "button",
+                {
+                  mouse: true,
+                  keys: true,
+                  input: true,
+                  clickable: true,
+                  focused: true,
+                  right: 0,
+                  bottom: 0,
+                  height: 3,
+                  valign: "middle",
+                  align: "center",
+                  width: "45%",
+                  style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+                  onClick: () => {
+                    onFolderSelect(null);
+                  },
+                  content: "cancel"
+                }
+              )
+            ]
           }
         ) }),
-        /* @__PURE__ */ jsxRuntime_js.jsxs("box", { top: 3, height: 1, children: [
-          /* @__PURE__ */ jsxRuntime_js.jsx(
-            "text",
-            {
-              mouse: true,
-              clickable: true,
-              underline: true,
-              onClick: () => {
-                onFolderSelect(selected);
-              },
-              children: "Select"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntime_js.jsx(
-            "text",
-            {
-              left: 6,
-              mouse: true,
-              clickable: true,
-              underline: true,
-              onClick: () => {
-                onFolderSelect(null);
-              },
-              children: "Cancel"
-            }
-          )
-        ] })
+        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 3, height: 1 })
       ]
     }
   );
@@ -2235,7 +2253,7 @@ function App(props) {
                       onClick: () => {
                         setPickFolder(true);
                       },
-                      content: "ClickMe"
+                      content: "workspace"
                     }
                   )
                 }

@@ -1,6 +1,6 @@
 // components/ModalDialog.js
 import React, { useEffect, useRef,useState } from 'react';
-import { BoxElement as box, TextElement as text } from 'react-blessed';
+import { BoxElement as box, TextElement as text, ButtonElement as button } from 'react-blessed';
 import FileTree from "./FileTree";
 import {Workspace} from "./Workspace";
 
@@ -95,26 +95,47 @@ export default function FolderPickerDialog({
                     onDirSelect={selectDir}
                     onFileSelect={selectFile}
                     label={'Project'}
-                />
+                >
+                    <button
+                        mouse
+                        keys
+                        input
+                        clickable
+                        focused
+                        left={0}
+                        bottom={0}
+                        height={3}
+                        width={'45%'}
+                        valign={'middle'}
+                        align={'center'}
+                        style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
+                        onClick={() => {
+                            /* do something */
+                            onFolderSelect(selected)
+                        }}
+                        content={'select'}
+                    />
+                    <button
+                            mouse
+                            keys
+                            input
+                            clickable
+                            focused
+                            right={0}
+                            bottom={0}
+                            height={3}
+                            valign={'middle'}
+                            align={'center'}
+                            width={'45%'}
+                            style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
+                          onClick={() => {
+                              onFolderSelect(null)
+                          }}
+                            content={'cancel'}
+                    />
+                </FileTree>
             </box>
             <box top={3} height={1}>
-                <text
-                    mouse
-                    clickable
-                    underline
-                    onClick={() => {
-                        /* do something */
-                        onFolderSelect(selected)
-                    }}
-                >Select</text>
-                <text left={6}
-                      mouse
-                      clickable
-                      underline
-                      onClick={() => {
-                          onFolderSelect(null)
-                      }}
-                >Cancel</text>
             </box>
         </box>
     )
