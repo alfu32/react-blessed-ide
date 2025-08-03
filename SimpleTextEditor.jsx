@@ -9,7 +9,7 @@ import {
 } from 'react-blessed';
 import {SimpleTextBuffer} from "./SimpleTextBuffer.js";
 import {safeStringify} from "./util";
-const defaultText="asdfasdf,qwerqwer,qrtyutyu,ghjfghj,xcvbxcvbcvb,zxcv,asdasdasdasd,5678567856785678678,123412341234123412341234123"
+const defaultText="..."
     .split(",").join("\n")
 export function SimpleTextEditor({initialText, onChange,...boxProps}) {
     const boxRef = useRef(null);

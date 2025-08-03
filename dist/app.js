@@ -1358,7 +1358,7 @@ class SimpleTextBuffer {
     return newSimpleTextBuffer;
   }
 }
-const defaultText = "asdfasdf,qwerqwer,qrtyutyu,ghjfghj,xcvbxcvbcvb,zxcv,asdasdasdasd,5678567856785678678,123412341234123412341234123".split(",").join("\n");
+const defaultText = "...".split(",").join("\n");
 function SimpleTextEditor({ initialText, onChange, ...boxProps }) {
   const boxRef = React.useRef(null);
   const [editor2, setEditor2] = React.useState(null);
