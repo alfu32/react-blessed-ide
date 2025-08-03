@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { getTokenizer,TokenizerToken } from './tokenizer.js';
 
-export class MemoryBufferEditor {
+export class CodeBufferEditor {
   /**
    * @param {string} filePath
    * @param {{rows:number, cols:number}} windowSize
@@ -224,7 +224,7 @@ export class MemoryBufferEditor {
 
   /** return a new instance with identical state */
   copy() {
-    const clone = new MemoryBufferEditor(this.filePath, {
+    const clone = new CodeBufferEditor(this.filePath, {
       rows: this.viewportHeight,
       cols: this.viewportWidth
     });

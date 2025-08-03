@@ -1,4 +1,3 @@
-
 import React, {useEffect, useRef, useState} from "react";
 import {
     ListElement as list,
@@ -7,11 +6,11 @@ import {
     TextareaElement as textarea,
     TextElement as text
 } from 'react-blessed';
-import {SimpleTextBuffer} from "./SimpleTextBuffer.js";
+import {SimpleTextEditor} from "./SimpleTextEditor.js";
 import {safeStringify} from "./util";
 const defaultText="..."
     .split(",").join("\n")
-export function SimpleTextEditor({initialText, onChange,...boxProps}) {
+export function ListComponent({lines, editable=false,onClick, onChange,...boxProps}) {
     const boxRef = useRef(null);
     const [editor, setEditor] = useState(null);
     const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
@@ -20,17 +19,16 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
     useEffect(()=>{
         let newEditor=editor
         if(!newEditor){
-            newEditor = new SimpleTextBuffer(initialText||defaultText)
+            newEditor = new SimpleTextEditor(lines.join("\n")||defaultText)
         }
-        if((initialText||defaultText).substring(newEditor.cursorIndex)!==newEditor.buffer.substring(newEditor.cursorIndex)){
-            newEditor.cursorIndex = 0
+        if((lines.join("\n")||defaultText).substring(newEditor.cursorIndex)!==newEditor.buffer.substring(newEditor.cursorIndex)){
             newEditor.slideViewportToCursor()
         }
-        newEditor.buffer=initialText||defaultText
+        newEditor.buffer=lines.join("\n")||defaultText
         newEditor.viewportHeight = size.rows-1;
         newEditor.viewportWidth = size.cols;
         setEditor(newEditor.copy())
-    },[initialText])
+    },[lines])
 
     // 2) update size on resize
     useEffect(() => {
@@ -54,12 +52,17 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
     }, [size]);
 
     const internalOnKeyPress=(ch,key)=>{
-        editor.onKey(ch,key)
-        clearTimeout(changedTimeout)
-        changedTimeout = setTimeout(()=>{
-            onChange(editor)
+        if(editable) {
+            editor.onKey(ch, key)
+            clearTimeout(changedTimeout)
+            changedTimeout = setTimeout(() => {
+                onChange(editor)
+                setEditor(editor.copy())
+            }, 80)
+        }else if ( key in ['up','down'] ){
+            editor.onKey(ch, key)
             setEditor(editor.copy())
-        },80)
+        }
     }
     const setCursorPosition = (screenEvent) => {
         if(!editor){
@@ -68,6 +71,18 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
         const {xi,yi} = boxRef.current.lpos;
         const {x,y} = screenEvent;
         editor.setCursor(x-xi-1+editor.viewportX,y-yi-1+editor.viewportY)
+        const cursor = editor.cursorCoords()
+        const lines = editor.renderToLines()
+        const line = lines[cursor.y];
+        onClick({
+            lines:lines,
+            line,
+            visibleLines:lines,
+            cursor,
+            buffer:editor.buffer,
+            visibleBuffer:editor.buffer,
+            index:editor.cursorIndex,
+        });
         setEditor(editor.copy())
     };
     const mouseAction=(event) =>{
@@ -92,7 +107,9 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
             .filter((l,y) => {
                 return (y >=vy && y <= (vy + vh));
             })
-            .map((line,index)=>{
+            .map((line,index,arr)=>{
+                const clickLine=(event)=>{
+                }
                 return (
                     <box
                         top={index} left={0} height={1} width={line.length||1}
@@ -167,6 +184,5 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
             {/*label = {`${boxProps.label || 'Editing'} ${JSON.stringify(editor.cursorCoords())} ${editor.cursorIndex}`}*/}
             {renderLines()}
             {renderCursor()}
-            {renderStatus()}
         </box>)
 }

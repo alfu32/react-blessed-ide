@@ -1,11 +1,11 @@
 /**
  *
- * @param {SimpleTextBuffer} eventData
+ * @param {SimpleTextEditor} eventData
  * @return {(function())|undefined}
  */
 export function Listener(eventData){return ()=>{}}
 
-export class SimpleTextBuffer {
+export class SimpleTextEditor {
     buffer=""
     cursorIndex=0
     listeners={"cursorChanged":[],"bufferChanged":[]}
@@ -24,7 +24,7 @@ export class SimpleTextBuffer {
     /**
      *
      * @param {"cursorChanged"|"bufferChanged"} eventType
-     * @param {(eventData:SimpleTextBuffer)=>(()=>void)} listener
+     * @param {(eventData:SimpleTextEditor)=>(()=>void)} listener
      */
     on(eventType,listener){
         this.listeners[eventType]=listener
@@ -33,7 +33,7 @@ export class SimpleTextBuffer {
     /**
      *
      * @param {"cursorChanged"|"bufferChanged"} eventType
-     * @param {SimpleTextBuffer} payload
+     * @param {SimpleTextEditor} payload
      */
     _dispatchEvents(eventType,payload){
         const toKeep=[]
@@ -112,7 +112,7 @@ export class SimpleTextBuffer {
      *
      * @param {String} ch
      * @param {String} key
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     onKey(ch,key){
         switch (key.name) {
@@ -141,7 +141,7 @@ export class SimpleTextBuffer {
 
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     moveCursorUp(){
         let {x,y} = this.cursorIndexToCoords(this.cursorIndex)
@@ -154,7 +154,7 @@ export class SimpleTextBuffer {
 
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     moveCursorDown(){
         let {x,y} = this.cursorIndexToCoords(this.cursorIndex)
@@ -168,7 +168,7 @@ export class SimpleTextBuffer {
 
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     moveCursorLeft(){
         if(this.cursorIndex>0){
@@ -180,7 +180,7 @@ export class SimpleTextBuffer {
 
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     moveCursorRight(){
         if(this.cursorIndex<this.buffer.length){
@@ -192,7 +192,7 @@ export class SimpleTextBuffer {
 
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     toHome(){
         let {x,y} = this.cursorIndexToCoords(this.cursorIndex)
@@ -203,7 +203,7 @@ export class SimpleTextBuffer {
 
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     toEnd(){
         let {x,y} = this.cursorIndexToCoords(this.cursorIndex)
@@ -215,7 +215,7 @@ export class SimpleTextBuffer {
 
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     backspace(){
         if(this.cursorIndex>0){
@@ -230,7 +230,7 @@ export class SimpleTextBuffer {
     }
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     delete(){
         const before=this.buffer.substring(0,this.cursorIndex+1)
@@ -241,7 +241,7 @@ export class SimpleTextBuffer {
     }
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     insert(ch){
         this.cursorIndex+=1
@@ -255,10 +255,10 @@ export class SimpleTextBuffer {
 
     /**
      *
-     * @return {SimpleTextBuffer}
+     * @return {SimpleTextEditor}
      */
     copy(){
-        const newSimpleTextBuffer= new SimpleTextBuffer()
+        const newSimpleTextBuffer= new SimpleTextEditor()
         newSimpleTextBuffer.buffer = this.buffer
         newSimpleTextBuffer.cursorIndex = this.cursorIndex
         newSimpleTextBuffer.viewportHeight=this.viewportHeight

@@ -1,4 +1,4 @@
-// services/WorkspaceService.js
+// services/Workspace.js
 
 import { promises as fs } from 'fs';
 import path from 'path';

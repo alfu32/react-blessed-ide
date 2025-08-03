@@ -9,7 +9,7 @@ import 'raf/polyfill';
 import React from 'react';
 import blessed from 'blessed'
 import { render } from 'react-blessed';
-import {App} from './App';
+import {App} from './src/App';
 import fs from 'fs'
 import msg from "blessed/lib/widgets/message";
 import Message from "blessed/lib/widgets/message";

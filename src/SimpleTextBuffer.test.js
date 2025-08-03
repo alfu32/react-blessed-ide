@@ -1,4 +1,4 @@
-import {SimpleTextBuffer} from "./SimpleTextBuffer.js";
+import {SimpleTextEditor} from "./SimpleTextEditor.js";
 
 // A tiny helper for deep equality
 function assertDeepEqual(actual, expected, name) {
@@ -10,7 +10,7 @@ function assertDeepEqual(actual, expected, name) {
 
 // 1) renderToLines
 function testRenderToLines() {
-    const ed = new SimpleTextBuffer();
+    const ed = new SimpleTextEditor();
     ed.buffer = "line1\nline2\nline3\nline4";
     assertDeepEqual(
         ed.renderToLines(1, 2),
@@ -21,7 +21,7 @@ function testRenderToLines() {
 
 // 2) cursorIndex ↔ coords round-trip
 function testCursorIndexCoordsConversion() {
-    const ed = new SimpleTextBuffer();
+    const ed = new SimpleTextEditor();
     ed.buffer = "ab\ncde\nf";
     // pick index = 5 (0-based: a b \n c d e => index 5 is 'd')
     const idx = 5;
@@ -33,7 +33,7 @@ function testCursorIndexCoordsConversion() {
 
 // 3) basic cursor movements
 function testCursorMovement() {
-    const ed = new SimpleTextBuffer();
+    const ed = new SimpleTextEditor();
     ed.buffer = "0\n12\n345";
     // start at index of '2' (which is 3)
     ed.cursorIndex = 3;
@@ -56,7 +56,7 @@ function testCursorMovement() {
 
 // 4) toHome / toEnd
 function testHomeEnd() {
-    const ed = new SimpleTextBuffer();
+    const ed = new SimpleTextEditor();
     ed.buffer = "first\nsecond\nthird";
     // position somewhere in "second"
     ed.cursorIndex = ed.cursorCoordsToIndex({ x: 3, y: 1 });
@@ -75,7 +75,7 @@ function testHomeEnd() {
 
 // 5) insert / backspace / delete
 function testEditOps() {
-    const ed = new SimpleTextBuffer();
+    const ed = new SimpleTextEditor();
     ed.buffer = "ABXC";
     ed.buffer = "ABC";
     ed.cursorIndex = 1; // between A and B
@@ -93,7 +93,7 @@ function testEditOps() {
 
 // 6) copy()
 function testCopy() {
-    const ed = new SimpleTextBuffer();
+    const ed = new SimpleTextEditor();
     ed.buffer = "foo";
     ed.cursorIndex = 2;
     const ed2 = ed.copy();

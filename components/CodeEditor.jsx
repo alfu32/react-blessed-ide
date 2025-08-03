@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { BoxElement as box, TextElement as text,ListElement as list } from 'react-blessed';
-import {getTokenizer,highlight} from './tokenizer'
+import {getTokenizer,highlight} from '../src/tokenizer'
 
 export function CodeEditor({
   width = '100%',

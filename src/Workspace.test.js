@@ -1,4 +1,4 @@
-import * as wss from "./services/WorkspaceService.js"
+import * as wss from "./Workspace.js"
 
 
 

@@ -1,10 +1,10 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {MemoryBufferEditor} from './MemoryBufferEditor';
+import {CodeBufferEditor} from './CodeBufferEditor.js';
 import { BoxElement as box, TextElement as text } from 'react-blessed';
 import {safeStringify} from "./util";
 
 
-export function CodeBufferEditor({
+export function CodeBufferEditorComponent({
     filePath,
     onKeypress=(ch,key) =>{},
     onChange = (p) => {},
@@ -12,7 +12,7 @@ export function CodeBufferEditor({
 }) {
   const boxRef = useRef();
   /**
-   * @constant {[MemoryBufferEditor,(ed:MemoryBufferEditor)=>void]} [editor, setEditor]
+   * @constant {[CodeBufferEditor,(ed:CodeBufferEditor)=>void]} [editor, setEditor]
    */
 
 	
@@ -23,7 +23,7 @@ export function CodeBufferEditor({
   // 1) (Re)create editor whenever filePath changes
   useEffect(() => {
     if (filePath) {
-      const ed = new MemoryBufferEditor(filePath, { rows: size.rows, cols: size.cols });
+      const ed = new CodeBufferEditor(filePath, { rows: size.rows, cols: size.cols });
       // immediately render the new file
       ed.viewportHeight = size.rows-1;
       ed.viewportWidth = size.cols;

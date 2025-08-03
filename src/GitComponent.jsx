@@ -8,14 +8,14 @@ import {
     TextareaElement as textarea,
     TextElement as text
 } from 'react-blessed';
-import {Workspace} from "./services/WorkspaceService";
-import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,getTags,gitStage,gitUnstage,gitCommit,gitTag,gitPush} from "./services/GitService";
+import {Workspace} from "./Workspace";
+import {getStatus,getCommits,getBranch,getCurrentTag,getRemotes,getTags,gitStage,gitUnstage,gitCommit,gitTag,gitPush} from "./GitComponent.service";
 import ModalDialog from "./ModalDialog";
-import {SimpleTextEditor} from "./SimpleTextEditor";
+import {SimpleTextEditorComponent} from "./SimpleTextEditor.jsx";
 import {SemverControl} from "./Semver.jsx";
 import {safeStringify} from "./util";
 
-export function GitPanel({
+export function GitComponent({
         rootDir,
         onFileSelect ,
         ...boxProps
@@ -161,7 +161,7 @@ export function GitPanel({
             </box>
             <box content={status} top={0} left={3} width={statusLen} height={1} tags={true}/>
             <box content={rootDir} top={8} left={3} width={rootDir.length} height={1}/>
-            <SimpleTextEditor
+            <SimpleTextEditorComponent
                 top={9}  height={9}
                 label={'Message'}
                 initialText={commitMessage}

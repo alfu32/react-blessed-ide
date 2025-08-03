@@ -1,14 +1,14 @@
 // App.js
 import React, {Component, useState,useEffect} from 'react';
-import {Workspace,INode} from './services/WorkspaceService';
+import {Workspace,INode} from './Workspace';
 import FileTree from './FileTree';
 import ModalDialog from './ModalDialog.jsx';
 import { BoxElement as box, TextElement as text,ListElement as list,ButtonElement as button } from 'react-blessed';
 import { Grid,GridItem } from 'react-blessed-contrib-17'
 import FolderPickerDialog from "./FolderPickerDialog";
 import {Tab, VTabs} from "./VTabs";
-import {CodeBufferEditor} from './CodeBufferEditor'
-import {GitPanel} from "./GitPanel";
+import {CodeBufferEditorComponent} from './CodeBufferEditor.jsx'
+import {GitComponent} from "./GitComponent";
 import { ErrorBoundary } from 'react-error-boundary'
 import {ErrorFallback} from './ErrorFallback';
 
@@ -146,11 +146,11 @@ export function App(props){// Some Coment
                   </Grid>
               </Tab>
               <Tab name='Git'>
-                  <GitPanel rootDir={rootDir} row={0} col={1} rowSpan={1} colSpan={5}/>
+                  <GitComponent rootDir={rootDir} row={0} col={1} rowSpan={1} colSpan={5}/>
               </Tab>
           </VTabs>
           {/* Center panel */}
-          <CodeBufferEditor row={0} col={5} rowSpan={6} colSpan={10}
+          <CodeBufferEditorComponent row={0} col={5} rowSpan={6} colSpan={10}
                       border={{ type: 'line' }}
                       label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
                       filePath={selectedFile||null}
@@ -189,9 +189,7 @@ export function App(props){// Some Coment
                 onClose={() => setPickFolder(false)}
             >
             <FolderPickerDialog
-                label={'Pick Folder'}
                 title="Pick Folder"
-                onClose={() => setMessage(false)}
                 onFolderSelect={(inode)=>{
                     setMessage(`selected folder ${inode.fullPath}`)
                 }}

@@ -1,8 +1,9 @@
 // components/FileTree.js
 import React, { Component } from 'react';
 import { ListElement as list, TextElement as text, BoxElement as box } from 'react-blessed';
-import { Workspace,INode } from './services/WorkspaceService';
+import { Workspace,INode } from './Workspace';
 import {safeStringify} from "./util";
+import {ListComponent} from "./ListComponent";
 
 /**
  *
@@ -18,11 +19,13 @@ export default function FileTree({children,workspace,treeData, onDirSelect, onFi
     let lines = (treeData||[]).map((v,i,a) => {
         return v.toText();
     })
-    const itemSelect=(n,idx)=>{
-        const node = treeData[idx];
-        //throw JSON.stringify({node,idx},null, ' ')
+    const itemSelect=(eventData)=>{
+        const {lines, visibleLines, line, cursor:{x,y}, buffer, visibleBuffer, index} = eventData
+        const node = treeData[y];
+        // throw JSON.stringify({node,y},null, ' ')
         if (node.type.indexOf('d')>-1) {
             onDirSelect(node);
+            setSelected(node);
         } else {
             if(selected!==null && selected===node){
                 onFileSelect(node);
@@ -37,15 +40,14 @@ export default function FileTree({children,workspace,treeData, onDirSelect, onFi
         //     <text>{JSON.stringify(items,null,' ')}</text>
         // </>
         <box {...boxProps}>
-            <list
+            <ListComponent
                 scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                 top={1}
                 bottom={4}
-                items={lines}
+                lines={lines}
                 keys mouse
                 style={{ selected: { bg: 'blue' } }}
-                onSelect={itemSelect}
-                onSelectItem={itemSelect}
+                onClick={itemSelect}
                 label={label}
             />
             {children||[]}
