@@ -23,6 +23,7 @@ export default function FileTree({children,workspace,treeData, onDirSelect, onFi
         const {lines, visibleLines, line, cursor:{x,y}, buffer, visibleBuffer, index} = eventData
         const node = treeData[y];
         // throw JSON.stringify({node,y},null, ' ')
+        // if (node.type.indexOf('d')>-1) {
         if (node.type.indexOf('d')>-1) {
             onDirSelect(node);
             setSelected(node);

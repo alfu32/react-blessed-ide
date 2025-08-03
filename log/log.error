@@ -1,1 +1,13 @@
 [0m[2m[35m$[0m [2m[1mnode dist/app.js[0m
+TypeError: Cannot read properties of null (reading 'fullPath')
+    at onFolderSelect (/home/devlin/Development/term-blessed-react/dist/app.js:2329:51)
+    at onClick (/home/devlin/Development/term-blessed-react/dist/app.js:865:15)
+    at eventListener (/home/devlin/Development/term-blessed-react/node_modules/react-blessed/dist/index.js:2650:5)
+    at instance._eventListener (/home/devlin/Development/term-blessed-react/node_modules/react-blessed/dist/index.js:5360:46)
+    at EventEmitter._emit (/home/devlin/Development/term-blessed-react/node_modules/blessed/lib/events.js:94:20)
+    at EventEmitter.emit (/home/devlin/Development/term-blessed-react/node_modules/blessed/lib/events.js:111:8)
+    at Program.<anonymous> (/home/devlin/Development/term-blessed-react/node_modules/blessed/lib/widgets/screen.js:508:34)
+    at Program.emit (node:events:524:28)
+    at Program._bindMouse (/home/devlin/Development/term-blessed-react/node_modules/blessed/lib/program.js:834:10)
+    at Program.<anonymous> (/home/devlin/Development/term-blessed-react/node_modules/blessed/lib/program.js:566:10)
+[0m[31merror[0m[2m:[0m script [1m"vt:start"[0m exited with code 1[0m

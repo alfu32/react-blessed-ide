@@ -551,7 +551,7 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
     }
     const { xi, yi } = boxRef.current.lpos;
     const { x, y } = screenEvent;
-    editor2.setCursor(x - xi - 1 + editor2.viewportX, y - yi - 1 + editor2.viewportY);
+    editor2.setCursor(x - xi + editor2.viewportX, y - yi + editor2.viewportY);
     const cursor = editor2.cursorCoords();
     const lines2 = editor2.renderToLines();
     const line = lines2[cursor.y];
@@ -640,7 +640,6 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
       input: true,
       clickable: true,
       focused: true,
-      border: { type: "line" },
       style: { border: { fg: "cyan" } },
       tags: false,
       scrollable: false,
@@ -748,52 +747,89 @@ function ModalDialog({
     }
   );
 }
+function FileTree2({ children, rootDir, onDirSelect, onFileSelect, label, ...boxProps }) {
+  const boxRef = React.useRef();
+  const [selected, setSelected] = React.useState(null);
+  const [treeData, setTreeData] = React.useState([]);
+  const [workspace, setWorkspace] = React.useState(new Workspace());
+  React.useEffect(() => {
+    const node = boxRef.current;
+    if (node) node.focus();
+    workspace.init(rootDir).then((wk) => workspace.open(workspace.rootNode)).then((t) => {
+      const wk = workspace.copy();
+      const td = workspace.flatten();
+      setWorkspace(wk);
+      setTreeData(td);
+    });
+    setWorkspace(workspace.copy());
+  }, [rootDir]);
+  let lines = (treeData || []).map((v, i, a) => {
+    return v.toText();
+  });
+  const itemSelect = (eventData) => {
+    const { lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index } = eventData;
+    const node = treeData[y];
+    if (node.type.indexOf("d") > -1) {
+      const tk = line.split(/(\[\+])|(\[\-])/gi);
+      const [empty, sign, name] = [tk[0], line.substring(tk[0].length, tk[0].length + 3), tk[1]];
+      if (x >= empty.length && x < empty.length + sign.length) {
+        if (node.isOpen) {
+          node.close();
+          const wk = workspace.copy();
+          const td = wk.flatten();
+          setWorkspace(wk);
+          setTreeData(td);
+        } else {
+          node.open(workspace.rootDir, workspace.ig).then((n) => {
+            const wk = workspace.copy();
+            const td = wk.flatten();
+            setWorkspace(wk);
+            setTreeData(td);
+          });
+        }
+      } else if (x >= empty.length + sign.length) {
+        setSelected(node);
+      }
+    } else {
+      setSelected(node);
+    }
+  };
+  return (
+    // <>
+    //     <text>{workspacePath}</text>
+    //     <text>{JSON.stringify(items,null,' ')}</text>
+    // </>
+    /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [
+      /* @__PURE__ */ jsxRuntime_js.jsx(
+        ListComponent,
+        {
+          scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
+          top: 0,
+          bottom: 2,
+          lines,
+          keys: true,
+          mouse: true,
+          style: { selected: { bg: "blue" } },
+          onClick: itemSelect
+        }
+      ),
+      /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, content: label, height: 1 }),
+      children || []
+    ] })
+  );
+}
 function FolderPickerDialog({
   title = "Dialog",
   width = "50%",
   height = "50%",
   onFolderSelect
 }) {
-  const boxRef = React.useRef();
-  const [treeData, setTreeData] = React.useState([]);
-  const [workspace, setWorkspace] = React.useState(new Workspace());
   const [selected, setSelected] = React.useState(null);
-  React.useEffect(() => {
-    const node = boxRef.current;
-    if (node) node.focus();
-    workspace.init("/").then((wk) => workspace.open(workspace.rootNode)).then((t) => {
-      const wk = workspace.copy();
-      const td = workspace.flatten();
-      setWorkspace(wk);
-      setTreeData(td);
-    });
-  }, []);
-  const selectDir = async (dir) => {
-    if (dir.isOpen) {
-      dir.close();
-      const wk = workspace.copy();
-      const td = wk.flatten();
-      setWorkspace(wk);
-      setTreeData(td);
-    } else {
-      dir.open(workspace.rootDir, workspace.ig).then((n) => {
-        const wk = workspace.copy();
-        const td = wk.flatten();
-        setWorkspace(wk);
-        setTreeData(td);
-      });
-    }
-  };
-  const selectFile = async (dir) => {
-  };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(
-    "box",
+    FileTree2,
     {
-      ref: boxRef,
       top: "center",
       left: "center",
-      width,
-      height,
       border: { type: "line" },
       style: { bg: "black", fg: "white" },
       keys: true,
@@ -802,84 +838,56 @@ function FolderPickerDialog({
       onKey: (ch, key) => {
         if (key.name === "escape") onFolderSelect(null);
       },
-      label: selected ? selected.fullName : "---",
+      label: selected ? selected.fullName : "Pick Workspace",
+      rootDir: "/",
+      onDirSelect: (selectDir) => {
+        setSelected(selectDir);
+      },
+      onFileSelect: () => {
+      },
       children: [
-        /* @__PURE__ */ jsxRuntime_js.jsxs("box", { height: 1, width: "100%", style: { fg: "green" }, children: [
-          /* @__PURE__ */ jsxRuntime_js.jsxs("text", { bold: true, children: [
-            ` ${title}`,
-            " "
-          ] }),
-          /* @__PURE__ */ jsxRuntime_js.jsx(
-            "text",
-            {
-              right: 0,
-              mouse: true,
-              clickable: true,
-              underline: true,
-              onClick: (evt) => {
-                onFolderSelect(null);
-              },
-              children: "[×]"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 2, left: 1, right: 1, bottom: 1, scrollable: true, keys: true, mouse: true, alwaysScroll: true, children: /* @__PURE__ */ jsxRuntime_js.jsxs(
-          FileTree,
+        /* @__PURE__ */ jsxRuntime_js.jsx(
+          "button",
           {
-            top: 1,
+            mouse: true,
+            keys: true,
+            input: true,
+            clickable: true,
+            focused: true,
+            left: 0,
             bottom: 0,
-            workspace,
-            treeData,
-            onDirSelect: selectDir,
-            onFileSelect: selectFile,
-            label: "Project",
-            children: [
-              /* @__PURE__ */ jsxRuntime_js.jsx(
-                "button",
-                {
-                  mouse: true,
-                  keys: true,
-                  input: true,
-                  clickable: true,
-                  focused: true,
-                  left: 0,
-                  bottom: 0,
-                  height: 3,
-                  width: "45%",
-                  valign: "middle",
-                  align: "center",
-                  style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
-                  onClick: () => {
-                    onFolderSelect(selected);
-                  },
-                  content: "select"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntime_js.jsx(
-                "button",
-                {
-                  mouse: true,
-                  keys: true,
-                  input: true,
-                  clickable: true,
-                  focused: true,
-                  right: 0,
-                  bottom: 0,
-                  height: 3,
-                  valign: "middle",
-                  align: "center",
-                  width: "45%",
-                  style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
-                  onClick: () => {
-                    onFolderSelect(null);
-                  },
-                  content: "cancel"
-                }
-              )
-            ]
+            height: 3,
+            width: "45%",
+            valign: "middle",
+            align: "center",
+            style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+            onClick: () => {
+              onFolderSelect(selected);
+            },
+            content: "select"
           }
-        ) }),
-        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 3, height: 1 })
+        ),
+        /* @__PURE__ */ jsxRuntime_js.jsx(
+          "button",
+          {
+            mouse: true,
+            keys: true,
+            input: true,
+            clickable: true,
+            focused: true,
+            right: 0,
+            bottom: 0,
+            height: 3,
+            valign: "middle",
+            align: "center",
+            width: "45%",
+            style: { bg: "#ffaa00", fg: "#333333", hover: { bg: "#ffdd88", fg: "#333333" } },
+            onClick: () => {
+              onFolderSelect(null);
+            },
+            content: "cancel"
+          }
+        )
       ]
     }
   );

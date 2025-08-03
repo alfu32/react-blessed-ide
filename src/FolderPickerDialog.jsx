@@ -1,7 +1,7 @@
 // components/ModalDialog.js
 import React, { useEffect, useRef,useState } from 'react';
 import { BoxElement as box, TextElement as text, ButtonElement as button } from 'react-blessed';
-import FileTree from "./FileTree";
+import FileTree2 from "./FileTree2";
 import {Workspace} from "./Workspace";
 
 export default function FolderPickerDialog({
@@ -10,59 +10,12 @@ export default function FolderPickerDialog({
     height = '50%',
     onFolderSelect,
 }) {
-    const boxRef = useRef();
-    const [treeData, setTreeData]   = useState([]);
-    const [workspace,setWorkspace] = useState(new Workspace());
-    const [selected,setSelected] = useState(null);
+    const [selected, setSelected] = React.useState(null);
 
-    // focus the modal so it can catch keypresses
-    useEffect(() => {
-        const node = boxRef.current;
-        if (node) node.focus();
-        workspace.init('/')
-            .then(wk => workspace.open(workspace.rootNode))
-            .then(t => {
-                const wk=workspace.copy()
-                const td = workspace.flatten()
-                setWorkspace(wk)
-                setTreeData(td)
-                // setMessage(`loaded tree data ${JSON.stringify({
-                //   td
-                // })}`)
-            })
-    }, []);
-    const selectDir = async (dir) => {
-        // throw JSON.stringify({dir})
-        if (dir.isOpen) {
-            dir.close()
-            const wk=workspace.copy()
-            const td = wk.flatten()
-            setWorkspace(wk)
-            setTreeData(td)
-        } else {
-            dir.open(workspace.rootDir,workspace.ig).then(n => {
-                const wk=workspace.copy()
-                const td = wk.flatten()
-                setWorkspace(wk)
-                setTreeData(td)
-            })
-        }
-    }
-    const selectFile = async (dir) => {
-        /**
-         *
-         * @param {INode} dir
-         * @returns {Promise<void>}
-         */
-
-        // setMessage(`dir selected ${Object.keys(dir)}`)
-    };
-    return (<box
-            ref={boxRef}
+    return (
+        <FileTree2
             top="center"
             left="center"
-            width={width}
-            height={height}
             border={{ type: 'line' }}
             style={{ bg: 'black', fg: 'white' }}
             keys
@@ -72,71 +25,50 @@ export default function FolderPickerDialog({
             onKey={(ch, key) => {
                 if (key.name === 'escape') onFolderSelect(null);
             }}
-            label={selected?selected.fullName:'---'}
+            label={selected?selected.fullName:'Pick Workspace'}
+            rootDir={'/'}
+            onDirSelect={(selectDir) => {
+                setSelected(selectDir);
+            }}
+            onFileSelect={()=>{}}
         >
-            {/* Header with title and close button */}
-            <box height={1} width="100%" style={{ fg: 'green' }}>
-                <text bold>{` ${title}`} </text>
-                <text
-                    right={0}
+            <button
+                mouse
+                keys
+                input
+                clickable
+                focused
+                left={0}
+                bottom={0}
+                height={3}
+                width={'45%'}
+                valign={'middle'}
+                align={'center'}
+                style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
+                onClick={() => {
+                    /* do something */
+                    onFolderSelect(selected)
+                }}
+                content={'select'}
+            />
+            <button
                     mouse
+                    keys
+                    input
                     clickable
-                    underline
-                    onClick={(evt)=>{onFolderSelect(null)}}
-                >[×]</text>
-            </box>
-
-            {/* Content area */}
-            <box top={2} left={1} right={1} bottom={1} scrollable keys mouse alwaysScroll>
-                <FileTree
-                    top={1} bottom={0}
-                    workspace={workspace}
-                    treeData={treeData}
-                    onDirSelect={selectDir}
-                    onFileSelect={selectFile}
-                    label={'Project'}
-                >
-                    <button
-                        mouse
-                        keys
-                        input
-                        clickable
-                        focused
-                        left={0}
-                        bottom={0}
-                        height={3}
-                        width={'45%'}
-                        valign={'middle'}
-                        align={'center'}
-                        style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
-                        onClick={() => {
-                            /* do something */
-                            onFolderSelect(selected)
-                        }}
-                        content={'select'}
-                    />
-                    <button
-                            mouse
-                            keys
-                            input
-                            clickable
-                            focused
-                            right={0}
-                            bottom={0}
-                            height={3}
-                            valign={'middle'}
-                            align={'center'}
-                            width={'45%'}
-                            style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
-                          onClick={() => {
-                              onFolderSelect(null)
-                          }}
-                            content={'cancel'}
-                    />
-                </FileTree>
-            </box>
-            <box top={3} height={1}>
-            </box>
-        </box>
+                    focused
+                    right={0}
+                    bottom={0}
+                    height={3}
+                    valign={'middle'}
+                    align={'center'}
+                    width={'45%'}
+                    style={{bg:'#ffaa00',fg:'#333333',hover:{bg:'#ffdd88',fg:'#333333'}}}
+                  onClick={() => {
+                      onFolderSelect(null)
+                  }}
+                    content={'cancel'}
+            />
+        </FileTree2>
     )
 }

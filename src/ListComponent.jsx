@@ -70,7 +70,7 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
         }
         const {xi,yi} = boxRef.current.lpos;
         const {x,y} = screenEvent;
-        editor.setCursor(x-xi-1+editor.viewportX,y-yi-1+editor.viewportY)
+        editor.setCursor(x-xi+editor.viewportX,y-yi+editor.viewportY)
         const cursor = editor.cursorCoords()
         const lines = editor.renderToLines()
         const line = lines[cursor.y];
@@ -173,7 +173,6 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
             input
             clickable
             focused
-            border={{ type: 'line' }}
             style={{ border: { fg: 'cyan' } }}
             tags={false}           // raw ANSI
             scrollable={false}
