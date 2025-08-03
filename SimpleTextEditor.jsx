@@ -9,7 +9,8 @@ import {
 } from 'react-blessed';
 import {SimpleTextBuffer} from "./SimpleTextBuffer.js";
 import {safeStringify} from "./util";
-
+const defaultText="asdfasdf,qwerqwer,qrtyutyu,ghjfghj,xcvbxcvbcvb,zxcv,asdasdasdasd,5678567856785678678,123412341234123412341234123"
+    .split(",").join("\n")
 export function SimpleTextEditor({initialText, onChange,...boxProps}) {
     const boxRef = useRef(null);
     const [editor, setEditor] = useState(null);
@@ -19,10 +20,13 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
     useEffect(()=>{
         let newEditor=editor
         if(!newEditor){
-            newEditor = new SimpleTextBuffer(initialText||"...")
-        } else {
-            newEditor.buffer=initialText||"..."
+            newEditor = new SimpleTextBuffer(initialText||defaultText)
         }
+        if((initialText||defaultText).substring(newEditor.cursorIndex)!==newEditor.buffer.substring(newEditor.cursorIndex)){
+            newEditor.cursorIndex = 0
+            newEditor.slideViewportToCursor()
+        }
+        newEditor.buffer=initialText||defaultText
         newEditor.viewportHeight = size.rows-1;
         newEditor.viewportWidth = size.cols;
         setEditor(newEditor.copy())
@@ -83,7 +87,7 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
         if(!editor){
             return;
         }
-        const {viewportY:vy,viewportWidth:vh} = editor
+        const {viewportY:vy,viewportHeight:vh} = editor
         return editor.renderToLines()
             .filter((l,y) => {
                 return (y >=vy && y <= (vy + vh));
@@ -104,11 +108,12 @@ export function SimpleTextEditor({initialText, onChange,...boxProps}) {
         }
         const i = editor.cursorIndex
         const {x,y} = editor.cursorCoords()
+        const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
         const content = editor.buffer.substring(i,i+1)
         return (<box
             key={`editor-cursor-${Date.now()}`}
-            top={y}
-            left={x}
+            top={y-vy}
+            left={x-vx}
             width={1} height={1}
             style={{inverse:true,underline:true}}
             content={content}

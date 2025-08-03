@@ -10,11 +10,10 @@ export async function getCommits(cwd) {
   const { stdout } = await exec(`git log --pretty=format:"%h %s" --abbrev=40 | tee`, { cwd });
   const lines = stdout.split('\n').filter(Boolean)
   return await Promise.all(lines.map(async v => {
-    const tk=v.split(/\s/gi)
     const id = v.substring(0,40)
     const message = v.substring(41)
     const { stdout:tags } = await exec(`git tag --points-at ${id}`, { cwd });
-    return `${id.substring(0,8)}│${(tags?tags.trim("\n"):"").padEnd(9,' ')}│${message.trim("\n")}`
+    return `${id.substring(0,8)}│${(tags?tags.trim("\n"):"").padEnd(9,' ')}│${message}`
     // return `${id.substring(0,8)} ${message}`
   }));
 }
