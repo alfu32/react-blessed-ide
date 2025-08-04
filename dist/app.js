@@ -289,6 +289,11 @@ function safeStringify(obj, space = void 0) {
     return value;
   }, space);
 }
+function insertAt(destination, index, source) {
+  let first = destination.substring(0, index);
+  let last = destination.substring(index + source.length);
+  return (first + source + last).substring(0, destination.length);
+}
 class SimpleTextEditor {
   buffer = "";
   cursorIndex = 0;
@@ -557,8 +562,112 @@ class SimpleTextEditor {
     return newSimpleTextBuffer;
   }
 }
+class TokenizerToken {
+  tokenizerName = "";
+  type = "";
+  style = {};
+  start = 0;
+  end = 0;
+  y = 0;
+  x = 0;
+  text = "";
+  /**
+   *
+   * @param {RegExpExecArray} m
+   * @param tokenizerDef
+   * @return {{name: void | string, text: *, type: string, style, start, end: *}}
+   */
+  static fromRegexpMatch(m, tokenizerDef, tokenizerName, lineNumber) {
+    const groups = m.groups;
+    const type = Object.keys(groups).find((key) => groups[key] !== void 0);
+    const tokenDef = tokenizerDef.definitions[type];
+    const tt = new TokenizerToken();
+    tt.tokenizerName = tokenizerName;
+    tt.text = m[0];
+    tt.type = type;
+    tt.style = tokenDef.style;
+    tt.start = m.index;
+    tt.end = m.index + m[0].length;
+    tt.y = lineNumber;
+    tt.x = tt.start;
+    return tt;
+  }
+}
+const namedTokenizers = {
+  any: { name: "any", definitions: {
+    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
+    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
+    punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
+  } },
+  js: { name: "js", flags: "mg", definitions: {
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
+    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
+    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
+    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
+    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
+  } },
+  jsx: { name: "jsx", flags: "mg", definitions: {
+    ReactToken: { style: { fg: "#FFDD00" }, pattern: "\\buse[A-Z][a-z]*\\b" },
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
+    JsxTag: { style: { fg: "#FFDD00" }, pattern: "\\<(\\/){0,1}[a-zA-Z-]*\\>" },
+    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
+    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
+    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
+    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
+  } },
+  c: { name: "c", flags: "mg", definitions: {
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(int|const|char|long|if|else|for|while|return|switch|case|break|continue)\\b" },
+    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
+    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
+    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
+    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
+  } },
+  words: { name: "c", flags: "mg", definitions: {
+    Whitespace: { style: { fg: "red" }, pattern: "\\s+" },
+    Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
+  } }
+};
+function getNamedTokenizer(name) {
+  const tokenizerDef = namedTokenizers[name] || namedTokenizers["any"];
+  return getTokenizer(tokenizerDef);
+}
+function getTokenizer(tokenizerDef) {
+  const tokenRegex = new RegExp(
+    Object.entries(tokenizerDef.definitions).map(([name, definition]) => `(?<${name}>${definition.pattern})`).join("|"),
+    tokenizerDef.flags || "g"
+  );
+  return function tokenizer(code, lineNumber) {
+    const tokens = [];
+    for (const m of code.matchAll(tokenRegex)) {
+      const groups = m.groups;
+      const type = Object.keys(groups).find((key) => groups[key] !== void 0);
+      tokenizerDef.definitions[type];
+      tokens.push(TokenizerToken.fromRegexpMatch(m, tokenizerDef, tokenizerDef.name, lineNumber));
+    }
+    return tokens;
+  };
+}
 const defaultText$1 = "...".split(",").join("\n");
-function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps }) {
+function ListComponent({ lines, editable = false, onClick, onChange, tokenizerDef, children, ...boxProps }) {
   const boxRef = React.useRef(null);
   const [editor2, setEditor2] = React.useState(null);
   const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
@@ -617,6 +726,19 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
     const cursor = editor2.cursorCoords();
     const lines2 = editor2.renderToLines();
     const line = lines2[cursor.y];
+    const tokenizer = getTokenizer(tokenizerDef || {
+      name: "words",
+      flags: "mg",
+      definitions: {
+        Whitespace: { style: { fg: "red" }, pattern: "\\s+" },
+        Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
+      }
+    });
+    const tokens = tokenizer(line, y);
+    const phrase = tokens.map((v) => v.type);
+    const tokenUnderCursor = tokens.find((v, i, a) => {
+      return v.start <= cursor.x && v.end >= cursor.x;
+    });
     onClick({
       lines: lines2,
       line,
@@ -625,7 +747,10 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
       cursorScreen: { x: cursor.x - editor2.viewportX, y: cursor.y - editor2.viewportY },
       buffer: editor2.buffer,
       visibleBuffer: editor2.buffer,
-      index: editor2.cursorIndex
+      index: editor2.cursorIndex,
+      tokens,
+      tokenUnderCursor,
+      phrase
     });
     setEditor2(editor2.copy());
   };
@@ -756,7 +881,8 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
       children: [
         renderLines(),
         renderCursor(),
-        renderScrollbar()
+        renderScrollbar(),
+        children || []
       ]
     }
   );
@@ -770,15 +896,32 @@ function FileTree2({
   inodeFilter = (inode, index, nodes, parent) => {
     return true;
   },
+  cursor = true,
   ...boxProps
 }) {
   const boxRef = React.useRef();
+  const [message, setMessage] = React.useState(false);
   const [selected, setSelected] = React.useState(null);
   const [cursorData, setCursorData] = React.useState(null);
   const [selectionData, setSelectionData] = React.useState(null);
   const [treeData, setTreeData] = React.useState([]);
   const [workspace, setWorkspace] = React.useState(new Workspace(inodeFilter));
   const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
+  const listingTokenizerDefinition = {
+    name: "listing",
+    flags: "mg",
+    definitions: {
+      "Whitespace": { style: { fg: "white" }, pattern: "\\s+" },
+      "OpenButton": { style: { fg: "yellow" }, pattern: "\\[\\+]" },
+      "CloseButton": { style: { fg: "yellow" }, pattern: "\\[-]" },
+      "AddDirButton": { style: { fg: "cyan" }, pattern: "\\[\\+D]" },
+      "AddFileButton": { style: { fg: "magenta" }, pattern: "\\[\\+F]" },
+      "RenameButton": { style: { fg: "blue" }, pattern: "\\[r]" },
+      "DeleteButton": { style: { fg: "red" }, pattern: "\\[x]" },
+      "NodeName": { style: { fg: "green" }, pattern: "[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+" },
+      "Word": { style: { fg: "green" }, pattern: "\\s.+?\\s" }
+    }
+  };
   React.useEffect(() => {
     const node = boxRef.current;
     if (node) node.focus();
@@ -790,47 +933,107 @@ function FileTree2({
     });
     setWorkspace(workspace.copy());
   }, [rootDir]);
-  let lines = (treeData || []).map((v, i, a) => {
-    return v.toText();
-  });
+  let lines = () => {
+    if (boxRef && boxRef.current && boxRef.current.lpos) {
+      const lpos = boxRef.current.lpos;
+      return (treeData || []).map((v, i, a) => {
+        const lineBuffer = " ".repeat(lpos.width);
+        const t = v.toText();
+        let rr = insertAt(lineBuffer, 0, t);
+        switch (v.type.substring(0, 1)) {
+          case "d":
+            rr = insertAt(rr, lpos.width - 17, "[+D][+F][r][x]");
+            return rr;
+          default:
+            rr = insertAt(rr, lpos.width - 9, "[r][x]");
+            return rr;
+        }
+      });
+    } else {
+      return [];
+    }
+  };
   const itemSelect = (eventData) => {
-    const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index } = eventData;
-    setSelectionData({ lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index });
+    const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
+    setSelectionData({ lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase });
     const node = treeData[y];
-    if (node.type.indexOf("d") > -1) {
-      const tk = line.split(/(\[\+])|(\[\-])/gi);
-      const [empty, sign, name] = [tk[0], line.substring(tk[0].length, tk[0].length + 3), tk[1]];
-      if (x >= empty.length && x < empty.length + sign.length) {
-        if (node.isOpen) {
-          node.close();
-          const wk = workspace.copy();
-          const td = wk.flatten().filter(inodeFilter);
-          setWorkspace(wk);
-          setTreeData(td);
-          setCursorData({ cursor: { x, y }, cursorScreen: { x: empty.length, y: cursorScreen.y }, content: "[+]" });
-        } else {
-          node.open(workspace.rootDir, workspace.ig).then((n) => {
+    switch (phrase.filter((v) => v !== "Whitespace").join(",")) {
+      case "Whitespace,NodeName":
+      case "NodeName,RenameButton,DeleteButton":
+        switch ((tokenUnderCursor || { type: "undefined" }).type) {
+          case "NodeName":
+            setSelected(node);
+            onFileSelect(node);
+            setCursorData({ cursor: { x: 0, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
+          case "RenameButton":
+            setMessage(`Rename
+${node.fullPath}`);
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
+          case "DeleteButton":
+            setMessage(`Delete
+${node.fullPath}`);
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
+        }
+        break;
+      case "Whitespace,OpenButton,Whitespace,NodeName":
+      case "Whitespace,CloseButton,Whitespace,NodeName":
+      case "OpenButton,NodeName,AddDirButton,AddFileButton,RenameButton,DeleteButton":
+      case "CloseButton,NodeName,AddDirButton,AddFileButton,RenameButton,DeleteButton":
+        switch ((tokenUnderCursor || { type: "undefined" }).type) {
+          case "OpenButton":
+            node.open(workspace.rootDir, workspace.ig).then((n) => {
+              const wk2 = workspace.copy();
+              const td2 = wk2.flatten().filter(inodeFilter);
+              setWorkspace(wk2);
+              setTreeData(td2);
+              setCursorData({ cursor: { x, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            });
+            break;
+          case "CloseButton":
+            node.close();
             const wk = workspace.copy();
             const td = wk.flatten().filter(inodeFilter);
             setWorkspace(wk);
             setTreeData(td);
-            setCursorData({ cursor: { x, y }, cursorScreen: { x: empty.length, y: cursorScreen.y }, content: "[-]" });
-          });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
+          case "NodeName":
+            setSelected(node);
+            onDirSelect(node);
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
+          case "AddDirButton":
+            setMessage(`AddDir
+${node.fullPath}`);
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
+          case "AddFileButton":
+            setMessage(`AddFile
+${node.fullPath}`);
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
+          case "RenameButton":
+            setMessage(`Rename
+${node.fullPath}`);
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
+          case "DeleteButton":
+            setMessage(`Delete
+${node.fullPath}`);
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            break;
         }
-      } else if (x >= empty.length + sign.length) {
-        setSelected(node);
-        onDirSelect(node);
-        setCursorData({ cursor: { x: 0, y }, cursorScreen: { x: 0, y: cursorScreen.y }, content: line });
-      }
-    } else {
-      setSelected(node);
-      onFileSelect(node);
-      setCursorData({ cursor: { x: 0, y }, cursorScreen: { x: 0, y: cursorScreen.y }, content: line });
+        break;
+      default:
+        throw new Error(`Unexpected phrase Structure '${phrase}'`);
     }
   };
   const cursorExtra = () => {
     if (!cursorData) return /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, left: 0, width: 1, height: 1, content: " " });
-    const { cursor, cursorScreen, content } = cursorData;
+    const { cursor: cursor2, cursorScreen, content } = cursorData;
     const { x, y } = mouseCoords;
     return /* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
@@ -869,31 +1072,37 @@ function FileTree2({
     } catch (e) {
     }
   };
-  return (
-    // <>
-    //     <text>{workspacePath}</text>
-    //     <text>{JSON.stringify(items,null,' ')}</text>
-    // </>
-    /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [
+  return /* @__PURE__ */ jsxRuntime_js.jsxs(jsxRuntime_js.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, ref: boxRef, children: [
       /* @__PURE__ */ jsxRuntime_js.jsx(
         ListComponent,
         {
           scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
           top: 0,
           bottom: 2,
-          lines,
+          lines: lines(),
           keys: true,
           mouse: true,
           style: { selected: { bg: "blue" } },
           onClick: itemSelect,
-          onMouse: mouseAction
+          onMouse: mouseAction,
+          tokenizerDef: listingTokenizerDefinition
         }
       ),
       /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, content: selected ? selected.fullPath : " " + label, height: 1 }),
       children || [],
-      cursorExtra()
-    ] })
-  );
+      cursor ? cursorExtra() : []
+    ] }),
+    message && /* @__PURE__ */ jsxRuntime_js.jsx(
+      ModalDialog,
+      {
+        label: "Message",
+        title: "Message",
+        onClose: () => setMessage(false),
+        children: /* @__PURE__ */ jsxRuntime_js.jsx("text", { children: message })
+      }
+    )
+  ] });
 }
 function FolderPickerDialog({
   title = "Dialog",
@@ -999,103 +1208,6 @@ function VTabs({ children, ...boxProps }) {
 function Tab({ children }) {
   return /* @__PURE__ */ jsxRuntime_js.jsx(jsxRuntime_js.Fragment, { children });
 }
-class TokenizerToken {
-  tokenizerName = "";
-  type = "";
-  style = {};
-  start = 0;
-  end = 0;
-  y = 0;
-  x = 0;
-  text = "";
-  /**
-   *
-   * @param {RegExpExecArray} m
-   * @param tokenizerDef
-   * @return {{name: void | string, text: *, type: string, style, start, end: *}}
-   */
-  static fromRegexpMatch(m, tokenizerDef, tokenizerName, lineNumber) {
-    const groups = m.groups;
-    const type = Object.keys(groups).find((key) => groups[key] !== void 0);
-    const tokenDef = tokenizerDef.definitions[type];
-    const tt = new TokenizerToken();
-    tt.tokenizerName = tokenizerName;
-    tt.text = m[0];
-    tt.type = type;
-    tt.style = tokenDef.style;
-    tt.start = m.index;
-    tt.end = m.index + m[0].length;
-    tt.y = lineNumber;
-    tt.x = tt.start;
-    return tt;
-  }
-}
-const namedTokenizers = {
-  any: { name: "any", definitions: {
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
-  } },
-  js: { name: "js", flags: "mg", definitions: {
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
-    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
-  } },
-  jsx: { name: "jsx", flags: "mg", definitions: {
-    ReactToken: { style: { fg: "#FFDD00" }, pattern: "\\buse[A-Z][a-z]*\\b" },
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
-    JsxTag: { style: { fg: "#FFDD00" }, pattern: "\\<(\\/){0,1}[a-zA-Z-]*\\>" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
-    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
-  } },
-  c: { name: "c", flags: "mg", definitions: {
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(int|const|char|long|if|else|for|while|return|switch|case|break|continue)\\b" },
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
-    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
-  } }
-};
-function getTokenizer(name) {
-  const tokenizerDef = namedTokenizers[name] || namedTokenizers["any"];
-  const tokenRegex = new RegExp(
-    Object.entries(tokenizerDef.definitions).map(([name2, definition]) => `(?<${name2}>${definition.pattern})`).join("|"),
-    tokenizerDef.flags || "g"
-  );
-  return function tokenizer(code, lineNumber) {
-    const tokens = [];
-    for (const m of code.matchAll(tokenRegex)) {
-      const groups = m.groups;
-      const type = Object.keys(groups).find((key) => groups[key] !== void 0);
-      tokenizerDef.definitions[type];
-      tokens.push(TokenizerToken.fromRegexpMatch(m, tokenizerDef, name, lineNumber));
-    }
-    return tokens;
-  };
-}
 class CodeBufferEditor {
   /**
    * @param {string} filePath
@@ -1154,7 +1266,7 @@ class CodeBufferEditor {
   }
   updateTokens() {
     const ps = this.filePath.split(".");
-    const tokenizer = getTokenizer(ps[ps.length - 1]);
+    const tokenizer = getNamedTokenizer(ps[ps.length - 1]);
     this.tokens = this.lines.reduce((r, line, lineNumber) => {
       const tokens = tokenizer(line, lineNumber);
       r[lineNumber] = tokens;

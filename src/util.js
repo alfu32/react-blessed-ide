@@ -17,3 +17,10 @@ export function safeStringify(obj,space=undefined) {
       return value;
     },space);
   }
+
+  export function insertAt(destination,index,source){
+    let first = destination.substring(0,index);
+
+    let last = destination.substring(index+source.length);
+    return (first+source+last).substring(0,destination.length)
+  }

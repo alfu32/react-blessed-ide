@@ -4,12 +4,21 @@
  * @return { TokenizerToken[] }
  */
 export function highlight(line) {
-    const tokenizer=getTokenizer('jsx')
+    const tokenizer=getNamedTokenizer('jsx')
     return tokenizer(line)
   }
-export class TokenizerDef{
+export class TokenizerMatcherDef{
     style = {}
     pattern = ''
+}
+export class TokenizerDef{
+    name = '';
+    flags='mgi'
+    /**
+     *
+     * @type {{[name:string]:TokenizerDef}}
+     */
+    definitions = {}
 }
 export class TokenizerToken{
     tokenizerName=''
@@ -45,7 +54,7 @@ export class TokenizerToken{
 }
 /**
  * @const
- * @type {Map<string,TokenizerDef>}} namedTokenizers
+ * @type {Map<string,TokenizerMatcherDef>}} namedTokenizers
  */
 export const namedTokenizers={
     any:{name:'any',definitions:{
@@ -90,10 +99,14 @@ export const namedTokenizers={
         // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
         String:       {style: {fg:'yellow'},pattern:`"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'`},
         Operator:     {style: {fg:'cyan'},pattern:'==|!=|<=|>=|[+\\-*/=<>]'},
-            Punctuation:  {style: {fg:'cyan'},pattern:'[()\\[\\]{}.,;:?]'},
+        Punctuation:  {style: {fg:'cyan'},pattern:'[()\\[\\]{}.,;:?]'},
         Whitespace:   {style: {fg:'white'},pattern:'\\s+'},
         Identifier:   {style: {fg:'green'},pattern:'[A-Za-z_]\\w*'},
             Others:       {style: {fg:'white'},pattern:'.*?'},
+    }},
+    words:{name:'c',flags:'mg',definitions:{
+        Whitespace:       {style: {fg:'red'},pattern:'\\s+'},
+        Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
     }},
   }
 
@@ -102,16 +115,24 @@ export const namedTokenizers={
  * @param {string} name language name
  * @return {function (code:string,lineNumber:int): Array<TokenizerToken>}
  */
-export function getTokenizer(name) {
+export function getNamedTokenizer(name) {
     const tokenizerDef = namedTokenizers[name]||namedTokenizers['any']
+    return getTokenizer(tokenizerDef)
+}
+/**
+ *
+ * @param {TokenizerDef} tokenizerDef language name
+ * @return {function (code:string,lineNumber:int): Array<TokenizerToken>}
+ */
+export function getTokenizer(tokenizerDef) {
     const tokenRegex = new RegExp(
         Object.entries(tokenizerDef.definitions)
-          .map(([name, definition]) => `(?<${name}>${definition.pattern})`)
-          .join('|'),
+            .map(([name, definition]) => `(?<${name}>${definition.pattern})`)
+            .join('|'),
         tokenizerDef.flags||'g'
     );
     /**
-     * @param {String} code
+     * @param {TokenizerMatcherDef} code
      * @return {Array<TokenizerToken>}
      */
     return function tokenizer(code,lineNumber){
@@ -120,8 +141,8 @@ export function getTokenizer(name) {
             const groups = m.groups;
             const type = Object.keys(groups).find(key => groups[key] !== undefined);
             const tokenDef = tokenizerDef.definitions[type]
-            tokens.push(TokenizerToken.fromRegexpMatch(m,tokenizerDef,name,lineNumber))
+            tokens.push(TokenizerToken.fromRegexpMatch(m,tokenizerDef,tokenizerDef.name,lineNumber))
         }
         return tokens
     }
-  }
+}

@@ -47,6 +47,7 @@ export default function FileTree({children,workspace,treeData, onDirSelect, onFi
                 bottom={4}
                 lines={lines}
                 keys mouse
+                cursor={false}
                 style={{ selected: { bg: 'blue' } }}
                 onClick={itemSelect}
                 label={label}

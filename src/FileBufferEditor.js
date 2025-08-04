@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { getTokenizer } from './tokenizer.js';
+import { getNamedTokenizer } from './tokenizer.js';
 // something new
 export class FileBufferEditor {
   /**
@@ -20,7 +20,9 @@ export class FileBufferEditor {
 
   // ── private ─public───────────────────────────────────────────────────────────
   //  aaha
-  _ensureCursorInView() {
+  
+
+_ensureCursorInView() {
     if (this.row < this.windowStartRow) {
       this.windowStartRow = this.row;
     } else if (this.row >= this.windowStartRow + this.windowRows) {
@@ -63,7 +65,7 @@ export class FileBufferEditor {
   * */
   render() {
     const ps = this.filePath.split('.')
-    const tokenizer = getTokenizer(ps[ps.length-1])
+    const tokenizer = getNamedTokenizer(ps[ps.length-1])
     const fd    = fs.openSync(this.filePath, 'r');
     const stats = fs.statSync(this.filePath);
     const fileSize = stats.size;

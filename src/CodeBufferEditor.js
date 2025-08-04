@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { getTokenizer,TokenizerToken } from './tokenizer.js';
+import { getNamedTokenizer,TokenizerToken } from './tokenizer.js';
 
 export class CodeBufferEditor {
   /**
@@ -62,7 +62,7 @@ export class CodeBufferEditor {
   }
   updateTokens(){
     const ps = this.filePath.split('.')
-    const tokenizer = getTokenizer(ps[ps.length-1])
+    const tokenizer = getNamedTokenizer(ps[ps.length-1])
 
     this.tokens=this.lines.reduce((r,line,lineNumber) => {
       // const seg = line.substring(this.viewportX, this.viewportWidth);

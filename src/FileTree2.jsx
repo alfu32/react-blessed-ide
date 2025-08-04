@@ -2,8 +2,9 @@
 import React, {Component, useEffect, useRef, useState} from 'react';
 import { ListElement as list, TextElement as text, BoxElement as box } from 'react-blessed';
 import { Workspace,INode } from './Workspace';
-import {safeStringify} from "./util";
+import {insertAt, safeStringify} from "./util";
 import {ListComponent} from "./ListComponent";
+import ModalDialog from "./ModalDialog";
 
 /**
  *
@@ -20,15 +21,34 @@ export default function FileTree2({
     onFileSelect,
     label,
     inodeFilter=(inode,index,nodes,parent)=>{return true},
+    cursor=true,
     ...boxProps
 }){
     const boxRef = useRef();
+    const [message, setMessage] = React.useState(false);
     const [selected, setSelected] = React.useState(null);
     const [cursorData, setCursorData] = React.useState(null);
     const [selectionData, setSelectionData] = React.useState(null);
     const [treeData, setTreeData]   = useState([]);
     const [workspace,setWorkspace] = useState(new Workspace(inodeFilter));
     const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
+    const listingTokenizerDefinition={
+        name:'listing',
+        flags:'mg',
+        definitions:{
+            "Whitespace":     {style: {fg:'white'},pattern:'\\s+'},
+            "OpenButton":     {style: {fg:'yellow'},pattern:'\\[\\+]'},
+            "CloseButton":    {style: {fg:'yellow'},pattern:'\\[-]'},
+            "AddDirButton":   {style: {fg:'cyan'},pattern:'\\[\\+D]'},
+            "AddFileButton":  {style: {fg:'magenta'},pattern:'\\[\\+F]'},
+            "RenameButton":   {style: {fg:'blue'},pattern:'\\[r]'},
+            "DeleteButton":   {style: {fg:'red'},pattern:'\\[x]'},
+            "NodeName":       {style: {fg:'green'},pattern:'[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+'},
+            "Word":           {style: {fg:'green'},pattern:'\\s.+?\\s'},
+        }
+    }
+
+
 
     // focus the modal so it can catch keypresses
     useEffect(() => {
@@ -48,48 +68,99 @@ export default function FileTree2({
         setWorkspace(workspace.copy())
     }, [rootDir]);
     // let treeData = workspace.flatten()
-    let lines = (treeData||[]).map((v,i,a) => {
-        return v.toText();
-    })
+    let lines = () => {
+        if(boxRef && boxRef.current && boxRef.current.lpos) {
+            const lpos = boxRef.current.lpos
+
+            return (treeData || []).map((v, i, a) => {
+                const lineBuffer = " ".repeat(lpos.width)
+                const t = v.toText()
+                let rr = insertAt(lineBuffer,0,t)
+                switch (v.type.substring(0, 1)) {
+                    case 'd':
+                        rr=insertAt(rr,lpos.width-17,'[+D][+F][r][x]')
+                        return rr
+                    default:
+                        rr=insertAt(rr,lpos.width-9,'[r][x]')
+                        return rr
+                }
+            })
+        } else {
+            return []
+        }
+    }
     const itemSelect=(eventData)=>{
-        const {lines, visibleLines, line, cursor:{x,y},cursorScreen, buffer, visibleBuffer, index} = eventData
-        setSelectionData({lines, visibleLines, line, cursor:{x,y}, buffer, visibleBuffer, index})
+        const {lines, visibleLines, line, cursor:{x,y},cursorScreen, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase} = eventData
+        setSelectionData({lines, visibleLines, line, cursor:{x,y}, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase})
         const node = treeData[y];
         // throw JSON.stringify({node,y},null, ' ')
         // if (node.type.indexOf('d')>-1) {
-        if (node.type.indexOf('d')>-1) {
-            const tk=line.split(/(\[\+])|(\[\-])/gi)
-            const [empty,sign,name] = [tk[0],line.substring(tk[0].length,tk[0].length+3),tk[1]];
-
-
-            // throw JSON.stringify({dir})
-            if(x>=(empty.length) && x<(empty.length+sign.length)) {
-                //if on [+] or [-] toggle open/close
-                if (node.isOpen) {
-                    node.close()
-                    const wk=workspace.copy()
-                    const td = wk.flatten().filter(inodeFilter)
-                    setWorkspace(wk)
-                    setTreeData(td)
-                    setCursorData({cursor:{x,y},cursorScreen:{x:empty.length,y:cursorScreen.y},content:'[+]'})
-                } else {
-                    node.open(workspace.rootDir,workspace.ig).then(n => {
+        switch(phrase.filter(v => v!=='Whitespace').join(",")){
+            case "Whitespace,NodeName":
+            case "NodeName,RenameButton,DeleteButton":
+                switch((tokenUnderCursor||{type:'undefined'}).type){
+                    case "NodeName":
+                        setSelected(node);
+                        onFileSelect(node);
+                        setCursorData({cursor:{x:0,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
+                    case "RenameButton":
+                        setMessage(`Rename\n${node.fullPath}`)
+                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
+                    case "DeleteButton":
+                        setMessage(`Delete\n${node.fullPath}`)
+                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
+                }
+                break;
+            case "Whitespace,OpenButton,Whitespace,NodeName":
+            case "Whitespace,CloseButton,Whitespace,NodeName":
+            case "OpenButton,NodeName,AddDirButton,AddFileButton,RenameButton,DeleteButton":
+            case "CloseButton,NodeName,AddDirButton,AddFileButton,RenameButton,DeleteButton":
+                switch((tokenUnderCursor||{type:'undefined'}).type){
+                    case "OpenButton":
+                        node.open(workspace.rootDir,workspace.ig).then(n => {
+                            const wk=workspace.copy()
+                            const td = wk.flatten().filter(inodeFilter)
+                            setWorkspace(wk)
+                            setTreeData(td)
+                            setCursorData({cursor:{x,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        })
+                        break;
+                    case "CloseButton":
+                        node.close()
                         const wk=workspace.copy()
                         const td = wk.flatten().filter(inodeFilter)
                         setWorkspace(wk)
                         setTreeData(td)
-                        setCursorData({cursor:{x,y},cursorScreen:{x:empty.length,y:cursorScreen.y},content:'[-]'})
-                    })
+                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
+                    case "NodeName":
+                        setSelected(node);
+                        onDirSelect(node);
+                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
+                    case "AddDirButton":
+                        setMessage(`AddDir\n${node.fullPath}`)
+                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
+                    case "AddFileButton":
+                        setMessage(`AddFile\n${node.fullPath}`)
+                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
+                    case "RenameButton":
+                        setMessage(`Rename\n${node.fullPath}`)
+                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
+                    case "DeleteButton":
+                        setMessage(`Delete\n${node.fullPath}`)
+                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text})
+                        break;
                 }
-            }else if (x>=(empty.length+sign.length)) {
-                setSelected(node);
-                onDirSelect(node);
-                setCursorData({cursor:{x:0,y},cursorScreen:{x:0,y:cursorScreen.y},content:line})
-            }
-        } else {
-            setSelected(node);
-            onFileSelect(node);
-            setCursorData({cursor:{x:0,y},cursorScreen:{x:0,y:cursorScreen.y},content:line})
+                break;
+            default:
+                throw new Error(`Unexpected phrase Structure '${phrase}'`)
         }
     }
     const cursorExtra=()=>{
@@ -120,25 +191,33 @@ export default function FileTree2({
         }catch(e){}
     }
     return (
-        // <>
-        //     <text>{workspacePath}</text>
-        //     <text>{JSON.stringify(items,null,' ')}</text>
-        // </>
-        <box {...boxProps}>
+        <>
+        <box {...boxProps} ref={boxRef}>
             <ListComponent
                 scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
                 top={0}
                 bottom={2}
-                lines={lines}
+                lines={lines()}
                 keys mouse
                 style={{ selected: { bg: 'blue' } }}
                 onClick={itemSelect}
                 onMouse={mouseAction}
+                tokenizerDef={listingTokenizerDefinition}
             />
             <box top={0} content={selected?selected.fullPath:'' + ' ' + label} height={1}/>
             {children||[]}
-            {cursorExtra()}
+            {cursor?cursorExtra():[]}
         </box>
+        {message && (
+            <ModalDialog
+                label={'Message'}
+                title="Message"
+                onClose={() => setMessage(false)}
+            >
+                <text>{message}</text>
+            </ModalDialog>
+        )}
+    </>
     );
 }
 

@@ -8,9 +8,10 @@ import {
 } from 'react-blessed';
 import {SimpleTextEditor} from "./SimpleTextEditor.js";
 import {safeStringify} from "./util";
+import {getNamedTokenizer, getTokenizer} from "./tokenizer";
 const defaultText="..."
     .split(",").join("\n")
-export function ListComponent({lines, editable=false,onClick, onChange,...boxProps}) {
+export function ListComponent({lines, editable=false,onClick, onChange,tokenizerDef,children,...boxProps}) {
     const boxRef = useRef(null);
     const [editor, setEditor] = useState(null);
     const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
@@ -74,6 +75,19 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
         const cursor = editor.cursorCoords()
         const lines = editor.renderToLines()
         const line = lines[cursor.y];
+        const tokenizer=getTokenizer(tokenizerDef||{
+            name:'words',
+            flags:'mg',
+            definitions:{
+                Whitespace:       {style: {fg:'red'},pattern:'\\s+'},
+                Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
+            }
+        })
+        const tokens = tokenizer(line,y)
+        const phrase = tokens.map(v=>v.type)
+        const tokenUnderCursor = tokens.find((v,i,a)=>{
+            return v.start<=cursor.x && v.end>=cursor.x;
+        })
         onClick({
             lines:lines,
             line,
@@ -83,6 +97,9 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
             buffer:editor.buffer,
             visibleBuffer:editor.buffer,
             index:editor.cursorIndex,
+            tokens,
+            tokenUnderCursor,
+            phrase,
         });
         setEditor(editor.copy())
     };
@@ -223,5 +240,6 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
             {renderLines()}
             {renderCursor()}
             {renderScrollbar()}
+            {children||[]}
         </box>)
 }
