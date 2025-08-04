@@ -79,6 +79,7 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
             line,
             visibleLines:lines,
             cursor,
+            cursorScreen:{x:cursor.x-editor.viewportX,y:cursor.y-editor.viewportY},
             buffer:editor.buffer,
             visibleBuffer:editor.buffer,
             index:editor.cursorIndex,
@@ -97,6 +98,9 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
             default: throw new Error(safeStringify(event)); break;
         }
         setMouseCoords({x,y});
+        try{
+            boxProps.onMouse(event);
+        }catch(e){}
     }
     const renderLines = () => {
         if(!editor){
@@ -164,6 +168,41 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
             content={content}
         />)
     }
+    const renderScrollbar = () => {
+        const barElements= [(<box
+            key={`scrollbar-bg-${Date.now()}`}
+            right={0}
+            width={1}
+            mouse
+            keys
+            input
+            clickable
+            focused
+            style={{fg: 'cyan',bg: 'grey'}}
+        />)];
+        if(!editor){
+            return barElements
+        }
+        const th=editor.renderToLines().length
+
+        const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
+        const sh=Math.floor(vh*vh/th)+1
+        const sy=Math.floor(vy*vh/th)+1
+        barElements.push((<box
+            key={`scrollbar-btn-${Date.now()}`}
+            right={0}
+            width={1}
+            top={sy}
+            height={sh}
+            mouse
+            keys
+            input
+            clickable
+            focused
+            style={{fg: 'cyan',bg: 'cyan'}}
+        />))
+        return barElements
+    }
     return (
         <box
             ref={boxRef}
@@ -183,5 +222,6 @@ export function ListComponent({lines, editable=false,onClick, onChange,...boxPro
             {/*label = {`${boxProps.label || 'Editing'} ${JSON.stringify(editor.cursorCoords())} ${editor.cursorIndex}`}*/}
             {renderLines()}
             {renderCursor()}
+            {renderScrollbar()}
         </box>)
 }

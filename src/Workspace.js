@@ -146,6 +146,10 @@ export class INode{
 export class Workspace{
   rootDir=""
   rootNode=new INode()
+  nodeFilter=(inode,index,nodes,parent)=>{return true}
+  constructor(nodeFilter=(inode,index,nodes,parent)=>{}){
+    this.nodeFilter=nodeFilter;
+  }
   async loadIgnore() {
     const ig = ignore();
     try {
@@ -186,6 +190,9 @@ export class Workspace{
           return inode1.init(this.rootDir, this.ig, inode1.fullPath)
         })
     )
+    node.children=node.children.filter((v,i,a)=> {
+      return this.nodeFilter(v,i,a,node)
+    })
     return this
   }
   flatten(){
@@ -209,6 +216,7 @@ export class Workspace{
     wks.rootDir=this.rootDir
     wks.rootNode=this.rootNode
     wks.ig=this.ig
+    wks.nodeFilter=this.nodeFilter
     return wks
   }
 }

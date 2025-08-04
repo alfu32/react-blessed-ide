@@ -1,7 +1,7 @@
 // App.js
 import React, {Component, useState,useEffect} from 'react';
 import {Workspace,INode} from './Workspace';
-import FileTree from './FileTree';
+// import FileTree from './FileTree';
 import ModalDialog from './ModalDialog.jsx';
 import { BoxElement as box, TextElement as text,ListElement as list,ButtonElement as button } from 'react-blessed';
 import { Grid,GridItem } from 'react-blessed-contrib-17'
@@ -11,32 +11,18 @@ import {CodeBufferEditorComponent} from './CodeBufferEditor.jsx'
 import {GitComponent} from "./GitComponent";
 import { ErrorBoundary } from 'react-error-boundary'
 import {ErrorFallback} from './ErrorFallback';
+import FileTree2 from "./FileTree2";
 
 
 export function App(props){// Some Coment 
   const [message, setMessage] = useState(false);
   const [pickFolder, setPickFolder] = useState(false);
   const [currentEditorText, setCurrentEditorText] = useState('');
-  const [treeData, setTreeData]   = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [openedFiles, setOpenedFiles] = useState({});
   const [fileContent, setFileContent]   = useState('');
   const [rootDir, setRootDir]   = useState(process.cwd());
   const [gitStatus, setGitStatus] = useState([]);
-  const [workspace, setWorkspace]   = useState(new Workspace());
-  useEffect(() => {
-    workspace.init(rootDir)
-        .then(wk => workspace.open(workspace.rootNode))
-        .then(t => {
-          const wk=workspace.copy()
-          const td = workspace.flatten()
-          setWorkspace(wk)
-          setTreeData(td)
-          // setMessage(`loaded tree data ${JSON.stringify({
-          //   td
-          // })}`)
-        })
-  }, []);
 
 
   const onFilePathSelect = (event) => {
@@ -49,7 +35,7 @@ export function App(props){// Some Coment
   const selectFile = (node) => {
     setSelectedFile(node.fullPath)
     const newOpenedFiles={...openedFiles}
-    newOpenedFiles[node.fullPath.replace(workspace.rootNode.fullPath,'')] = node
+    newOpenedFiles[node.fullPath.replace(rootDir,'')] = node
     setOpenedFiles(newOpenedFiles)
     setFileContent(`Loading ${node.relPath}`)
     node.readFile(node.fullPath).then(setFileContent);
@@ -60,22 +46,7 @@ export function App(props){// Some Coment
    * @returns {Promise<void>}
    */
   const selectDir = async (dir) => {
-      if (dir.isOpen) {
-          dir.close()
-          const wk=workspace.copy()
-          const td = wk.flatten()
-          setWorkspace(wk)
-          setTreeData(td)
-      } else {
-          dir.open(workspace.rootDir,workspace.ig).then(n => {
-              const wk=workspace.copy()
-              const td = wk.flatten()
-              setWorkspace(wk)
-              setTreeData(td)
-          })
-
-      }
-    // setMessage(`dir selected ${Object.keys(dir)}`)
+    setMessage(`dir selected ${Object.keys(dir)}`)
   };
   const onTextEditorSave = (a,b,c)=> {
       setMessage(JSON.stringify({a,b,c}))
@@ -117,11 +88,10 @@ export function App(props){// Some Coment
                        row={3} col={0} rowSpan={5} colSpan={1}
                        label={'Project'}>
 
-                      <FileTree
+                      <FileTree2
                           top={0}
                           bottom={0}
-                          workspace={workspace}
-                          treeData={treeData}
+                          rootDir={rootDir}
                           onDirSelect={selectDir}
                           onFileSelect={selectFile}
                           label={'Project'}
@@ -141,7 +111,7 @@ export function App(props){// Some Coment
                                   setPickFolder(true)
                               }}
                               content={'workspace'}/>
-                      </FileTree>
+                      </FileTree2>
                   </box>
                   </Grid>
               </Tab>
@@ -152,7 +122,7 @@ export function App(props){// Some Coment
           {/* Center panel */}
           <CodeBufferEditorComponent row={0} col={5} rowSpan={6} colSpan={10}
                       border={{ type: 'line' }}
-                      label={(selectedFile || 'No file selected').replace(workspace.rootDir,'')}
+                      label={(selectedFile || 'No file selected').replace(rootDir,'')}
                       filePath={selectedFile||null}
                       onKeypress={onCodeEditKeyPress}
                       onChange={onCurrentEditorChange}
@@ -191,7 +161,11 @@ export function App(props){// Some Coment
             <FolderPickerDialog
                 title="Pick Folder"
                 onFolderSelect={(inode)=>{
-                    setMessage(`selected folder ${inode.fullPath}`)
+                    setPickFolder(false)
+                    if(inode) {
+                        setMessage(`selected folder ${inode.fullPath}`)
+                        setRootDir(inode.fullPath)
+                    }
                 }}
             />
             </ErrorBoundary>)

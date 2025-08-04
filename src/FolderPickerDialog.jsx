@@ -27,7 +27,9 @@ export default function FolderPickerDialog({
             }}
             label={selected?selected.fullName:'Pick Workspace'}
             rootDir={'/'}
+            inodeFilter={(inode,index,nodes,parent)=>{return inode.type.indexOf('d')>-1}}
             onDirSelect={(selectDir) => {
+                // throw JSON.stringify(selectDir,null,' ');
                 setSelected(selectDir);
             }}
             onFileSelect={()=>{}}

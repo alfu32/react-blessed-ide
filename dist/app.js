@@ -5,10 +5,10 @@ require("raf/polyfill.js");
 const React = require("react");
 const blessed = require("blessed");
 const reactBlessed = require("react-blessed");
-const fs = require("fs");
-const path = require("path");
 const ignore = require("ignore");
 const reactBlessedContrib17 = require("react-blessed-contrib-17");
+const fs = require("fs");
+const path = require("path");
 require("vite");
 const reactErrorBoundary = require("react-error-boundary");
 require("blessed/lib/widgets/message.js");
@@ -146,6 +146,13 @@ class INode {
 class Workspace {
   rootDir = "";
   rootNode = new INode();
+  nodeFilter = (inode, index, nodes, parent) => {
+    return true;
+  };
+  constructor(nodeFilter = (inode, index, nodes, parent) => {
+  }) {
+    this.nodeFilter = nodeFilter;
+  }
   async loadIgnore() {
     const ig = ignore();
     try {
@@ -185,6 +192,9 @@ class Workspace {
         return inode1.init(this.rootDir, this.ig, inode1.fullPath);
       })
     );
+    node.children = node.children.filter((v, i, a) => {
+      return this.nodeFilter(v, i, a, node);
+    });
     return this;
   }
   flatten() {
@@ -201,8 +211,60 @@ class Workspace {
     wks.rootDir = this.rootDir;
     wks.rootNode = this.rootNode;
     wks.ig = this.ig;
+    wks.nodeFilter = this.nodeFilter;
     return wks;
   }
+}
+function ModalDialog({
+  title = "Dialog",
+  width = "50%",
+  height = "50%",
+  onClose,
+  children
+}) {
+  const boxRef = React.useRef();
+  React.useEffect(() => {
+    const node = boxRef.current;
+    if (node) node.focus();
+  }, []);
+  return /* @__PURE__ */ jsxRuntime_js.jsxs(
+    "box",
+    {
+      ref: boxRef,
+      top: "center",
+      left: "center",
+      width,
+      height,
+      border: { type: "line" },
+      style: { bg: "black", fg: "white" },
+      keys: true,
+      mouse: true,
+      clickable: true,
+      onKey: (ch, key) => {
+        if (key.name === "escape") onClose();
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntime_js.jsxs("box", { height: 1, width: "100%", style: { fg: "green" }, children: [
+          /* @__PURE__ */ jsxRuntime_js.jsxs("text", { bold: true, children: [
+            ` ${title}`,
+            " "
+          ] }),
+          /* @__PURE__ */ jsxRuntime_js.jsx(
+            "text",
+            {
+              right: 0,
+              mouse: true,
+              clickable: true,
+              underline: true,
+              onClick: onClose,
+              children: "[×]"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 2, left: 1, right: 1, bottom: 1, scrollable: true, keys: true, mouse: true, alwaysScroll: true, children })
+      ]
+    }
+  );
 }
 function safeStringify(obj, space = void 0) {
   const seen = /* @__PURE__ */ new WeakSet();
@@ -560,6 +622,7 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
       line,
       visibleLines: lines2,
       cursor,
+      cursorScreen: { x: cursor.x - editor2.viewportX, y: cursor.y - editor2.viewportY },
       buffer: editor2.buffer,
       visibleBuffer: editor2.buffer,
       index: editor2.cursorIndex
@@ -587,6 +650,10 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
         throw new Error(safeStringify(event));
     }
     setMouseCoords({ x, y });
+    try {
+      boxProps.onMouse(event);
+    } catch (e) {
+    }
   };
   const renderLines = () => {
     if (!editor2) {
@@ -630,6 +697,46 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
       `editor-cursor-${Date.now()}`
     );
   };
+  const renderScrollbar = () => {
+    const barElements = [/* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        right: 0,
+        width: 1,
+        mouse: true,
+        keys: true,
+        input: true,
+        clickable: true,
+        focused: true,
+        style: { fg: "cyan", bg: "grey" }
+      },
+      `scrollbar-bg-${Date.now()}`
+    )];
+    if (!editor2) {
+      return barElements;
+    }
+    const th = editor2.renderToLines().length;
+    const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor2;
+    const sh = Math.floor(vh * vh / th) + 1;
+    const sy = Math.floor(vy * vh / th) + 1;
+    barElements.push(/* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        right: 0,
+        width: 1,
+        top: sy,
+        height: sh,
+        mouse: true,
+        keys: true,
+        input: true,
+        clickable: true,
+        focused: true,
+        style: { fg: "cyan", bg: "cyan" }
+      },
+      `scrollbar-btn-${Date.now()}`
+    ));
+    return barElements;
+  };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(
     "box",
     {
@@ -648,116 +755,36 @@ function ListComponent({ lines, editable = false, onClick, onChange, ...boxProps
       onMouse: mouseAction,
       children: [
         renderLines(),
-        renderCursor()
+        renderCursor(),
+        renderScrollbar()
       ]
     }
   );
 }
-function FileTree({ children, workspace, treeData, onDirSelect, onFileSelect, label, ...boxProps }) {
-  const [selected, setSelected] = React.useState(null);
-  let lines = (treeData || []).map((v, i, a) => {
-    return v.toText();
-  });
-  const itemSelect = (eventData) => {
-    const { lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index } = eventData;
-    const node = treeData[y];
-    if (node.type.indexOf("d") > -1) {
-      onDirSelect(node);
-      setSelected(node);
-    } else {
-      if (selected !== null && selected === node) {
-        onFileSelect(node);
-      } else {
-        setSelected(node);
-      }
-    }
-  };
-  return (
-    // <>
-    //     <text>{workspacePath}</text>
-    //     <text>{JSON.stringify(items,null,' ')}</text>
-    // </>
-    /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [
-      /* @__PURE__ */ jsxRuntime_js.jsx(
-        ListComponent,
-        {
-          scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
-          top: 1,
-          bottom: 4,
-          lines,
-          keys: true,
-          mouse: true,
-          style: { selected: { bg: "blue" } },
-          onClick: itemSelect,
-          label
-        }
-      ),
-      children || []
-    ] })
-  );
-}
-function ModalDialog({
-  title = "Dialog",
-  width = "50%",
-  height = "50%",
-  onClose,
-  children
+function FileTree2({
+  children,
+  rootDir,
+  onDirSelect,
+  onFileSelect,
+  label,
+  inodeFilter = (inode, index, nodes, parent) => {
+    return true;
+  },
+  ...boxProps
 }) {
   const boxRef = React.useRef();
-  React.useEffect(() => {
-    const node = boxRef.current;
-    if (node) node.focus();
-  }, []);
-  return /* @__PURE__ */ jsxRuntime_js.jsxs(
-    "box",
-    {
-      ref: boxRef,
-      top: "center",
-      left: "center",
-      width,
-      height,
-      border: { type: "line" },
-      style: { bg: "black", fg: "white" },
-      keys: true,
-      mouse: true,
-      clickable: true,
-      onKey: (ch, key) => {
-        if (key.name === "escape") onClose();
-      },
-      children: [
-        /* @__PURE__ */ jsxRuntime_js.jsxs("box", { height: 1, width: "100%", style: { fg: "green" }, children: [
-          /* @__PURE__ */ jsxRuntime_js.jsxs("text", { bold: true, children: [
-            ` ${title}`,
-            " "
-          ] }),
-          /* @__PURE__ */ jsxRuntime_js.jsx(
-            "text",
-            {
-              right: 0,
-              mouse: true,
-              clickable: true,
-              underline: true,
-              onClick: onClose,
-              children: "[×]"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 2, left: 1, right: 1, bottom: 1, scrollable: true, keys: true, mouse: true, alwaysScroll: true, children })
-      ]
-    }
-  );
-}
-function FileTree2({ children, rootDir, onDirSelect, onFileSelect, label, ...boxProps }) {
-  const boxRef = React.useRef();
   const [selected, setSelected] = React.useState(null);
+  const [cursorData, setCursorData] = React.useState(null);
+  const [selectionData, setSelectionData] = React.useState(null);
   const [treeData, setTreeData] = React.useState([]);
-  const [workspace, setWorkspace] = React.useState(new Workspace());
+  const [workspace, setWorkspace] = React.useState(new Workspace(inodeFilter));
+  const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
   React.useEffect(() => {
     const node = boxRef.current;
     if (node) node.focus();
     workspace.init(rootDir).then((wk) => workspace.open(workspace.rootNode)).then((t) => {
       const wk = workspace.copy();
-      const td = workspace.flatten();
+      const td = workspace.flatten().filter(inodeFilter);
       setWorkspace(wk);
       setTreeData(td);
     });
@@ -767,7 +794,8 @@ function FileTree2({ children, rootDir, onDirSelect, onFileSelect, label, ...box
     return v.toText();
   });
   const itemSelect = (eventData) => {
-    const { lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index } = eventData;
+    const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index } = eventData;
+    setSelectionData({ lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index });
     const node = treeData[y];
     if (node.type.indexOf("d") > -1) {
       const tk = line.split(/(\[\+])|(\[\-])/gi);
@@ -776,22 +804,69 @@ function FileTree2({ children, rootDir, onDirSelect, onFileSelect, label, ...box
         if (node.isOpen) {
           node.close();
           const wk = workspace.copy();
-          const td = wk.flatten();
+          const td = wk.flatten().filter(inodeFilter);
           setWorkspace(wk);
           setTreeData(td);
+          setCursorData({ cursor: { x, y }, cursorScreen: { x: empty.length, y: cursorScreen.y }, content: "[+]" });
         } else {
           node.open(workspace.rootDir, workspace.ig).then((n) => {
             const wk = workspace.copy();
-            const td = wk.flatten();
+            const td = wk.flatten().filter(inodeFilter);
             setWorkspace(wk);
             setTreeData(td);
+            setCursorData({ cursor: { x, y }, cursorScreen: { x: empty.length, y: cursorScreen.y }, content: "[-]" });
           });
         }
       } else if (x >= empty.length + sign.length) {
         setSelected(node);
+        onDirSelect(node);
+        setCursorData({ cursor: { x: 0, y }, cursorScreen: { x: 0, y: cursorScreen.y }, content: line });
       }
     } else {
       setSelected(node);
+      onFileSelect(node);
+      setCursorData({ cursor: { x: 0, y }, cursorScreen: { x: 0, y: cursorScreen.y }, content: line });
+    }
+  };
+  const cursorExtra = () => {
+    if (!cursorData) return /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, left: 0, width: 1, height: 1, content: " " });
+    const { cursor, cursorScreen, content } = cursorData;
+    const { x, y } = mouseCoords;
+    return /* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        top: cursorScreen.y,
+        left: cursorScreen.x,
+        width: content.length,
+        height: 1,
+        style: { inverse: true },
+        content
+      },
+      `xcursor-${Math.random()}-${Date.now()}`
+    );
+  };
+  const mouseAction = (event) => {
+    const { x, y } = event;
+    switch (event.action) {
+      case "mousemove":
+        break;
+      case "mousedown":
+        break;
+      case "mouseup":
+        break;
+      case "wheelup":
+        setCursorData(null);
+        break;
+      case "wheeldown":
+        setCursorData(null);
+        break;
+      default:
+        throw new Error(safeStringify(event));
+    }
+    setMouseCoords({ x, y });
+    try {
+      boxProps.onMouse(event);
+    } catch (e) {
     }
   };
   return (
@@ -810,11 +885,13 @@ function FileTree2({ children, rootDir, onDirSelect, onFileSelect, label, ...box
           keys: true,
           mouse: true,
           style: { selected: { bg: "blue" } },
-          onClick: itemSelect
+          onClick: itemSelect,
+          onMouse: mouseAction
         }
       ),
-      /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, content: label, height: 1 }),
-      children || []
+      /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, content: selected ? selected.fullPath : " " + label, height: 1 }),
+      children || [],
+      cursorExtra()
     ] })
   );
 }
@@ -840,6 +917,9 @@ function FolderPickerDialog({
       },
       label: selected ? selected.fullName : "Pick Workspace",
       rootDir: "/",
+      inodeFilter: (inode, index, nodes, parent) => {
+        return inode.type.indexOf("d") > -1;
+      },
       onDirSelect: (selectDir) => {
         setSelected(selectDir);
       },
@@ -2147,44 +2227,21 @@ function App(props) {
   const [message, setMessage] = React.useState(false);
   const [pickFolder, setPickFolder] = React.useState(false);
   const [currentEditorText, setCurrentEditorText] = React.useState("");
-  const [treeData, setTreeData] = React.useState([]);
   const [selectedFile, setSelectedFile] = React.useState(null);
   const [openedFiles, setOpenedFiles] = React.useState({});
   const [fileContent, setFileContent] = React.useState("");
   const [rootDir, setRootDir] = React.useState(process.cwd());
   const [gitStatus, setGitStatus] = React.useState([]);
-  const [workspace, setWorkspace] = React.useState(new Workspace());
-  React.useEffect(() => {
-    workspace.init(rootDir).then((wk) => workspace.open(workspace.rootNode)).then((t) => {
-      const wk = workspace.copy();
-      const td = workspace.flatten();
-      setWorkspace(wk);
-      setTreeData(td);
-    });
-  }, []);
   const selectFile = (node) => {
     setSelectedFile(node.fullPath);
     const newOpenedFiles = { ...openedFiles };
-    newOpenedFiles[node.fullPath.replace(workspace.rootNode.fullPath, "")] = node;
+    newOpenedFiles[node.fullPath.replace(rootDir, "")] = node;
     setOpenedFiles(newOpenedFiles);
     setFileContent(`Loading ${node.relPath}`);
     node.readFile(node.fullPath).then(setFileContent);
   };
   const selectDir = async (dir) => {
-    if (dir.isOpen) {
-      dir.close();
-      const wk = workspace.copy();
-      const td = wk.flatten();
-      setWorkspace(wk);
-      setTreeData(td);
-    } else {
-      dir.open(workspace.rootDir, workspace.ig).then((n) => {
-        const wk = workspace.copy();
-        const td = wk.flatten();
-        setWorkspace(wk);
-        setTreeData(td);
-      });
-    }
+    setMessage(`dir selected ${Object.keys(dir)}`);
   };
   const onCurrentEditorChange = (a, b, c) => {
   };
@@ -2236,12 +2293,11 @@ function App(props) {
               colSpan: 1,
               label: "Project",
               children: /* @__PURE__ */ jsxRuntime_js.jsx(
-                FileTree,
+                FileTree2,
                 {
                   top: 0,
                   bottom: 0,
-                  workspace,
-                  treeData,
+                  rootDir,
                   onDirSelect: selectDir,
                   onFileSelect: selectFile,
                   label: "Project",
@@ -2280,7 +2336,7 @@ function App(props) {
           rowSpan: 6,
           colSpan: 10,
           border: { type: "line" },
-          label: (selectedFile || "No file selected").replace(workspace.rootDir, ""),
+          label: (selectedFile || "No file selected").replace(rootDir, ""),
           filePath: selectedFile || null,
           onKeypress: onCodeEditKeyPress,
           onChange: onCurrentEditorChange
@@ -2326,7 +2382,11 @@ function App(props) {
           {
             title: "Pick Folder",
             onFolderSelect: (inode) => {
-              setMessage(`selected folder ${inode.fullPath}`);
+              setPickFolder(false);
+              if (inode) {
+                setMessage(`selected folder ${inode.fullPath}`);
+                setRootDir(inode.fullPath);
+              }
             }
           }
         )
