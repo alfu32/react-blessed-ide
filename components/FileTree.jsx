@@ -1,9 +1,9 @@
-// components/FileTree.js
+// components/FileTree.jsx
 import React, { Component } from 'react';
 import { ListElement as list, TextElement as text, BoxElement as box } from 'react-blessed';
-import { Workspace,INode } from './Workspace';
-import {safeStringify} from "./util";
-import {ListComponent} from "./ListComponent";
+import { Workspace,INode } from '../src/Workspace';
+import {safeStringify} from "../src/util";
+import {ListComponent} from "../src/ListComponent";
 
 /**
  *
