@@ -6,6 +6,21 @@ import {insertAt, safeStringify} from "./util";
 import {ListComponent} from "./ListComponent";
 import ModalDialog from "./ModalDialog";
 
+const listingTokenizerDefinition={
+    name:'listing',
+    flags:'mg',
+    definitions:{
+        "Whitespace":     {style: {},pattern:'\\s+'},
+        "OpenButton":     {style: {bg:'yellow'},pattern:'\\[\\+]'},
+        "CloseButton":    {style: {bg:'yellow'},pattern:'\\[-]'},
+        "AddDirButton":   {style: {bg:'cyan'},pattern:'\\[\\+D]'},
+        "AddFileButton":  {style: {bg:'magenta'},pattern:'\\[\\+F]'},
+        "RenameButton":   {style: {bg:'blue'},pattern:'\\[r]'},
+        "DeleteButton":   {style: {bg:'red'},pattern:'\\[x]'},
+        "NodeName":       {style: {bg:'green'},pattern:'[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+'},
+        "Word":           {style: {bg:'green'},pattern:'\\s.+?\\s'},
+    }
+}
 /**
  *
  * @param {INode[]} tree
@@ -33,21 +48,6 @@ export default function FileTree2({
     const [treeData, setTreeData]   = useState([]);
     const [workspace,setWorkspace] = useState(new Workspace(inodeFilter));
     const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
-    const listingTokenizerDefinition={
-        name:'listing',
-        flags:'mg',
-        definitions:{
-            "Whitespace":     {style: {fg:'white'},pattern:'\\s+'},
-            "OpenButton":     {style: {fg:'yellow'},pattern:'\\[\\+]'},
-            "CloseButton":    {style: {fg:'yellow'},pattern:'\\[-]'},
-            "AddDirButton":   {style: {fg:'cyan'},pattern:'\\[\\+D]'},
-            "AddFileButton":  {style: {fg:'magenta'},pattern:'\\[\\+F]'},
-            "RenameButton":   {style: {fg:'blue'},pattern:'\\[r]'},
-            "DeleteButton":   {style: {fg:'red'},pattern:'\\[x]'},
-            "NodeName":       {style: {fg:'green'},pattern:'[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+'},
-            "Word":           {style: {fg:'green'},pattern:'\\s.+?\\s'},
-        }
-    }
 
 
 
@@ -69,13 +69,17 @@ export default function FileTree2({
         setWorkspace(workspace.copy())
     }, [rootDir]);
     // let treeData = workspace.flatten()
+    let baseLevel=rootDir.split("/").length*2
+    if (baseLevel>0) {
+       baseLevel = baseLevel-1
+    }
     let lines = () => {
         if(boxRef && boxRef.current && boxRef.current.lpos) {
             const lpos = boxRef.current.lpos
 
             return (treeData || []).map((v, i, a) => {
                 const lineBuffer = " ".repeat(lpos.width)
-                const t = v.toText()
+                const t = v.toText().substring(baseLevel)
                 let rr = insertAt(lineBuffer,0,t)
                 switch (v.type.substring(0, 1)) {
                     case 'd':
@@ -94,7 +98,7 @@ export default function FileTree2({
         const {lines, visibleLines, line, cursor:{x,y},cursorScreen, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase} = eventData
         setHighlightCursorData({cursor:{x:0,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
     }
-    const itemSelect=(eventData)=>{
+    const onElementClick=(eventData)=>{
         const {lines, visibleLines, line, cursor:{x,y},cursorScreen, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase} = eventData
         setSelectionData({lines, visibleLines, line, cursor:{x,y}, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase})
         const node = treeData[y];
@@ -186,25 +190,45 @@ export default function FileTree2({
         return <box key={`hxcursor-${Math.random()}-${Date.now()}`}
                     top={cursorScreen.y} left={cursorScreen.x}
                     width={content.length} height={1}
-                    style={{...style,inverse: true}}
+                    style={{...style}}
                     content={content}
         />
     }
+    // const mouseAction=(event) =>{
+    //     const {x,y} = event
+    //     setMouseCoords({x,y});
+    //     try{
+    //         boxProps.onMouse(event);
+    //     }catch(e){}
+//
+    //     switch(event.action){
+    //         case 'mousemove':
+    //             highlight(event)
+    //             break;
+    //         case 'mousedown':break;
+    //         case 'mouseup':break;
+    //         case 'wheelup':setCursorData(null);break;
+    //         case 'wheeldown':setCursorData(null);break;
+    //         default: throw new Error(safeStringify(event)); break;
+    //     }
+    // }
     const mouseAction=(event) =>{
         const {x,y} = event
-
+        setMouseCoords({x,y});
+        try{
+            boxProps.onMouse(event);
+        }catch(e){}
         switch(event.action){
-            case 'mousemove':break;
+            case 'mousemove':
+                setCursorData(null)
+                highlight(event)
+                break;
             case 'mousedown':break;
             case 'mouseup':break;
             case 'wheelup':setCursorData(null);break;
             case 'wheeldown':setCursorData(null);break;
             default: throw new Error(safeStringify(event)); break;
         }
-        setMouseCoords({x,y});
-        try{
-            boxProps.onMouse(event);
-        }catch(e){}
     }
     return (
         <>
@@ -216,15 +240,14 @@ export default function FileTree2({
                 lines={lines()}
                 keys mouse
                 style={{ selected: { bg: 'blue' } }}
-                onClick={itemSelect}
+                onClick={onElementClick}
                 onTokenHover={highlight}
-                onMouse={mouseAction}
                 tokenizerDef={listingTokenizerDefinition}
             />
             {/*<box top={0} content={selected ? selected.fullPath : '' + ' ' + label} height={1}/>*/}
             {children||[]}
-            {cursor?cursorExtra():[]}
             {cursorHighlight()}
+            {cursor?cursorExtra():[]}
         </box>
         {message && (
             <ModalDialog

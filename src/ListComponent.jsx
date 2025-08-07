@@ -42,21 +42,21 @@ export function ListComponent({
 }) {
     const boxRef = useRef(null);
     const [editor, setEditor] = useState(null);
-    const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
+    // const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
     const [size, setSize]     = useState({ rows: 10, cols: 30 });
-    const [lastEvent, setLastEvent]     = useState({
-        lines:[],
-        line:"",
-        visibleLines:[],
-        cursor:{x:0,y:0},
-        cursorScreen:{x:0,y:0},
-        buffer:"",
-        visibleBuffer:"",
-        index:0,
-        tokens:[],
-        tokenUnderCursor:null,
-        phrase:"",
-    });
+    // const [lastEvent, setLastEvent]     = useState({
+    //     lines:[],
+    //     line:"",
+    //     visibleLines:[],
+    //     cursor:{x:0,y:0},
+    //     cursorScreen:{x:0,y:0},
+    //     buffer:"",
+    //     visibleBuffer:"",
+    //     index:0,
+    //     tokens:[],
+    //     tokenUnderCursor:null,
+    //     phrase:"",
+    // });
     let changedTimeout=0
     useEffect(()=>{
         let newEditor=editor
@@ -98,7 +98,7 @@ export function ListComponent({
             editor.onKey(ch, key)
             clearTimeout(changedTimeout)
             changedTimeout = setTimeout(() => {
-                onChange(editor)
+                // onChange(editor)
                 setEditor(editor.copy())
             }, 80)
         }else if ( key in ['up','down'] ){
@@ -131,6 +131,7 @@ export function ListComponent({
         })
         return {
             event:screenEvent,
+            parentPos:{x:xi,y:yi},
             lines:lines,
             line,
             visibleLines:lines,
@@ -146,10 +147,11 @@ export function ListComponent({
     }
     const setCursorPosition = (screenEvent) => {
         const newEvent=getEvent(screenEvent)
+        editor.setCursor(newEvent.cursorScreen.x+editor.viewportX,newEvent.cursorScreen.y+editor.viewportY)
         onClick(newEvent);
         onLineClick(newEvent);
         onTokenClick(newEvent);
-        setLastEvent(newEvent);
+        // setLastEvent(newEvent);
         setEditor(editor.copy())
     };
     const mouseAction=(screenEvent) =>{
@@ -158,6 +160,7 @@ export function ListComponent({
         switch(screenEvent.action){
             case 'mousemove':
                 const newEvent=getEvent(screenEvent)
+                editor.setHighlight(newEvent.cursorScreen.x+editor.viewportX,newEvent.cursorScreen.y+editor.viewportY)
                 onLineHover(newEvent);
                 onTokenHover(newEvent);
                 break;
@@ -167,7 +170,7 @@ export function ListComponent({
             case 'wheeldown':editor.moveCursorDown().slideViewportToCursor();setEditor(editor.copy());break;
             default: throw new Error(safeStringify(screenEvent)); break;
         }
-        setMouseCoords({x,y});
+        // setMouseCoords({x,y});
         try{
             boxProps.onMouse(screenEvent);
         }catch(e){}
@@ -210,34 +213,34 @@ export function ListComponent({
             content={content}
         />)
     }
-    const renderStatus = () => {
-        if(!editor){
-            return;
-        }
-        const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
-        const {x:cx,y:cy} = editor.cursorCoords()
-        const {x:mx,y:my} = mouseCoords
-        let cursorContent = editor.buffer.substring(ci,ci+1)
-        let content=cursorContent
-        if(boxRef.current && boxRef.current.lpos) {
-            const {xi,yi} = boxRef.current.lpos;
-            const feedback={
-                C:`${cx},${cy},[${ci}]=${cursorContent}`,
-                B:`${xi},${yi}`,
-                V:`${vx},${vy},${vw},${vh}`,
-                M:`A${mx},${my}R${mx-xi-1},${my-yi-1}`
-            }
-            content = safeStringify(feedback).replace(/[{} "]/gi,'')
-        }
-        return (<box
-            key={`editor-status-${Date.now()}`}
-            top={7}
-            left={2}
-            width={content.length} height={1}
-            style={{inverse:true,underline:true}}
-            content={content}
-        />)
-    }
+    // const renderStatus = () => {
+    //     if(!editor){
+    //         return;
+    //     }
+    //     const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
+    //     const {x:cx,y:cy} = editor.cursorCoords()
+    //     const {x:mx,y:my} = mouseCoords
+    //     let cursorContent = editor.buffer.substring(ci,ci+1)
+    //     let content=cursorContent
+    //     if(boxRef.current && boxRef.current.lpos) {
+    //         const {xi,yi} = boxRef.current.lpos;
+    //         const feedback={
+    //             C:`${cx},${cy},[${ci}]=${cursorContent}`,
+    //             B:`${xi},${yi}`,
+    //             V:`${vx},${vy},${vw},${vh}`,
+    //             M:`A${mx},${my}R${mx-xi-1},${my-yi-1}`
+    //         }
+    //         content = safeStringify(feedback).replace(/[{} "]/gi,'')
+    //     }
+    //     return (<box
+    //         key={`editor-status-${Date.now()}`}
+    //         top={7}
+    //         left={2}
+    //         width={content.length} height={1}
+    //         style={{inverse:true,underline:true}}
+    //         content={content}
+    //     />)
+    // }
     const renderScrollbar = () => {
         const barElements= [(<box
             key={`scrollbar-bg-${Date.now()}`}

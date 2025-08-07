@@ -69,6 +69,7 @@ class EditorEvent{
 export class SimpleTextEditor {
     buffer=""
     cursorIndex=0
+    highlightIndex=0
     listeners={"cursorChanged":[],"bufferChanged":[]}
     viewportHeight=7
     viewportWidth=30
@@ -155,6 +156,9 @@ export class SimpleTextEditor {
     }
     setCursor(x,y){
         this.cursorIndex=this.cursorCoordsToIndex({x,y})
+    }
+    setHighlight(x,y){
+        this.highlightIndex=this.cursorCoordsToIndex({x,y})
     }
 
     /**
@@ -322,6 +326,7 @@ export class SimpleTextEditor {
         const newSimpleTextBuffer= new SimpleTextEditor()
         newSimpleTextBuffer.buffer = this.buffer
         newSimpleTextBuffer.cursorIndex = this.cursorIndex
+        newSimpleTextBuffer.highlightIndex = this.highlightIndex
         newSimpleTextBuffer.viewportHeight=this.viewportHeight
         newSimpleTextBuffer.viewportWidth=this.viewportWidth
         newSimpleTextBuffer.viewportX=this.viewportX

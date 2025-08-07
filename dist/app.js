@@ -12,11 +12,36 @@ const path = require("path");
 require("vite");
 const reactErrorBoundary = require("react-error-boundary");
 require("blessed/lib/widgets/message.js");
+const inodeSortBy = (node) => {
+  const mapping = {
+    "d": 1,
+    // Directory
+    "f": 2,
+    // File
+    "l": 2,
+    // SymbolicLink
+    "b": 2,
+    // BlockDevice
+    "c": 2,
+    // CharacterDevice
+    "p": 2,
+    // FIFO
+    "s": 2
+    // Socket
+  };
+  const nt = node.type.replace(/-/gi, "");
+  return `${node.parentFullName().split("/").map((nn) => `1|${nn}`).join("/")}/${mapping[nt]}|${node.name}`;
+};
+const compareInodes = (na, nb) => {
+  const sa = inodeSortBy(na);
+  const sb = inodeSortBy(nb);
+  return sa < sb ? -1 : sa === sb ? 0 : 1;
+};
 class INode {
   id = 0;
   /// (file stat ino)
   type = "";
-  ///  ( one of 'd','f','l','p')
+  ///  ( one of 'd','f','l','p','c','p','s')
   name = "";
   ///  file name
   fullPath = "";
@@ -33,22 +58,28 @@ class INode {
     return fs.promises.readFile(this.fullPath, "utf8");
   }
   depth() {
-    return this.relPath.split("/").length;
+    return this.fullPath.split("/").length;
+  }
+  parentFullName() {
+    return this.fullPath.replace(`/${this.name}`, "");
   }
   toText() {
-    const marker = this.type.indexOf("d") > -1 ? this.isOpen ? "[-]" : "[+]" : " ";
+    this.type.replace(/-/gi, "");
+    const marker = this.type.indexOf("d") > -1 ? this.isOpen ? " [-]" : " [+]" : ``;
     return `${" ".repeat(this.depth() * 2)}${marker} ${this.name}`;
+  }
+  toText2() {
+    return inodeSortBy(this);
   }
   /**
    *
-   * @param depth current depth
    * @returns {INode[]}
    */
-  flatten(depth = 0) {
+  flatten() {
     let out = [];
     out.push(this);
     if (this.isOpen) {
-      const o = this.children.flatMap((child) => child.flatten(depth + 1));
+      const o = this.children.flatMap((child) => child.flatten());
       o.forEach((n) => out.push(n));
     }
     return out;
@@ -71,7 +102,7 @@ class INode {
       stat.isBlockDevice() ? "b" : "-",
       stat.isCharacterDevice() ? "c" : "-",
       stat.isFIFO() ? "p" : "-",
-      stat.isSocket() ? "s" : "?"
+      stat.isSocket() ? "s" : "-"
     ].join("");
     this.name = path.basename(this.fullPath);
     this.relPath = path.relative(rootDir, this.fullPath);
@@ -103,6 +134,7 @@ class INode {
         return inode1.init(rootDir, ig, inode1.fullPath);
       })
     );
+    this.children.sort(compareInodes);
     return this;
   }
   async close(rootDir, ig) {
@@ -133,12 +165,8 @@ class INode {
           return inode1.refresh(rootDir, ig);
         })
       );
-      children = children.filter((x) => x !== null);
-      children.sort((a, b) => {
-        const aa = `${a.type}${a.name}`;
-        const bb = `${b.type}${b.name}`;
-        return aa > bb ? 1 : aa === bb ? 0 : -1;
-      });
+      children = children.filter((x) => x !== null).sort(compareInodes);
+      this.children = children;
     }
     return this;
   }
@@ -199,6 +227,7 @@ class Workspace {
   }
   flatten() {
     let fmap = this.rootNode.flatten();
+    fmap.sort(compareInodes);
     return fmap;
   }
   // build a flat list of visible nodes
@@ -401,6 +430,7 @@ function getTokenizer(tokenizerDef) {
 class SimpleTextEditor {
   buffer = "";
   cursorIndex = 0;
+  highlightIndex = 0;
   listeners = { "cursorChanged": [], "bufferChanged": [] };
   viewportHeight = 7;
   viewportWidth = 30;
@@ -482,6 +512,9 @@ class SimpleTextEditor {
   }
   setCursor(x, y) {
     this.cursorIndex = this.cursorCoordsToIndex({ x, y });
+  }
+  setHighlight(x, y) {
+    this.highlightIndex = this.cursorCoordsToIndex({ x, y });
   }
   /**
    *
@@ -659,6 +692,7 @@ class SimpleTextEditor {
     const newSimpleTextBuffer = new SimpleTextEditor();
     newSimpleTextBuffer.buffer = this.buffer;
     newSimpleTextBuffer.cursorIndex = this.cursorIndex;
+    newSimpleTextBuffer.highlightIndex = this.highlightIndex;
     newSimpleTextBuffer.viewportHeight = this.viewportHeight;
     newSimpleTextBuffer.viewportWidth = this.viewportWidth;
     newSimpleTextBuffer.viewportX = this.viewportX;
@@ -686,21 +720,7 @@ function ListComponent({
 }) {
   const boxRef = React.useRef(null);
   const [editor2, setEditor2] = React.useState(null);
-  const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
   const [size, setSize] = React.useState({ rows: 10, cols: 30 });
-  const [lastEvent, setLastEvent] = React.useState({
-    lines: [],
-    line: "",
-    visibleLines: [],
-    cursor: { x: 0, y: 0 },
-    cursorScreen: { x: 0, y: 0 },
-    buffer: "",
-    visibleBuffer: "",
-    index: 0,
-    tokens: [],
-    tokenUnderCursor: null,
-    phrase: ""
-  });
   let changedTimeout = 0;
   React.useEffect(() => {
     let newEditor = editor2;
@@ -737,7 +757,6 @@ function ListComponent({
       editor2.onKey(ch, key);
       clearTimeout(changedTimeout);
       changedTimeout = setTimeout(() => {
-        onChange(editor2);
         setEditor2(editor2.copy());
       }, 80);
     } else if (key in ["up", "down"]) {
@@ -770,6 +789,7 @@ function ListComponent({
     });
     return {
       event: screenEvent,
+      parentPos: { x: xi, y: yi },
       lines: lines2,
       line,
       visibleLines: lines2,
@@ -785,10 +805,10 @@ function ListComponent({
   };
   const setCursorPosition = (screenEvent) => {
     const newEvent = getEvent(screenEvent);
+    editor2.setCursor(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
     onClick(newEvent);
     onLineClick(newEvent);
     onTokenClick(newEvent);
-    setLastEvent(newEvent);
     setEditor2(editor2.copy());
   };
   const mouseAction = (screenEvent) => {
@@ -796,6 +816,7 @@ function ListComponent({
     switch (screenEvent.action) {
       case "mousemove":
         const newEvent = getEvent(screenEvent);
+        editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
         onLineHover(newEvent);
         onTokenHover(newEvent);
         break;
@@ -814,7 +835,6 @@ function ListComponent({
       default:
         throw new Error(safeStringify(screenEvent));
     }
-    setMouseCoords({ x, y });
     try {
       boxProps.onMouse(screenEvent);
     } catch (e) {
@@ -927,6 +947,21 @@ function ListComponent({
     }
   );
 }
+const listingTokenizerDefinition = {
+  name: "listing",
+  flags: "mg",
+  definitions: {
+    "Whitespace": { style: {}, pattern: "\\s+" },
+    "OpenButton": { style: { bg: "yellow" }, pattern: "\\[\\+]" },
+    "CloseButton": { style: { bg: "yellow" }, pattern: "\\[-]" },
+    "AddDirButton": { style: { bg: "cyan" }, pattern: "\\[\\+D]" },
+    "AddFileButton": { style: { bg: "magenta" }, pattern: "\\[\\+F]" },
+    "RenameButton": { style: { bg: "blue" }, pattern: "\\[r]" },
+    "DeleteButton": { style: { bg: "red" }, pattern: "\\[x]" },
+    "NodeName": { style: { bg: "green" }, pattern: "[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+" },
+    "Word": { style: { bg: "green" }, pattern: "\\s.+?\\s" }
+  }
+};
 function FileTree2({
   children,
   rootDir,
@@ -948,21 +983,6 @@ function FileTree2({
   const [treeData, setTreeData] = React.useState([]);
   const [workspace, setWorkspace] = React.useState(new Workspace(inodeFilter));
   const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
-  const listingTokenizerDefinition = {
-    name: "listing",
-    flags: "mg",
-    definitions: {
-      "Whitespace": { style: { fg: "white" }, pattern: "\\s+" },
-      "OpenButton": { style: { fg: "yellow" }, pattern: "\\[\\+]" },
-      "CloseButton": { style: { fg: "yellow" }, pattern: "\\[-]" },
-      "AddDirButton": { style: { fg: "cyan" }, pattern: "\\[\\+D]" },
-      "AddFileButton": { style: { fg: "magenta" }, pattern: "\\[\\+F]" },
-      "RenameButton": { style: { fg: "blue" }, pattern: "\\[r]" },
-      "DeleteButton": { style: { fg: "red" }, pattern: "\\[x]" },
-      "NodeName": { style: { fg: "green" }, pattern: "[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+" },
-      "Word": { style: { fg: "green" }, pattern: "\\s.+?\\s" }
-    }
-  };
   React.useEffect(() => {
     const node = boxRef.current;
     if (node) node.focus();
@@ -974,12 +994,16 @@ function FileTree2({
     });
     setWorkspace(workspace.copy());
   }, [rootDir]);
+  let baseLevel = rootDir.split("/").length * 2;
+  if (baseLevel > 0) {
+    baseLevel = baseLevel - 1;
+  }
   let lines = () => {
     if (boxRef && boxRef.current && boxRef.current.lpos) {
       const lpos = boxRef.current.lpos;
       return (treeData || []).map((v, i, a) => {
         const lineBuffer = " ".repeat(lpos.width);
-        const t = v.toText();
+        const t = v.toText().substring(baseLevel);
         let rr = insertAt(lineBuffer, 0, t);
         switch (v.type.substring(0, 1)) {
           case "d":
@@ -998,7 +1022,7 @@ function FileTree2({
     const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
     setHighlightCursorData({ cursor: { x: 0, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
   };
-  const itemSelect = (eventData) => {
+  const onElementClick = (eventData) => {
     const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
     setSelectionData({ lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase });
     const node = treeData[y];
@@ -1104,35 +1128,11 @@ ${node.fullPath}`);
         left: cursorScreen.x,
         width: content.length,
         height: 1,
-        style: { ...style, inverse: true },
+        style: { ...style },
         content
       },
       `hxcursor-${Math.random()}-${Date.now()}`
     );
-  };
-  const mouseAction = (event) => {
-    const { x, y } = event;
-    switch (event.action) {
-      case "mousemove":
-        break;
-      case "mousedown":
-        break;
-      case "mouseup":
-        break;
-      case "wheelup":
-        setCursorData(null);
-        break;
-      case "wheeldown":
-        setCursorData(null);
-        break;
-      default:
-        throw new Error(safeStringify(event));
-    }
-    setMouseCoords({ x, y });
-    try {
-      boxProps.onMouse(event);
-    } catch (e) {
-    }
   };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(jsxRuntime_js.Fragment, { children: [
     /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, ref: boxRef, children: [
@@ -1146,15 +1146,14 @@ ${node.fullPath}`);
           keys: true,
           mouse: true,
           style: { selected: { bg: "blue" } },
-          onClick: itemSelect,
+          onClick: onElementClick,
           onTokenHover: highlight,
-          onMouse: mouseAction,
           tokenizerDef: listingTokenizerDefinition
         }
       ),
       children || [],
-      cursor ? cursorExtra() : [],
-      cursorHighlight()
+      cursorHighlight(),
+      cursor ? cursorExtra() : []
     ] }),
     message && /* @__PURE__ */ jsxRuntime_js.jsx(
       ModalDialog,
@@ -1512,7 +1511,7 @@ function CodeBufferEditorComponent({
   filePath,
   onKeypress = (ch, key) => {
   },
-  onChange: onChange2 = (p) => {
+  onChange = (p) => {
   },
   ...boxProps
 }) {
@@ -1667,33 +1666,33 @@ function CodeBufferEditorComponent({
         break;
       case "backspace":
         editor2.backspace().save();
-        onChange2();
+        onChange();
         break;
       case "delete":
         editor2.delete().save();
-        onChange2();
+        onChange();
         break;
       case "return":
         editor2.insert("\n");
         editor2.moveCursorDown();
         editor2.save();
-        onChange2();
+        onChange();
         break;
       case "tab":
         editor2.insert("	").save();
-        onChange2();
+        onChange();
         break;
       default:
         if (ch && ch.length > 0) {
           if (key.sequence && key.sequence.length === 1) {
             editor2.insert(key.sequence).save();
-            onChange2();
+            onChange();
           } else if (key.name && key.name.length === 1) {
             editor2.insert(key.name).save();
-            onChange2();
+            onChange();
           } else {
             editor2.insert(ch).save();
-            onChange2();
+            onChange();
           }
         }
     }
@@ -1821,7 +1820,7 @@ async function gitPush(cwd, remote, branch) {
   return stdout.split("\n").filter(Boolean);
 }
 const defaultText = "...".split(",").join("\n");
-function SimpleTextEditorComponent({ initialText, onChange: onChange2, ...boxProps }) {
+function SimpleTextEditorComponent({ initialText, onChange, ...boxProps }) {
   const boxRef = React.useRef(null);
   const [editor2, setEditor2] = React.useState(null);
   const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
@@ -1862,7 +1861,7 @@ function SimpleTextEditorComponent({ initialText, onChange: onChange2, ...boxPro
     editor2.onKey(ch, key);
     clearTimeout(changedTimeout);
     changedTimeout = setTimeout(() => {
-      onChange2(editor2);
+      onChange(editor2);
       setEditor2(editor2.copy());
     }, 80);
   };
@@ -2062,39 +2061,39 @@ class Semver {
     return new Semver(this.major, this.minor, this.patch);
   }
 }
-function SemverControl({ initial, onChange: onChange2, ...boxProps }) {
+function SemverControl({ initial, onChange, ...boxProps }) {
   const [semver, setSemver] = React.useState(Semver.from(initial));
   React.useEffect(() => {
     setSemver(Semver.from(initial));
   }, [initial]);
   const decMajor = () => {
     const newSemver = semver.prevMajor();
-    onChange2(newSemver);
+    onChange(newSemver);
     setSemver(newSemver);
   };
   const incMajor = () => {
     const newSemver = semver.nextMajor();
-    onChange2(newSemver);
+    onChange(newSemver);
     setSemver(newSemver);
   };
   const decMinor = () => {
     const newSemver = semver.prevMinor();
-    onChange2(newSemver);
+    onChange(newSemver);
     setSemver(newSemver);
   };
   const incMinor = () => {
     const newSemver = semver.nextMinor();
-    onChange2(newSemver);
+    onChange(newSemver);
     setSemver(newSemver);
   };
   const decPatch = () => {
     const newSemver = semver.prevPatch();
-    onChange2(newSemver);
+    onChange(newSemver);
     setSemver(newSemver);
   };
   const incPatch = () => {
     const newSemver = semver.nextPatch();
-    onChange2(newSemver);
+    onChange(newSemver);
     setSemver(newSemver);
   };
   return /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [

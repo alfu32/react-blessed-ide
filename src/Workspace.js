@@ -4,9 +4,28 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import ignore from 'ignore';
 
+const inodeSortBy=(node)=> {
+  const mapping={
+    'd':1,// Directory
+    'f':2,// File
+    'l':2,// SymbolicLink
+    'b':2,// BlockDevice
+    'c':2,// CharacterDevice
+    'p':2,// FIFO
+    's':2,// Socket
+  }
+  const nt=node.type.replace(/-/gi,'')
+  return `${node.parentFullName().split('/').map(nn => `1|${nn}`).join("/")}/${mapping[nt]}|${node.name}`
+}
+const compareInodes=(na,nb) => {
+  const sa = inodeSortBy(na)
+  const sb=inodeSortBy(nb)
+  return sa<sb?-1:(sa===sb)?0:1
+}
+
 export class INode{
   id=0        /// (file stat ino)
-  type=''      ///  ( one of 'd','f','l','p')
+  type=''      ///  ( one of 'd','f','l','p','c','p','s')
   name=""      ///  file name
   fullPath=""  /// 
   relPath=""  /// 
@@ -18,25 +37,33 @@ export class INode{
     return fs.readFile(this.fullPath, 'utf8');
   }
   depth(){
-    return this.relPath.split("/").length
+    return this.fullPath.split("/").length
+  }
+  parentFullName(){
+    return this.fullPath.replace(`/${this.name}`,'')
   }
   toText(){
+
+    const nt=this.type.replace(/-/gi,'')
     const marker = this.type.indexOf('d')>-1
-      ? (this.isOpen ? '[-]' : '[+]')
-      : ' ';
+      ? (this.isOpen ? ' [-]' : ' [+]')
+    //  : ` [${nt}]`;
+      : ``;
     return `${' '.repeat(this.depth()*2)}${marker} ${this.name}`
+  }
+  toText2(){
+    return inodeSortBy(this)
   }
 
   /**
    *
-   * @param depth current depth
    * @returns {INode[]}
    */
-  flatten (depth = 0){
+  flatten (){
     let out =[]
     out.push(this);
     if (this.isOpen) {
-      const o = this.children.flatMap(child => child.flatten(depth+1));
+      const o = this.children.flatMap(child => child.flatten());
       o.forEach(n => out.push(n))
     }
     return out;
@@ -60,7 +87,7 @@ export class INode{
       stat.isBlockDevice()?'b':'-',
       stat.isCharacterDevice()?'c':'-',
       stat.isFIFO()?'p':'-',
-      stat.isSocket()?'s':'?',
+      stat.isSocket()?'s':'-',
     ].join("")
     this.name = path.basename(this.fullPath);
     this.relPath = path.relative(rootDir, this.fullPath);
@@ -93,6 +120,7 @@ export class INode{
           return inode1.init(rootDir, ig, inode1.fullPath)
         })
     )
+    this.children.sort(compareInodes)
     return this
   }
   async close(rootDir,ig){
@@ -130,11 +158,8 @@ export class INode{
         })
       )
       children=children.filter(x => x!== null)
-      children.sort((a,b) => {
-        const aa=`${a.type}${a.name}`
-        const bb=`${b.type}${b.name}`
-        return (aa>bb)?1:(aa===bb)?0:-1
-      });
+        .sort(compareInodes)
+      this.children=children
     }
     return this
 
@@ -199,11 +224,7 @@ export class Workspace{
 
     // throw JSON.stringify(wk,null,' ')
     let fmap = this.rootNode.flatten()
-    // fmap.sort((a,b) => {
-    //   const at = `${a.type}|${a.toText()}`
-    //   const bt = `${b.type}|${b.toText()}`
-    //   return at>bt?-1:((at===bt)?0:1)
-    // })
+    fmap.sort(compareInodes)
     return fmap
   }
   // build a flat list of visible nodes
