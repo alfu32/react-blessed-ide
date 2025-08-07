@@ -9,13 +9,54 @@ import {
 import {SimpleTextEditor} from "./SimpleTextEditor.js";
 import {safeStringify} from "./util";
 import {getNamedTokenizer, getTokenizer} from "./tokenizer";
-const defaultText="..."
-    .split(",").join("\n")
-export function ListComponent({lines, editable=false,onClick, onChange,tokenizerDef,children,...boxProps}) {
+import {ScreenEvent} from "react-blessed";
+import {EditorEvent} from './SimpleTextEditor'
+const defaultText="...".split(",").join("\n")
+
+
+/**
+ *
+ * @param {string[]} lines
+ * @param {boolean} editable
+ * @param {(editorEvent:EditorEvent)=>void} onClick
+ * @param {(editorEvent:EditorEvent)=>void} onLineClick
+ * @param {(editorEvent:EditorEvent)=>void} onLineHover
+ * @param {(editorEvent:EditorEvent)=>void} onTokenClick
+ * @param {(editorEvent:EditorEvent)=>void} onTokenHover
+ * @param {TokenizerDef} tokenizerDef
+ * @param {NodeWithEvents[]} children
+ * @param {any[]} boxProps
+ * @return {Element}
+ */
+export function ListComponent({
+  lines,
+  editable = false,
+  onClick=(editorEvent)=>{},
+  onLineClick=(editorEvent)=>{},
+  onLineHover=(editorEvent)=>{},
+  onTokenClick=(editorEvent)=>{},
+  onTokenHover=(editorEvent)=>{},
+  tokenizerDef,
+  children,
+  ...boxProps
+}) {
     const boxRef = useRef(null);
     const [editor, setEditor] = useState(null);
     const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
     const [size, setSize]     = useState({ rows: 10, cols: 30 });
+    const [lastEvent, setLastEvent]     = useState({
+        lines:[],
+        line:"",
+        visibleLines:[],
+        cursor:{x:0,y:0},
+        cursorScreen:{x:0,y:0},
+        buffer:"",
+        visibleBuffer:"",
+        index:0,
+        tokens:[],
+        tokenUnderCursor:null,
+        phrase:"",
+    });
     let changedTimeout=0
     useEffect(()=>{
         let newEditor=editor
@@ -65,7 +106,7 @@ export function ListComponent({lines, editable=false,onClick, onChange,tokenizer
             setEditor(editor.copy())
         }
     }
-    const setCursorPosition = (screenEvent) => {
+    const getEvent = (screenEvent) => {
         if(!editor){
             return;
         }
@@ -88,7 +129,8 @@ export function ListComponent({lines, editable=false,onClick, onChange,tokenizer
         const tokenUnderCursor = tokens.find((v,i,a)=>{
             return v.start<=cursor.x && v.end>=cursor.x;
         })
-        onClick({
+        return {
+            event:screenEvent,
             lines:lines,
             line,
             visibleLines:lines,
@@ -100,23 +142,34 @@ export function ListComponent({lines, editable=false,onClick, onChange,tokenizer
             tokens,
             tokenUnderCursor,
             phrase,
-        });
+        }
+    }
+    const setCursorPosition = (screenEvent) => {
+        const newEvent=getEvent(screenEvent)
+        onClick(newEvent);
+        onLineClick(newEvent);
+        onTokenClick(newEvent);
+        setLastEvent(newEvent);
         setEditor(editor.copy())
     };
-    const mouseAction=(event) =>{
-        const {x,y} = event
+    const mouseAction=(screenEvent) =>{
+        const {x,y} = screenEvent
 
-        switch(event.action){
-            case 'mousemove':break;
+        switch(screenEvent.action){
+            case 'mousemove':
+                const newEvent=getEvent(screenEvent)
+                onLineHover(newEvent);
+                onTokenHover(newEvent);
+                break;
             case 'mousedown':break;
             case 'mouseup':break;
             case 'wheelup':editor.moveCursorUp().slideViewportToCursor();setEditor(editor.copy());break;
             case 'wheeldown':editor.moveCursorDown().slideViewportToCursor();setEditor(editor.copy());break;
-            default: throw new Error(safeStringify(event)); break;
+            default: throw new Error(safeStringify(screenEvent)); break;
         }
         setMouseCoords({x,y});
         try{
-            boxProps.onMouse(event);
+            boxProps.onMouse(screenEvent);
         }catch(e){}
     }
     const renderLines = () => {

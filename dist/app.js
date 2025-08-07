@@ -294,6 +294,110 @@ function insertAt(destination, index, source) {
   let last = destination.substring(index + source.length);
   return (first + source + last).substring(0, destination.length);
 }
+class TokenizerToken {
+  tokenizerName = "";
+  type = "";
+  style = {};
+  start = 0;
+  end = 0;
+  y = 0;
+  x = 0;
+  text = "";
+  /**
+   *
+   * @param {RegExpExecArray} m
+   * @param tokenizerDef
+   * @return {{name: void | string, text: *, type: string, style, start, end: *}}
+   */
+  static fromRegexpMatch(m, tokenizerDef, tokenizerName, lineNumber) {
+    const groups = m.groups;
+    const type = Object.keys(groups).find((key) => groups[key] !== void 0);
+    const tokenDef = tokenizerDef.definitions[type];
+    const tt = new TokenizerToken();
+    tt.tokenizerName = tokenizerName;
+    tt.text = m[0];
+    tt.type = type;
+    tt.style = tokenDef.style;
+    tt.start = m.index;
+    tt.end = m.index + m[0].length;
+    tt.y = lineNumber;
+    tt.x = tt.start;
+    return tt;
+  }
+}
+const namedTokenizers = {
+  any: { name: "any", definitions: {
+    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
+    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
+    punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
+  } },
+  js: { name: "js", flags: "mg", definitions: {
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
+    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
+    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
+    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
+    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
+  } },
+  jsx: { name: "jsx", flags: "mg", definitions: {
+    ReactToken: { style: { fg: "#FFDD00" }, pattern: "\\buse[A-Z][a-z]*\\b" },
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
+    JsxTag: { style: { fg: "#FFDD00" }, pattern: "\\<(\\/){0,1}[a-zA-Z-]*\\>" },
+    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
+    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
+    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
+    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
+  } },
+  c: { name: "c", flags: "mg", definitions: {
+    Keyword: { style: { fg: "magenta" }, pattern: "\\b(int|const|char|long|if|else|for|while|return|switch|case|break|continue)\\b" },
+    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
+    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
+    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
+    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
+    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
+    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
+    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
+    Others: { style: { fg: "white" }, pattern: ".*?" }
+  } },
+  words: { name: "c", flags: "mg", definitions: {
+    Whitespace: { style: { fg: "red" }, pattern: "\\s+" },
+    Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
+  } }
+};
+function getNamedTokenizer(name) {
+  const tokenizerDef = namedTokenizers[name] || namedTokenizers["any"];
+  return getTokenizer(tokenizerDef);
+}
+function getTokenizer(tokenizerDef) {
+  const tokenRegex = new RegExp(
+    Object.entries(tokenizerDef.definitions).map(([name, definition]) => `(?<${name}>${definition.pattern})`).join("|"),
+    tokenizerDef.flags || "g"
+  );
+  return function tokenizer(code, lineNumber) {
+    const tokens = [];
+    for (const m of code.matchAll(tokenRegex)) {
+      const groups = m.groups;
+      const type = Object.keys(groups).find((key) => groups[key] !== void 0);
+      tokenizerDef.definitions[type];
+      tokens.push(TokenizerToken.fromRegexpMatch(m, tokenizerDef, tokenizerDef.name, lineNumber));
+    }
+    return tokens;
+  };
+}
 class SimpleTextEditor {
   buffer = "";
   cursorIndex = 0;
@@ -562,116 +666,41 @@ class SimpleTextEditor {
     return newSimpleTextBuffer;
   }
 }
-class TokenizerToken {
-  tokenizerName = "";
-  type = "";
-  style = {};
-  start = 0;
-  end = 0;
-  y = 0;
-  x = 0;
-  text = "";
-  /**
-   *
-   * @param {RegExpExecArray} m
-   * @param tokenizerDef
-   * @return {{name: void | string, text: *, type: string, style, start, end: *}}
-   */
-  static fromRegexpMatch(m, tokenizerDef, tokenizerName, lineNumber) {
-    const groups = m.groups;
-    const type = Object.keys(groups).find((key) => groups[key] !== void 0);
-    const tokenDef = tokenizerDef.definitions[type];
-    const tt = new TokenizerToken();
-    tt.tokenizerName = tokenizerName;
-    tt.text = m[0];
-    tt.type = type;
-    tt.style = tokenDef.style;
-    tt.start = m.index;
-    tt.end = m.index + m[0].length;
-    tt.y = lineNumber;
-    tt.x = tt.start;
-    return tt;
-  }
-}
-const namedTokenizers = {
-  any: { name: "any", definitions: {
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
-  } },
-  js: { name: "js", flags: "mg", definitions: {
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
-    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
-  } },
-  jsx: { name: "jsx", flags: "mg", definitions: {
-    ReactToken: { style: { fg: "#FFDD00" }, pattern: "\\buse[A-Z][a-z]*\\b" },
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
-    JsxTag: { style: { fg: "#FFDD00" }, pattern: "\\<(\\/){0,1}[a-zA-Z-]*\\>" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
-    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
-  } },
-  c: { name: "c", flags: "mg", definitions: {
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(int|const|char|long|if|else|for|while|return|switch|case|break|continue)\\b" },
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
-    // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
-  } },
-  words: { name: "c", flags: "mg", definitions: {
-    Whitespace: { style: { fg: "red" }, pattern: "\\s+" },
-    Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
-  } }
-};
-function getNamedTokenizer(name) {
-  const tokenizerDef = namedTokenizers[name] || namedTokenizers["any"];
-  return getTokenizer(tokenizerDef);
-}
-function getTokenizer(tokenizerDef) {
-  const tokenRegex = new RegExp(
-    Object.entries(tokenizerDef.definitions).map(([name, definition]) => `(?<${name}>${definition.pattern})`).join("|"),
-    tokenizerDef.flags || "g"
-  );
-  return function tokenizer(code, lineNumber) {
-    const tokens = [];
-    for (const m of code.matchAll(tokenRegex)) {
-      const groups = m.groups;
-      const type = Object.keys(groups).find((key) => groups[key] !== void 0);
-      tokenizerDef.definitions[type];
-      tokens.push(TokenizerToken.fromRegexpMatch(m, tokenizerDef, tokenizerDef.name, lineNumber));
-    }
-    return tokens;
-  };
-}
 const defaultText$1 = "...".split(",").join("\n");
-function ListComponent({ lines, editable = false, onClick, onChange, tokenizerDef, children, ...boxProps }) {
+function ListComponent({
+  lines,
+  editable = false,
+  onClick = (editorEvent) => {
+  },
+  onLineClick = (editorEvent) => {
+  },
+  onLineHover = (editorEvent) => {
+  },
+  onTokenClick = (editorEvent) => {
+  },
+  onTokenHover = (editorEvent) => {
+  },
+  tokenizerDef,
+  children,
+  ...boxProps
+}) {
   const boxRef = React.useRef(null);
   const [editor2, setEditor2] = React.useState(null);
   const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
   const [size, setSize] = React.useState({ rows: 10, cols: 30 });
+  const [lastEvent, setLastEvent] = React.useState({
+    lines: [],
+    line: "",
+    visibleLines: [],
+    cursor: { x: 0, y: 0 },
+    cursorScreen: { x: 0, y: 0 },
+    buffer: "",
+    visibleBuffer: "",
+    index: 0,
+    tokens: [],
+    tokenUnderCursor: null,
+    phrase: ""
+  });
   let changedTimeout = 0;
   React.useEffect(() => {
     let newEditor = editor2;
@@ -716,7 +745,7 @@ function ListComponent({ lines, editable = false, onClick, onChange, tokenizerDe
       setEditor2(editor2.copy());
     }
   };
-  const setCursorPosition = (screenEvent) => {
+  const getEvent = (screenEvent) => {
     if (!editor2) {
       return;
     }
@@ -739,7 +768,8 @@ function ListComponent({ lines, editable = false, onClick, onChange, tokenizerDe
     const tokenUnderCursor = tokens.find((v, i, a) => {
       return v.start <= cursor.x && v.end >= cursor.x;
     });
-    onClick({
+    return {
+      event: screenEvent,
       lines: lines2,
       line,
       visibleLines: lines2,
@@ -751,13 +781,23 @@ function ListComponent({ lines, editable = false, onClick, onChange, tokenizerDe
       tokens,
       tokenUnderCursor,
       phrase
-    });
+    };
+  };
+  const setCursorPosition = (screenEvent) => {
+    const newEvent = getEvent(screenEvent);
+    onClick(newEvent);
+    onLineClick(newEvent);
+    onTokenClick(newEvent);
+    setLastEvent(newEvent);
     setEditor2(editor2.copy());
   };
-  const mouseAction = (event) => {
-    const { x, y } = event;
-    switch (event.action) {
+  const mouseAction = (screenEvent) => {
+    const { x, y } = screenEvent;
+    switch (screenEvent.action) {
       case "mousemove":
+        const newEvent = getEvent(screenEvent);
+        onLineHover(newEvent);
+        onTokenHover(newEvent);
         break;
       case "mousedown":
         break;
@@ -772,11 +812,11 @@ function ListComponent({ lines, editable = false, onClick, onChange, tokenizerDe
         setEditor2(editor2.copy());
         break;
       default:
-        throw new Error(safeStringify(event));
+        throw new Error(safeStringify(screenEvent));
     }
     setMouseCoords({ x, y });
     try {
-      boxProps.onMouse(event);
+      boxProps.onMouse(screenEvent);
     } catch (e) {
     }
   };
@@ -903,6 +943,7 @@ function FileTree2({
   const [message, setMessage] = React.useState(false);
   const [selected, setSelected] = React.useState(null);
   const [cursorData, setCursorData] = React.useState(null);
+  const [highlightCursorData, setHighlightCursorData] = React.useState(null);
   const [selectionData, setSelectionData] = React.useState(null);
   const [treeData, setTreeData] = React.useState([]);
   const [workspace, setWorkspace] = React.useState(new Workspace(inodeFilter));
@@ -953,6 +994,10 @@ function FileTree2({
       return [];
     }
   };
+  const highlight = (eventData) => {
+    const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
+    setHighlightCursorData({ cursor: { x: 0, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
+  };
   const itemSelect = (eventData) => {
     const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
     setSelectionData({ lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase });
@@ -964,17 +1009,17 @@ function FileTree2({
           case "NodeName":
             setSelected(node);
             onFileSelect(node);
-            setCursorData({ cursor: { x: 0, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: 0, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "RenameButton":
             setMessage(`Rename
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "DeleteButton":
             setMessage(`Delete
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
         }
         break;
@@ -989,7 +1034,7 @@ ${node.fullPath}`);
               const td2 = wk2.flatten().filter(inodeFilter);
               setWorkspace(wk2);
               setTreeData(td2);
-              setCursorData({ cursor: { x, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+              setCursorData({ cursor: { x, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             });
             break;
           case "CloseButton":
@@ -998,32 +1043,32 @@ ${node.fullPath}`);
             const td = wk.flatten().filter(inodeFilter);
             setWorkspace(wk);
             setTreeData(td);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "NodeName":
             setSelected(node);
             onDirSelect(node);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "AddDirButton":
             setMessage(`AddDir
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "AddFileButton":
             setMessage(`AddFile
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "RenameButton":
             setMessage(`Rename
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "DeleteButton":
             setMessage(`Delete
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text });
+            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
         }
         break;
@@ -1046,6 +1091,23 @@ ${node.fullPath}`);
         content
       },
       `xcursor-${Math.random()}-${Date.now()}`
+    );
+  };
+  const cursorHighlight = () => {
+    if (!highlightCursorData) return /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, left: 0, width: 1, height: 1, content: " " });
+    const { cursor: cursor2, cursorScreen, content, style } = highlightCursorData;
+    const { x, y } = mouseCoords;
+    return /* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        top: cursorScreen.y,
+        left: cursorScreen.x,
+        width: content.length,
+        height: 1,
+        style: { ...style, inverse: true },
+        content
+      },
+      `hxcursor-${Math.random()}-${Date.now()}`
     );
   };
   const mouseAction = (event) => {
@@ -1085,13 +1147,14 @@ ${node.fullPath}`);
           mouse: true,
           style: { selected: { bg: "blue" } },
           onClick: itemSelect,
+          onTokenHover: highlight,
           onMouse: mouseAction,
           tokenizerDef: listingTokenizerDefinition
         }
       ),
-      /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, content: selected ? selected.fullPath : " " + label, height: 1 }),
       children || [],
-      cursor ? cursorExtra() : []
+      cursor ? cursorExtra() : [],
+      cursorHighlight()
     ] }),
     message && /* @__PURE__ */ jsxRuntime_js.jsx(
       ModalDialog,
@@ -1449,7 +1512,7 @@ function CodeBufferEditorComponent({
   filePath,
   onKeypress = (ch, key) => {
   },
-  onChange = (p) => {
+  onChange: onChange2 = (p) => {
   },
   ...boxProps
 }) {
@@ -1604,33 +1667,33 @@ function CodeBufferEditorComponent({
         break;
       case "backspace":
         editor2.backspace().save();
-        onChange();
+        onChange2();
         break;
       case "delete":
         editor2.delete().save();
-        onChange();
+        onChange2();
         break;
       case "return":
         editor2.insert("\n");
         editor2.moveCursorDown();
         editor2.save();
-        onChange();
+        onChange2();
         break;
       case "tab":
         editor2.insert("	").save();
-        onChange();
+        onChange2();
         break;
       default:
         if (ch && ch.length > 0) {
           if (key.sequence && key.sequence.length === 1) {
             editor2.insert(key.sequence).save();
-            onChange();
+            onChange2();
           } else if (key.name && key.name.length === 1) {
             editor2.insert(key.name).save();
-            onChange();
+            onChange2();
           } else {
             editor2.insert(ch).save();
-            onChange();
+            onChange2();
           }
         }
     }
@@ -1758,7 +1821,7 @@ async function gitPush(cwd, remote, branch) {
   return stdout.split("\n").filter(Boolean);
 }
 const defaultText = "...".split(",").join("\n");
-function SimpleTextEditorComponent({ initialText, onChange, ...boxProps }) {
+function SimpleTextEditorComponent({ initialText, onChange: onChange2, ...boxProps }) {
   const boxRef = React.useRef(null);
   const [editor2, setEditor2] = React.useState(null);
   const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
@@ -1799,7 +1862,7 @@ function SimpleTextEditorComponent({ initialText, onChange, ...boxProps }) {
     editor2.onKey(ch, key);
     clearTimeout(changedTimeout);
     changedTimeout = setTimeout(() => {
-      onChange(editor2);
+      onChange2(editor2);
       setEditor2(editor2.copy());
     }, 80);
   };
@@ -1999,39 +2062,39 @@ class Semver {
     return new Semver(this.major, this.minor, this.patch);
   }
 }
-function SemverControl({ initial, onChange, ...boxProps }) {
+function SemverControl({ initial, onChange: onChange2, ...boxProps }) {
   const [semver, setSemver] = React.useState(Semver.from(initial));
   React.useEffect(() => {
     setSemver(Semver.from(initial));
   }, [initial]);
   const decMajor = () => {
     const newSemver = semver.prevMajor();
-    onChange(newSemver);
+    onChange2(newSemver);
     setSemver(newSemver);
   };
   const incMajor = () => {
     const newSemver = semver.nextMajor();
-    onChange(newSemver);
+    onChange2(newSemver);
     setSemver(newSemver);
   };
   const decMinor = () => {
     const newSemver = semver.prevMinor();
-    onChange(newSemver);
+    onChange2(newSemver);
     setSemver(newSemver);
   };
   const incMinor = () => {
     const newSemver = semver.nextMinor();
-    onChange(newSemver);
+    onChange2(newSemver);
     setSemver(newSemver);
   };
   const decPatch = () => {
     const newSemver = semver.prevPatch();
-    onChange(newSemver);
+    onChange2(newSemver);
     setSemver(newSemver);
   };
   const incPatch = () => {
     const newSemver = semver.nextPatch();
-    onChange(newSemver);
+    onChange2(newSemver);
     setSemver(newSemver);
   };
   return /* @__PURE__ */ jsxRuntime_js.jsxs("box", { ...boxProps, children: [

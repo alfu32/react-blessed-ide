@@ -1,9 +1,70 @@
+import {ScreenEvent} from 'react-blessed'
+import {TokenizerToken} from './tokenizer'
 /**
  *
  * @param {SimpleTextEditor} eventData
  * @return {(function())|undefined}
  */
 export function Listener(eventData){return ()=>{}}
+
+
+class EditorEvent{
+    /**
+     * @type {ScreenEvent}
+     */
+    screen= {}
+    /**
+     *
+     * @type {string[]}
+     */
+    lines=[]
+    /**
+     *
+     * @type {string}
+     */
+    line=""
+    /**
+     *
+     * @type {string[]}
+     */
+    visibleLines=[]
+    /**
+     *
+     * @type {{x: number, y: number}}
+     */
+    cursor={x:0,y:0}
+    /**
+     *
+     * @type {{x: number, y: number}}
+     */
+    cursorScreen={x:0,y:0}
+    /**
+     *
+     * @type {string}
+     */
+    buffer=""
+    /**
+     *
+     * @type {string}
+     */
+    visibleBuffer=""
+    /**
+     *
+     * @type {number}
+     */
+    index=0
+    /**
+     *
+     * @type {TokenizerToken[]}
+     */
+    tokens=[]
+    /**
+     *
+     * @type {TokenizerToken}
+     */
+    tokenUnderCursor=null
+    phrase=""
+}
 
 export class SimpleTextEditor {
     buffer=""
