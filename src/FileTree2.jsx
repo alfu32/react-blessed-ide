@@ -40,11 +40,9 @@ export default function FileTree2({
     ...boxProps
 }){
     const boxRef = useRef();
-    const [dummy,setDummy] = useState(null);
     const [message, setMessage] = React.useState(false);
     const [selected, setSelected] = React.useState(null);
     const [cursorData, setCursorData] = React.useState(null);
-    const [selectionData, setSelectionData] = React.useState(null);
     const [workspace,setWorkspace] = useState(new Workspace(inodeFilter));
 
 
@@ -59,9 +57,6 @@ export default function FileTree2({
                 setTimeout(()=>{
                     setWorkspace(wk.copy())
                 },100)
-                /// setDummy(`loaded tree data ${JSON.stringify({
-                ///   wk
-                /// })}`)
                 /// setMessage(`loaded tree data ${JSON.stringify({
                 ///   wk
                 /// })}`)
@@ -97,7 +92,6 @@ export default function FileTree2({
     const onTokenClick=(eventData)=>{
         const treeData = workspace.flatten().filter(inodeFilter)
         const {lines, visibleLines, line, cursor:{x,y},cursorScreen, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase} = eventData
-        setSelectionData({lines, visibleLines, line, cursor:{x,y}, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase})
         const node = treeData[y];
         // throw JSON.stringify({node,y},null, ' ')
         // if (node.type.indexOf('d')>-1) {
@@ -108,15 +102,15 @@ export default function FileTree2({
                     case "NodeName":
                         setSelected(node);
                         onFileSelect(node);
-                        setCursorData({cursor:{x:0,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:0,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                     case "RenameButton":
                         setMessage(`Rename\n${node.fullPath}`)
-                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                     case "DeleteButton":
                         setMessage(`Delete\n${node.fullPath}`)
-                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                 }
                 break;
@@ -130,7 +124,7 @@ export default function FileTree2({
                             const wk=workspace.copy()
                             const td = wk.flatten().filter(inodeFilter)
                             setWorkspace(wk)
-                            setCursorData({cursor:{x,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                            // setCursorData({cursor:{x,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         })
                         break;
                     case "CloseButton":
@@ -138,28 +132,28 @@ export default function FileTree2({
                         const wk=workspace.copy()
                         const td = wk.flatten().filter(inodeFilter)
                         setWorkspace(wk)
-                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                     case "NodeName":
                         setSelected(node);
                         onDirSelect(node);
-                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                     case "AddDirButton":
                         setMessage(`AddDir\n${node.fullPath}`)
-                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                     case "AddFileButton":
                         setMessage(`AddFile\n${node.fullPath}`)
-                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                     case "RenameButton":
                         setMessage(`Rename\n${node.fullPath}`)
-                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                     case "DeleteButton":
                         setMessage(`Delete\n${node.fullPath}`)
-                        setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                 }
                 break;
@@ -194,7 +188,6 @@ export default function FileTree2({
             {children||[]}
             {cursor?cursorExtra():[]}
         </box>
-        {dummy && <box key={`dummy-${Date.now}`} width={1} height={1}/>}
         {message && (
             <ModalDialog
                 label={'Message'}

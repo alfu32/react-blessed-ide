@@ -42,7 +42,6 @@ export function ListComponent({
     const boxRef = useRef(null);
     const [editor, setEditor] = useState(null);
     const [size, setSize]     = useState({ rows: 10, cols: 30 });
-    const [highlightCursorData, setHighlightCursorData] = React.useState(null);
 
     let changedTimeout=0
     useEffect(()=>{
@@ -90,18 +89,16 @@ export function ListComponent({
             }, 80)
         }else if ( key in ['up','down'] ){
             editor.onKey(ch, key)
-            setEditor(editor.copy())
+            changedTimeout = setTimeout(() => {
+                // onChange(editor)
+                setEditor(editor.copy())
+            }, 80)
         }
     }
     const getEvent0 = (screenEvent) => {
         if(!editor){
             return;
         }
-        const {xi,yi} = boxRef.current.lpos;
-        const {x,y} = screenEvent;
-        const cursor = editor.cursorCoords()
-        const lines = editor.renderToLines()
-        const line = lines[cursor.y];
         const tokenizer=getTokenizer(tokenizerDef||{
             name:'words',
             flags:'mg',
@@ -110,36 +107,14 @@ export function ListComponent({
                 Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
             }
         })
-        const tokens = tokenizer(line,y)
-        const phrase = tokens.map(v=>v.type)
-        const tokenUnderCursor = tokens.find((v,i,a)=>{
-            return v.start<=cursor.x && v.end>=cursor.x;
-        })
-        return {
-            event:screenEvent,
-            parentPos:{x:xi,y:yi},
-            lines:lines,
-            line,
-            visibleLines:lines,
-            cursor,
-            cursorScreen:{x:cursor.x-editor.viewportX,y:cursor.y-editor.viewportY},
-            buffer:editor.buffer,
-            visibleBuffer:editor.buffer,
-            index:editor.cursorIndex,
-            tokens,
-            tokenUnderCursor,
-            phrase,
-        }
+        const evt = editor.getEvent(boxRef.current.lpos,screenEvent,tokenizer);
+
+        return evt
     }
     const getEvent = (screenEvent) => {
         if(!editor){
             return;
         }
-        const {xi,yi} = boxRef.current.lpos;
-        const {x,y} = screenEvent;
-        const cursor = editor.cursorCoords()
-        const lines = editor.renderToLines()
-        const line = lines[cursor.y];
         const tokenizer=getTokenizer(tokenizerDef||{
             name:'words',
             flags:'mg',
@@ -148,27 +123,10 @@ export function ListComponent({
                 Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
             }
         })
-        const tokens = tokenizer(line,y)
-        const phrase = tokens.map(v=>v.type)
-        const tokenUnderCursor = tokens.find((v,i,a)=>{
-            return v.start<=cursor.x && v.end>=cursor.x;
-        })
-        editor.setCursor(x-xi+editor.viewportX,y-yi+editor.viewportY)
-        return {
-            event:screenEvent,
-            parentPos:{x:xi,y:yi},
-            lines:lines,
-            line,
-            visibleLines:lines,
-            cursor,
-            cursorScreen:{x:cursor.x-editor.viewportX,y:cursor.y-editor.viewportY},
-            buffer:editor.buffer,
-            visibleBuffer:editor.buffer,
-            index:editor.cursorIndex,
-            tokens,
-            tokenUnderCursor,
-            phrase,
-        }
+        const evt = editor.getEvent(boxRef.current.lpos,screenEvent,tokenizer);
+
+        // editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+        return evt
     }
     const mouseAction=(screenEvent) =>{
 
@@ -180,34 +138,48 @@ export function ListComponent({
                     setTimeout(()=>{
                         onLineHover(newEvent);
                         onTokenHover(newEvent);
-                    },80)
+                    },1)
                 }
                 break;
-            case 'mousedown':
-                setHighlightCursorData(null)
+            case 'mousedown': {
+                    setTimeout(() => {
+                        editor.setHighlight(null)
+                        editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+                        setEditor(editor.copy())
+                    }, 1)
+                }
                 break;
             case 'mouseup': {
                     const newEvent = getEvent(screenEvent)
+                    const {x,y} = screenEvent;
                     // setLastEvent(newEvent);
-                    setEditor(editor.copy())
                     setTimeout(()=>{
+                        editor.setHighlight(null)
+                        editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
                         onLineClick(newEvent);
                         onTokenClick(newEvent);
-                    },80)
+                        setEditor(editor.copy())
+                    },1)
                 }
                 break;
             case 'wheelup': {
                     const newEvent = getEvent(screenEvent)
                     editor.moveCursorUp().slideViewportToCursor();
-                    editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
-                    setEditor(editor.copy());
+                    setTimeout(()=>{
+                        editor.setHighlight(null)
+                        // editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+                        setEditor(editor.copy())
+                    },1)
                 }
                 break;
             case 'wheeldown': {
                     const newEvent = getEvent(screenEvent)
                     editor.moveCursorDown().slideViewportToCursor();
-                    editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
-                    setEditor(editor.copy());
+                    setTimeout(()=>{
+                        editor.setHighlight(null)
+                        // editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+                        setEditor(editor.copy())
+                    },1)
                 }
                 break;
             default: throw new Error(safeStringify(screenEvent)); break;
@@ -241,14 +213,13 @@ export function ListComponent({
         const i = editor.cursorIndex
         const {x,y} = editor.cursorCoords()
         const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
-        const content = editor.buffer.substring(i,i+1)
         return (<box
             key={`editor-cursor-${Date.now()}`}
             top={y-vy}
             left={x-vx}
             width={1} height={1}
-            style={{inverse:true,underline:true}}
-            content={content}
+            style={{inverse:true}}
+            content={editor.buffer.substring(i,i+1)}
         />)
     }
     const renderHighlight=()=>{
@@ -258,14 +229,22 @@ export function ListComponent({
         const i = editor.cursorIndex
         const {x,y} = editor.highlightCoords()
         const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
-        const content = editor.buffer.substring(i,i+1)
+        const tokenizer=getTokenizer(tokenizerDef||{
+            name:'words',
+            flags:'mg',
+            definitions:{
+                Whitespace:       {style: {fg:'red'},pattern:'\\s+'},
+                Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
+            }
+        })
+        const tokenUnderCursor=editor.tokenUnderCursor(x,y,tokenizer)
         return (<box
             key={`editor-highlight-${Date.now()}`}
             top={y-vy}
-            left={x-vx}
-            width={1} height={1}
-            style={{inverse:true,underline:true}}
-            content={content}
+            left={tokenUnderCursor.start}
+            width={tokenUnderCursor.text.length} height={1}
+            style={{...tokenUnderCursor.style,underline:true}}
+            content={tokenUnderCursor.text}
         />)
     }
     const renderScrollbar = () => {

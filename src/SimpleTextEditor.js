@@ -1,5 +1,5 @@
 import {ScreenEvent} from 'react-blessed'
-import {TokenizerToken} from './tokenizer'
+import {getTokenizer, TokenizerToken} from './tokenizer'
 /**
  *
  * @param {SimpleTextEditor} eventData
@@ -209,6 +209,51 @@ export class SimpleTextEditor {
         }
         this.slideViewportToCursor()
         return this
+    }
+    tokenUnderCursor(x,y,tokenizer){
+        const lines = this.renderToLines()
+        const line = lines[y];
+        const tokens = tokenizer(line,y)
+        const phrase = tokens.map(v=>v.type)
+        const tokenUnderCursor = tokens.find((v,i,a)=>{
+            return v.start<=x && v.end>=x;
+        })
+        return tokenUnderCursor
+    }
+    /**
+     *
+     * @param lpos
+     * @param {Screen} screenEvent
+     * @param tokenizer
+     * @return {EditorEvent}
+     */
+    getEvent(lpos,screenEvent,tokenizer) {
+        const {xi,yi} = lpos;
+        const {x,y} = screenEvent;
+        const cursor = this.cursorCoords()
+        const lines = this.renderToLines()
+        const line = lines[cursor.y];
+        const tokens = tokenizer(line,y)
+        const phrase = tokens.map(v=>v.type)
+        const tokenUnderCursor = tokens.find((v,i,a)=>{
+            return v.start<=cursor.x && v.end>=cursor.x;
+        })
+        //this.setCursor(x-xi+this.viewportX,y-yi+this.viewportY)
+        return {
+            event:screenEvent,
+            parentPos:{x:xi,y:yi},
+            lines:lines,
+            line,
+            visibleLines:lines,
+            cursor,
+            cursorScreen:{x:cursor.x-this.viewportX,y:cursor.y-this.viewportY},
+            buffer:this.buffer,
+            visibleBuffer:this.buffer,
+            index:this.cursorIndex,
+            tokens,
+            tokenUnderCursor,
+            phrase,
+        }
     }
 
     /**

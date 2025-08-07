@@ -584,6 +584,50 @@ class SimpleTextEditor {
     this.slideViewportToCursor();
     return this;
   }
+  tokenUnderCursor(x, y, tokenizer) {
+    const lines = this.renderToLines();
+    const line = lines[y];
+    const tokens = tokenizer(line, y);
+    tokens.map((v) => v.type);
+    const tokenUnderCursor = tokens.find((v, i, a) => {
+      return v.start <= x && v.end >= x;
+    });
+    return tokenUnderCursor;
+  }
+  /**
+   *
+   * @param lpos
+   * @param {Screen} screenEvent
+   * @param tokenizer
+   * @return {EditorEvent}
+   */
+  getEvent(lpos, screenEvent, tokenizer) {
+    const { xi, yi } = lpos;
+    const { x, y } = screenEvent;
+    const cursor = this.cursorCoords();
+    const lines = this.renderToLines();
+    const line = lines[cursor.y];
+    const tokens = tokenizer(line, y);
+    const phrase = tokens.map((v) => v.type);
+    const tokenUnderCursor = tokens.find((v, i, a) => {
+      return v.start <= cursor.x && v.end >= cursor.x;
+    });
+    return {
+      event: screenEvent,
+      parentPos: { x: xi, y: yi },
+      lines,
+      line,
+      visibleLines: lines,
+      cursor,
+      cursorScreen: { x: cursor.x - this.viewportX, y: cursor.y - this.viewportY },
+      buffer: this.buffer,
+      visibleBuffer: this.buffer,
+      index: this.cursorIndex,
+      tokens,
+      tokenUnderCursor,
+      phrase
+    };
+  }
   /**
    *
    * @return {SimpleTextEditor}
@@ -726,7 +770,6 @@ function ListComponent({
   const boxRef = React.useRef(null);
   const [editor2, setEditor2] = React.useState(null);
   const [size, setSize] = React.useState({ rows: 10, cols: 30 });
-  const [highlightCursorData, setHighlightCursorData] = React.useState(null);
   let changedTimeout = 0;
   React.useEffect(() => {
     let newEditor = editor2;
@@ -767,18 +810,15 @@ function ListComponent({
       }, 80);
     } else if (key in ["up", "down"]) {
       editor2.onKey(ch, key);
-      setEditor2(editor2.copy());
+      changedTimeout = setTimeout(() => {
+        setEditor2(editor2.copy());
+      }, 80);
     }
   };
   const getEvent = (screenEvent) => {
     if (!editor2) {
       return;
     }
-    const { xi, yi } = boxRef.current.lpos;
-    const { x, y } = screenEvent;
-    const cursor = editor2.cursorCoords();
-    const lines2 = editor2.renderToLines();
-    const line = lines2[cursor.y];
     const tokenizer = getTokenizer(tokenizerDef || {
       name: "words",
       flags: "mg",
@@ -787,27 +827,8 @@ function ListComponent({
         Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
       }
     });
-    const tokens = tokenizer(line, y);
-    const phrase = tokens.map((v) => v.type);
-    const tokenUnderCursor = tokens.find((v, i, a) => {
-      return v.start <= cursor.x && v.end >= cursor.x;
-    });
-    editor2.setCursor(x - xi + editor2.viewportX, y - yi + editor2.viewportY);
-    return {
-      event: screenEvent,
-      parentPos: { x: xi, y: yi },
-      lines: lines2,
-      line,
-      visibleLines: lines2,
-      cursor,
-      cursorScreen: { x: cursor.x - editor2.viewportX, y: cursor.y - editor2.viewportY },
-      buffer: editor2.buffer,
-      visibleBuffer: editor2.buffer,
-      index: editor2.cursorIndex,
-      tokens,
-      tokenUnderCursor,
-      phrase
-    };
+    const evt = editor2.getEvent(boxRef.current.lpos, screenEvent, tokenizer);
+    return evt;
   };
   const mouseAction = (screenEvent) => {
     switch (screenEvent.action) {
@@ -819,36 +840,49 @@ function ListComponent({
           setTimeout(() => {
             onLineHover(newEvent);
             onTokenHover(newEvent);
-          }, 80);
+          }, 1);
         }
         break;
       case "mousedown":
-        setHighlightCursorData(null);
+        {
+          setTimeout(() => {
+            editor2.setHighlight(null);
+            editor2.setCursor(screenEvent.x - boxRef.current.lpos.xi + editor2.viewportX, screenEvent.y - boxRef.current.lpos.yi + editor2.viewportY);
+            setEditor2(editor2.copy());
+          }, 1);
+        }
         break;
       case "mouseup":
         {
           const newEvent = getEvent(screenEvent);
-          setEditor2(editor2.copy());
+          const { x, y } = screenEvent;
           setTimeout(() => {
+            editor2.setHighlight(null);
+            editor2.setCursor(screenEvent.x - boxRef.current.lpos.xi + editor2.viewportX, screenEvent.y - boxRef.current.lpos.yi + editor2.viewportY);
             onLineClick(newEvent);
             onTokenClick(newEvent);
-          }, 80);
+            setEditor2(editor2.copy());
+          }, 1);
         }
         break;
       case "wheelup":
         {
-          const newEvent = getEvent(screenEvent);
+          getEvent(screenEvent);
           editor2.moveCursorUp().slideViewportToCursor();
-          editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
-          setEditor2(editor2.copy());
+          setTimeout(() => {
+            editor2.setHighlight(null);
+            setEditor2(editor2.copy());
+          }, 1);
         }
         break;
       case "wheeldown":
         {
-          const newEvent = getEvent(screenEvent);
+          getEvent(screenEvent);
           editor2.moveCursorDown().slideViewportToCursor();
-          editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
-          setEditor2(editor2.copy());
+          setTimeout(() => {
+            editor2.setHighlight(null);
+            setEditor2(editor2.copy());
+          }, 1);
         }
         break;
       default:
@@ -883,7 +917,6 @@ function ListComponent({
     const i = editor2.cursorIndex;
     const { x, y } = editor2.cursorCoords();
     const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor2;
-    const content = editor2.buffer.substring(i, i + 1);
     return /* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
       {
@@ -891,8 +924,8 @@ function ListComponent({
         left: x - vx,
         width: 1,
         height: 1,
-        style: { inverse: true, underline: true },
-        content
+        style: { inverse: true },
+        content: editor2.buffer.substring(i, i + 1)
       },
       `editor-cursor-${Date.now()}`
     );
@@ -901,19 +934,27 @@ function ListComponent({
     if (!editor2) {
       return;
     }
-    const i = editor2.cursorIndex;
+    editor2.cursorIndex;
     const { x, y } = editor2.highlightCoords();
     const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor2;
-    const content = editor2.buffer.substring(i, i + 1);
+    const tokenizer = getTokenizer(tokenizerDef || {
+      name: "words",
+      flags: "mg",
+      definitions: {
+        Whitespace: { style: { fg: "red" }, pattern: "\\s+" },
+        Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
+      }
+    });
+    const tokenUnderCursor = editor2.tokenUnderCursor(x, y, tokenizer);
     return /* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
       {
         top: y - vy,
-        left: x - vx,
-        width: 1,
+        left: tokenUnderCursor.start,
+        width: tokenUnderCursor.text.length,
         height: 1,
-        style: { inverse: true, underline: true },
-        content
+        style: { ...tokenUnderCursor.style, underline: true },
+        content: tokenUnderCursor.text
       },
       `editor-highlight-${Date.now()}`
     );
@@ -1011,11 +1052,9 @@ function FileTree2({
   ...boxProps
 }) {
   const boxRef = React.useRef();
-  const [dummy, setDummy] = React.useState(null);
   const [message, setMessage] = React.useState(false);
   const [selected, setSelected] = React.useState(null);
   const [cursorData, setCursorData] = React.useState(null);
-  const [selectionData, setSelectionData] = React.useState(null);
   const [workspace, setWorkspace] = React.useState(new Workspace(inodeFilter));
   React.useEffect(() => {
     const node = boxRef.current;
@@ -1054,7 +1093,6 @@ function FileTree2({
   const onTokenClick = (eventData) => {
     const treeData = workspace.flatten().filter(inodeFilter);
     const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
-    setSelectionData({ lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase });
     const node = treeData[y];
     switch (phrase.filter((v) => v !== "Whitespace").join(",")) {
       case "Whitespace,NodeName":
@@ -1063,17 +1101,14 @@ function FileTree2({
           case "NodeName":
             setSelected(node);
             onFileSelect(node);
-            setCursorData({ cursor: { x: 0, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "RenameButton":
             setMessage(`Rename
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "DeleteButton":
             setMessage(`Delete
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
         }
         break;
@@ -1087,7 +1122,6 @@ ${node.fullPath}`);
               const wk2 = workspace.copy();
               wk2.flatten().filter(inodeFilter);
               setWorkspace(wk2);
-              setCursorData({ cursor: { x, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             });
             break;
           case "CloseButton":
@@ -1095,32 +1129,26 @@ ${node.fullPath}`);
             const wk = workspace.copy();
             wk.flatten().filter(inodeFilter);
             setWorkspace(wk);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "NodeName":
             setSelected(node);
             onDirSelect(node);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "AddDirButton":
             setMessage(`AddDir
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "AddFileButton":
             setMessage(`AddFile
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "RenameButton":
             setMessage(`Rename
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "DeleteButton":
             setMessage(`Delete
 ${node.fullPath}`);
-            setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
         }
         break;
@@ -1163,7 +1191,6 @@ ${node.fullPath}`);
       children || [],
       cursor ? cursorExtra() : []
     ] }),
-    dummy && /* @__PURE__ */ jsxRuntime_js.jsx("box", { width: 1, height: 1 }, `dummy-${Date.now}`),
     message && /* @__PURE__ */ jsxRuntime_js.jsx(
       ModalDialog,
       {
