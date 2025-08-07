@@ -500,6 +500,13 @@ class SimpleTextEditor {
   }
   /**
    *
+   * @return {{y: number, x: number}}
+   */
+  highlightCoords() {
+    return this.cursorIndexToCoords(this.highlightIndex);
+  }
+  /**
+   *
    * @param {String} index
    * @return {{y: number, x: number}}
    */
@@ -704,13 +711,11 @@ const defaultText$1 = "...".split(",").join("\n");
 function ListComponent({
   lines,
   editable = false,
-  onClick = (editorEvent) => {
-  },
   onLineClick = (editorEvent) => {
   },
-  onLineHover = (editorEvent) => {
-  },
   onTokenClick = (editorEvent) => {
+  },
+  onLineHover = (editorEvent) => {
   },
   onTokenHover = (editorEvent) => {
   },
@@ -721,6 +726,7 @@ function ListComponent({
   const boxRef = React.useRef(null);
   const [editor2, setEditor2] = React.useState(null);
   const [size, setSize] = React.useState({ rows: 10, cols: 30 });
+  const [highlightCursorData, setHighlightCursorData] = React.useState(null);
   let changedTimeout = 0;
   React.useEffect(() => {
     let newEditor = editor2;
@@ -770,7 +776,6 @@ function ListComponent({
     }
     const { xi, yi } = boxRef.current.lpos;
     const { x, y } = screenEvent;
-    editor2.setCursor(x - xi + editor2.viewportX, y - yi + editor2.viewportY);
     const cursor = editor2.cursorCoords();
     const lines2 = editor2.renderToLines();
     const line = lines2[cursor.y];
@@ -787,6 +792,7 @@ function ListComponent({
     const tokenUnderCursor = tokens.find((v, i, a) => {
       return v.start <= cursor.x && v.end >= cursor.x;
     });
+    editor2.setCursor(x - xi + editor2.viewportX, y - yi + editor2.viewportY);
     return {
       event: screenEvent,
       parentPos: { x: xi, y: yi },
@@ -803,41 +809,50 @@ function ListComponent({
       phrase
     };
   };
-  const setCursorPosition = (screenEvent) => {
-    const newEvent = getEvent(screenEvent);
-    editor2.setCursor(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
-    onClick(newEvent);
-    onLineClick(newEvent);
-    onTokenClick(newEvent);
-    setEditor2(editor2.copy());
-  };
   const mouseAction = (screenEvent) => {
-    const { x, y } = screenEvent;
     switch (screenEvent.action) {
       case "mousemove":
-        const newEvent = getEvent(screenEvent);
-        editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
-        onLineHover(newEvent);
-        onTokenHover(newEvent);
+        {
+          const newEvent = getEvent(screenEvent);
+          editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
+          setEditor2(editor2.copy());
+          setTimeout(() => {
+            onLineHover(newEvent);
+            onTokenHover(newEvent);
+          }, 80);
+        }
         break;
       case "mousedown":
+        setHighlightCursorData(null);
         break;
       case "mouseup":
+        {
+          const newEvent = getEvent(screenEvent);
+          setEditor2(editor2.copy());
+          setTimeout(() => {
+            onLineClick(newEvent);
+            onTokenClick(newEvent);
+          }, 80);
+        }
         break;
       case "wheelup":
-        editor2.moveCursorUp().slideViewportToCursor();
-        setEditor2(editor2.copy());
+        {
+          const newEvent = getEvent(screenEvent);
+          editor2.moveCursorUp().slideViewportToCursor();
+          editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
+          setEditor2(editor2.copy());
+        }
         break;
       case "wheeldown":
-        editor2.moveCursorDown().slideViewportToCursor();
-        setEditor2(editor2.copy());
+        {
+          const newEvent = getEvent(screenEvent);
+          editor2.moveCursorDown().slideViewportToCursor();
+          editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
+          setEditor2(editor2.copy());
+        }
         break;
       default:
         throw new Error(safeStringify(screenEvent));
-    }
-    try {
-      boxProps.onMouse(screenEvent);
-    } catch (e) {
     }
   };
   const renderLines = () => {
@@ -880,6 +895,27 @@ function ListComponent({
         content
       },
       `editor-cursor-${Date.now()}`
+    );
+  };
+  const renderHighlight = () => {
+    if (!editor2) {
+      return;
+    }
+    const i = editor2.cursorIndex;
+    const { x, y } = editor2.highlightCoords();
+    const { cursorIndex: ci, viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor2;
+    const content = editor2.buffer.substring(i, i + 1);
+    return /* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        top: y - vy,
+        left: x - vx,
+        width: 1,
+        height: 1,
+        style: { inverse: true, underline: true },
+        content
+      },
+      `editor-highlight-${Date.now()}`
     );
   };
   const renderScrollbar = () => {
@@ -936,13 +972,13 @@ function ListComponent({
       tags: false,
       scrollable: false,
       onKeypress: internalOnKeyPress,
-      onClick: setCursorPosition,
       onMouse: mouseAction,
       children: [
         renderLines(),
         renderCursor(),
         renderScrollbar(),
-        children || []
+        children || [],
+        renderHighlight()
       ]
     }
   );
@@ -975,32 +1011,29 @@ function FileTree2({
   ...boxProps
 }) {
   const boxRef = React.useRef();
+  const [dummy, setDummy] = React.useState(null);
   const [message, setMessage] = React.useState(false);
   const [selected, setSelected] = React.useState(null);
   const [cursorData, setCursorData] = React.useState(null);
-  const [highlightCursorData, setHighlightCursorData] = React.useState(null);
   const [selectionData, setSelectionData] = React.useState(null);
-  const [treeData, setTreeData] = React.useState([]);
   const [workspace, setWorkspace] = React.useState(new Workspace(inodeFilter));
-  const [mouseCoords, setMouseCoords] = React.useState({ x: 0, y: 0 });
   React.useEffect(() => {
     const node = boxRef.current;
     if (node) node.focus();
-    workspace.init(rootDir).then((wk) => workspace.open(workspace.rootNode)).then((t) => {
-      const wk = workspace.copy();
-      const td = workspace.flatten().filter(inodeFilter);
-      setWorkspace(wk);
-      setTreeData(td);
+    workspace.init(rootDir).then((wk) => workspace.open(workspace.rootNode)).then((wk) => {
+      setTimeout(() => {
+        setWorkspace(wk.copy());
+      }, 100);
     });
-    setWorkspace(workspace.copy());
   }, [rootDir]);
   let baseLevel = rootDir.split("/").length * 2;
   if (baseLevel > 0) {
     baseLevel = baseLevel - 1;
   }
   let lines = () => {
-    if (boxRef && boxRef.current && boxRef.current.lpos) {
+    try {
       const lpos = boxRef.current.lpos;
+      const treeData = workspace.flatten().filter(inodeFilter);
       return (treeData || []).map((v, i, a) => {
         const lineBuffer = " ".repeat(lpos.width);
         const t = v.toText().substring(baseLevel);
@@ -1014,15 +1047,12 @@ function FileTree2({
             return rr;
         }
       });
-    } else {
+    } catch (err) {
       return [];
     }
   };
-  const highlight = (eventData) => {
-    const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
-    setHighlightCursorData({ cursor: { x: 0, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
-  };
-  const onElementClick = (eventData) => {
+  const onTokenClick = (eventData) => {
+    const treeData = workspace.flatten().filter(inodeFilter);
     const { lines: lines2, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
     setSelectionData({ lines: lines2, visibleLines, line, cursor: { x, y }, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase });
     const node = treeData[y];
@@ -1055,18 +1085,16 @@ ${node.fullPath}`);
           case "OpenButton":
             node.open(workspace.rootDir, workspace.ig).then((n) => {
               const wk2 = workspace.copy();
-              const td2 = wk2.flatten().filter(inodeFilter);
+              wk2.flatten().filter(inodeFilter);
               setWorkspace(wk2);
-              setTreeData(td2);
               setCursorData({ cursor: { x, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             });
             break;
           case "CloseButton":
             node.close();
             const wk = workspace.copy();
-            const td = wk.flatten().filter(inodeFilter);
+            wk.flatten().filter(inodeFilter);
             setWorkspace(wk);
-            setTreeData(td);
             setCursorData({ cursor: { x: tokenUnderCursor.start, y }, cursorScreen: { x: tokenUnderCursor.start, y: cursorScreen.y }, content: tokenUnderCursor.text, style: tokenUnderCursor.style });
             break;
           case "NodeName":
@@ -1103,7 +1131,6 @@ ${node.fullPath}`);
   const cursorExtra = () => {
     if (!cursorData) return /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, left: 0, width: 1, height: 1, content: " " });
     const { cursor: cursor2, cursorScreen, content } = cursorData;
-    const { x, y } = mouseCoords;
     return /* @__PURE__ */ jsxRuntime_js.jsx(
       "box",
       {
@@ -1115,23 +1142,6 @@ ${node.fullPath}`);
         content
       },
       `xcursor-${Math.random()}-${Date.now()}`
-    );
-  };
-  const cursorHighlight = () => {
-    if (!highlightCursorData) return /* @__PURE__ */ jsxRuntime_js.jsx("box", { top: 0, left: 0, width: 1, height: 1, content: " " });
-    const { cursor: cursor2, cursorScreen, content, style } = highlightCursorData;
-    const { x, y } = mouseCoords;
-    return /* @__PURE__ */ jsxRuntime_js.jsx(
-      "box",
-      {
-        top: cursorScreen.y,
-        left: cursorScreen.x,
-        width: content.length,
-        height: 1,
-        style: { ...style },
-        content
-      },
-      `hxcursor-${Math.random()}-${Date.now()}`
     );
   };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(jsxRuntime_js.Fragment, { children: [
@@ -1146,15 +1156,14 @@ ${node.fullPath}`);
           keys: true,
           mouse: true,
           style: { selected: { bg: "blue" } },
-          onClick: onElementClick,
-          onTokenHover: highlight,
+          onTokenClick,
           tokenizerDef: listingTokenizerDefinition
         }
       ),
       children || [],
-      cursorHighlight(),
       cursor ? cursorExtra() : []
     ] }),
+    dummy && /* @__PURE__ */ jsxRuntime_js.jsx("box", { width: 1, height: 1 }, `dummy-${Date.now}`),
     message && /* @__PURE__ */ jsxRuntime_js.jsx(
       ModalDialog,
       {

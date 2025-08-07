@@ -40,14 +40,12 @@ export default function FileTree2({
     ...boxProps
 }){
     const boxRef = useRef();
+    const [dummy,setDummy] = useState(null);
     const [message, setMessage] = React.useState(false);
     const [selected, setSelected] = React.useState(null);
     const [cursorData, setCursorData] = React.useState(null);
-    const [highlightCursorData, setHighlightCursorData] = React.useState(null);
     const [selectionData, setSelectionData] = React.useState(null);
-    const [treeData, setTreeData]   = useState([]);
     const [workspace,setWorkspace] = useState(new Workspace(inodeFilter));
-    const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
 
 
 
@@ -57,25 +55,27 @@ export default function FileTree2({
         if (node) node.focus();
         workspace.init(rootDir)
             .then(wk => workspace.open(workspace.rootNode))
-            .then(t => {
-                const wk=workspace.copy()
-                const td = workspace.flatten().filter(inodeFilter)
-                setWorkspace(wk)
-                setTreeData(td)
-                // setMessage(`loaded tree data ${JSON.stringify({
-                //   td
-                // })}`)
+            .then(wk => {
+                setTimeout(()=>{
+                    setWorkspace(wk.copy())
+                },100)
+                /// setDummy(`loaded tree data ${JSON.stringify({
+                ///   wk
+                /// })}`)
+                /// setMessage(`loaded tree data ${JSON.stringify({
+                ///   wk
+                /// })}`)
             })
-        setWorkspace(workspace.copy())
+        // setWorkspace(workspace.copy())
     }, [rootDir]);
-    // let treeData = workspace.flatten()
     let baseLevel=rootDir.split("/").length*2
     if (baseLevel>0) {
        baseLevel = baseLevel-1
     }
     let lines = () => {
-        if(boxRef && boxRef.current && boxRef.current.lpos) {
+        try{
             const lpos = boxRef.current.lpos
+            const treeData = workspace.flatten().filter(inodeFilter)
 
             return (treeData || []).map((v, i, a) => {
                 const lineBuffer = " ".repeat(lpos.width)
@@ -90,15 +90,12 @@ export default function FileTree2({
                         return rr
                 }
             })
-        } else {
+        }catch(err){
             return []
         }
     }
-    const highlight=(eventData)=>{
-        const {lines, visibleLines, line, cursor:{x,y},cursorScreen, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase} = eventData
-        setHighlightCursorData({cursor:{x:0,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
-    }
-    const onElementClick=(eventData)=>{
+    const onTokenClick=(eventData)=>{
+        const treeData = workspace.flatten().filter(inodeFilter)
         const {lines, visibleLines, line, cursor:{x,y},cursorScreen, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase} = eventData
         setSelectionData({lines, visibleLines, line, cursor:{x,y}, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase})
         const node = treeData[y];
@@ -133,7 +130,6 @@ export default function FileTree2({
                             const wk=workspace.copy()
                             const td = wk.flatten().filter(inodeFilter)
                             setWorkspace(wk)
-                            setTreeData(td)
                             setCursorData({cursor:{x,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         })
                         break;
@@ -142,7 +138,6 @@ export default function FileTree2({
                         const wk=workspace.copy()
                         const td = wk.flatten().filter(inodeFilter)
                         setWorkspace(wk)
-                        setTreeData(td)
                         setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
                         break;
                     case "NodeName":
@@ -175,60 +170,12 @@ export default function FileTree2({
     const cursorExtra=()=>{
         if(!cursorData) return <box top={0} left={0} width={1} height={1} content={' '}/>;
         const {cursor,cursorScreen,content} = cursorData
-        const {x,y} = mouseCoords
         return <box key={`xcursor-${Math.random()}-${Date.now()}`}
             top={cursorScreen.y} left={cursorScreen.x}
             width={content.length} height={1}
             style={{inverse: true}}
             content={content}
         />
-    }
-    const cursorHighlight=()=>{
-        if(!highlightCursorData) return <box top={0} left={0} width={1} height={1} content={' '}/>;
-        const {cursor,cursorScreen,content,style} = highlightCursorData
-        const {x,y} = mouseCoords
-        return <box key={`hxcursor-${Math.random()}-${Date.now()}`}
-                    top={cursorScreen.y} left={cursorScreen.x}
-                    width={content.length} height={1}
-                    style={{...style}}
-                    content={content}
-        />
-    }
-    // const mouseAction=(event) =>{
-    //     const {x,y} = event
-    //     setMouseCoords({x,y});
-    //     try{
-    //         boxProps.onMouse(event);
-    //     }catch(e){}
-//
-    //     switch(event.action){
-    //         case 'mousemove':
-    //             highlight(event)
-    //             break;
-    //         case 'mousedown':break;
-    //         case 'mouseup':break;
-    //         case 'wheelup':setCursorData(null);break;
-    //         case 'wheeldown':setCursorData(null);break;
-    //         default: throw new Error(safeStringify(event)); break;
-    //     }
-    // }
-    const mouseAction=(event) =>{
-        const {x,y} = event
-        setMouseCoords({x,y});
-        try{
-            boxProps.onMouse(event);
-        }catch(e){}
-        switch(event.action){
-            case 'mousemove':
-                setCursorData(null)
-                highlight(event)
-                break;
-            case 'mousedown':break;
-            case 'mouseup':break;
-            case 'wheelup':setCursorData(null);break;
-            case 'wheeldown':setCursorData(null);break;
-            default: throw new Error(safeStringify(event)); break;
-        }
     }
     return (
         <>
@@ -240,15 +187,14 @@ export default function FileTree2({
                 lines={lines()}
                 keys mouse
                 style={{ selected: { bg: 'blue' } }}
-                onClick={onElementClick}
-                onTokenHover={highlight}
+                onTokenClick={onTokenClick}
                 tokenizerDef={listingTokenizerDefinition}
             />
             {/*<box top={0} content={selected ? selected.fullPath : '' + ' ' + label} height={1}/>*/}
             {children||[]}
-            {cursorHighlight()}
             {cursor?cursorExtra():[]}
         </box>
+        {dummy && <box key={`dummy-${Date.now}`} width={1} height={1}/>}
         {message && (
             <ModalDialog
                 label={'Message'}

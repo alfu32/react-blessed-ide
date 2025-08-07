@@ -31,10 +31,9 @@ const defaultText="...".split(",").join("\n")
 export function ListComponent({
   lines,
   editable = false,
-  onClick=(editorEvent)=>{},
   onLineClick=(editorEvent)=>{},
-  onLineHover=(editorEvent)=>{},
   onTokenClick=(editorEvent)=>{},
+  onLineHover=(editorEvent)=>{},
   onTokenHover=(editorEvent)=>{},
   tokenizerDef,
   children,
@@ -42,21 +41,9 @@ export function ListComponent({
 }) {
     const boxRef = useRef(null);
     const [editor, setEditor] = useState(null);
-    // const [mouseCoords, setMouseCoords] = useState({x:0,y:0});
     const [size, setSize]     = useState({ rows: 10, cols: 30 });
-    // const [lastEvent, setLastEvent]     = useState({
-    //     lines:[],
-    //     line:"",
-    //     visibleLines:[],
-    //     cursor:{x:0,y:0},
-    //     cursorScreen:{x:0,y:0},
-    //     buffer:"",
-    //     visibleBuffer:"",
-    //     index:0,
-    //     tokens:[],
-    //     tokenUnderCursor:null,
-    //     phrase:"",
-    // });
+    const [highlightCursorData, setHighlightCursorData] = React.useState(null);
+
     let changedTimeout=0
     useEffect(()=>{
         let newEditor=editor
@@ -106,13 +93,12 @@ export function ListComponent({
             setEditor(editor.copy())
         }
     }
-    const getEvent = (screenEvent) => {
+    const getEvent0 = (screenEvent) => {
         if(!editor){
             return;
         }
         const {xi,yi} = boxRef.current.lpos;
         const {x,y} = screenEvent;
-        editor.setCursor(x-xi+editor.viewportX,y-yi+editor.viewportY)
         const cursor = editor.cursorCoords()
         const lines = editor.renderToLines()
         const line = lines[cursor.y];
@@ -145,35 +131,87 @@ export function ListComponent({
             phrase,
         }
     }
-    const setCursorPosition = (screenEvent) => {
-        const newEvent=getEvent(screenEvent)
-        editor.setCursor(newEvent.cursorScreen.x+editor.viewportX,newEvent.cursorScreen.y+editor.viewportY)
-        onClick(newEvent);
-        onLineClick(newEvent);
-        onTokenClick(newEvent);
-        // setLastEvent(newEvent);
-        setEditor(editor.copy())
-    };
+    const getEvent = (screenEvent) => {
+        if(!editor){
+            return;
+        }
+        const {xi,yi} = boxRef.current.lpos;
+        const {x,y} = screenEvent;
+        const cursor = editor.cursorCoords()
+        const lines = editor.renderToLines()
+        const line = lines[cursor.y];
+        const tokenizer=getTokenizer(tokenizerDef||{
+            name:'words',
+            flags:'mg',
+            definitions:{
+                Whitespace:       {style: {fg:'red'},pattern:'\\s+'},
+                Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
+            }
+        })
+        const tokens = tokenizer(line,y)
+        const phrase = tokens.map(v=>v.type)
+        const tokenUnderCursor = tokens.find((v,i,a)=>{
+            return v.start<=cursor.x && v.end>=cursor.x;
+        })
+        editor.setCursor(x-xi+editor.viewportX,y-yi+editor.viewportY)
+        return {
+            event:screenEvent,
+            parentPos:{x:xi,y:yi},
+            lines:lines,
+            line,
+            visibleLines:lines,
+            cursor,
+            cursorScreen:{x:cursor.x-editor.viewportX,y:cursor.y-editor.viewportY},
+            buffer:editor.buffer,
+            visibleBuffer:editor.buffer,
+            index:editor.cursorIndex,
+            tokens,
+            tokenUnderCursor,
+            phrase,
+        }
+    }
     const mouseAction=(screenEvent) =>{
-        const {x,y} = screenEvent
 
         switch(screenEvent.action){
-            case 'mousemove':
-                const newEvent=getEvent(screenEvent)
-                editor.setHighlight(newEvent.cursorScreen.x+editor.viewportX,newEvent.cursorScreen.y+editor.viewportY)
-                onLineHover(newEvent);
-                onTokenHover(newEvent);
+            case 'mousemove': {
+                    const newEvent = getEvent(screenEvent)
+                    editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
+                    setEditor(editor.copy())
+                    setTimeout(()=>{
+                        onLineHover(newEvent);
+                        onTokenHover(newEvent);
+                    },80)
+                }
                 break;
-            case 'mousedown':break;
-            case 'mouseup':break;
-            case 'wheelup':editor.moveCursorUp().slideViewportToCursor();setEditor(editor.copy());break;
-            case 'wheeldown':editor.moveCursorDown().slideViewportToCursor();setEditor(editor.copy());break;
+            case 'mousedown':
+                setHighlightCursorData(null)
+                break;
+            case 'mouseup': {
+                    const newEvent = getEvent(screenEvent)
+                    // setLastEvent(newEvent);
+                    setEditor(editor.copy())
+                    setTimeout(()=>{
+                        onLineClick(newEvent);
+                        onTokenClick(newEvent);
+                    },80)
+                }
+                break;
+            case 'wheelup': {
+                    const newEvent = getEvent(screenEvent)
+                    editor.moveCursorUp().slideViewportToCursor();
+                    editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
+                    setEditor(editor.copy());
+                }
+                break;
+            case 'wheeldown': {
+                    const newEvent = getEvent(screenEvent)
+                    editor.moveCursorDown().slideViewportToCursor();
+                    editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
+                    setEditor(editor.copy());
+                }
+                break;
             default: throw new Error(safeStringify(screenEvent)); break;
         }
-        // setMouseCoords({x,y});
-        try{
-            boxProps.onMouse(screenEvent);
-        }catch(e){}
     }
     const renderLines = () => {
         if(!editor){
@@ -213,34 +251,23 @@ export function ListComponent({
             content={content}
         />)
     }
-    // const renderStatus = () => {
-    //     if(!editor){
-    //         return;
-    //     }
-    //     const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
-    //     const {x:cx,y:cy} = editor.cursorCoords()
-    //     const {x:mx,y:my} = mouseCoords
-    //     let cursorContent = editor.buffer.substring(ci,ci+1)
-    //     let content=cursorContent
-    //     if(boxRef.current && boxRef.current.lpos) {
-    //         const {xi,yi} = boxRef.current.lpos;
-    //         const feedback={
-    //             C:`${cx},${cy},[${ci}]=${cursorContent}`,
-    //             B:`${xi},${yi}`,
-    //             V:`${vx},${vy},${vw},${vh}`,
-    //             M:`A${mx},${my}R${mx-xi-1},${my-yi-1}`
-    //         }
-    //         content = safeStringify(feedback).replace(/[{} "]/gi,'')
-    //     }
-    //     return (<box
-    //         key={`editor-status-${Date.now()}`}
-    //         top={7}
-    //         left={2}
-    //         width={content.length} height={1}
-    //         style={{inverse:true,underline:true}}
-    //         content={content}
-    //     />)
-    // }
+    const renderHighlight=()=>{
+        if(!editor){
+            return;
+        }
+        const i = editor.cursorIndex
+        const {x,y} = editor.highlightCoords()
+        const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
+        const content = editor.buffer.substring(i,i+1)
+        return (<box
+            key={`editor-highlight-${Date.now()}`}
+            top={y-vy}
+            left={x-vx}
+            width={1} height={1}
+            style={{inverse:true,underline:true}}
+            content={content}
+        />)
+    }
     const renderScrollbar = () => {
         const barElements= [(<box
             key={`scrollbar-bg-${Date.now()}`}
@@ -289,7 +316,6 @@ export function ListComponent({
             tags={false}           // raw ANSI
             scrollable={false}
             onKeypress={internalOnKeyPress}
-            onClick={setCursorPosition}
             onMouse={mouseAction}
         >
             {/*label = {`${boxProps.label || 'Editing'} ${JSON.stringify(editor.cursorCoords())} ${editor.cursorIndex}`}*/}
@@ -297,5 +323,6 @@ export function ListComponent({
             {renderCursor()}
             {renderScrollbar()}
             {children||[]}
+            {renderHighlight()}
         </box>)
 }

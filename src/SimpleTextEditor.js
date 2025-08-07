@@ -143,6 +143,13 @@ export class SimpleTextEditor {
     }
     /**
      *
+     * @return {{y: number, x: number}}
+     */
+    highlightCoords(){
+        return this.cursorIndexToCoords(this.highlightIndex)
+    }
+    /**
+     *
      * @param {String} index
      * @return {{y: number, x: number}}
      */
