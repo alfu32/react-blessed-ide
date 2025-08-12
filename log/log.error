@@ -1,8 +1,0 @@
-[0m[31mENOENT[0m[2m:[0m [1mno such file or directory, stat '/home/alfu64/.steampath'[0m
-    path[0m[2m:[0m [0m[32m"/home/alfu64/.steampath"[0m[0m[2m,[0m
- syscall[0m[2m:[0m [0m[32m"stat"[0m[0m[2m,[0m
-   errno[0m[2m:[0m [0m[33m-2[0m[0m[2m,[0m
-    code[0m[2m:[0m [32m"ENOENT"[0m
-
-[0m
-[2mBun v1.2.20 (Linux x64)[0m
