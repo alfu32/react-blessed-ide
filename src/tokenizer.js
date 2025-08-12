@@ -1,3 +1,6 @@
+if(1 == 1 && 22 === 22 || 33!=33 ){
+// TODO
+}
 /**
  *
  * @param {string} line
@@ -72,7 +75,7 @@ export const namedTokenizers={
         Comment:      {style: {fg:'#779977'},pattern:/\/\/.*$/mig},
         // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
         String:       {style: {fg:'yellow'},pattern:/"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig},
-        Operator:     {style: {fg:'cyan'},pattern:/==|!=|<=|>=|[+\-*/=<>%]/mig},
+        Operator:     {style: {fg:'cyan'},pattern:/==|!=|<=|>=|[+\-*/=<>%|&]/mig},
         Punctuation:  {style: {fg:'red'},pattern:/[\\()\[\]{}.,;:?^$]/mig},
         Whitespace:   {style: {fg:'white'},pattern:/\s+/smig},
         Identifier:   {style: {fg:'green'},pattern:/[A-Za-z_]\w*/mig},

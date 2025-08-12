@@ -43,7 +43,8 @@ export function SimpleTextEditorComponent({initialText, onChange,...boxProps}) {
         box.on('resize', update);
         return () => box.removeListener('resize', update);
     }, []);
-
+    // $%^&*()
+    if(1 === 1 && 2==33){}
     // run once on size change
     useEffect(()=>{
         if(editor){
