@@ -1,8 +1,12 @@
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
+import peggy from 'rollup-plugin-peggy'; // or: import pegjs from 'rollup-plugin-pegjs';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    peggy(),
+  ],
   build: {
     ssr: true,                      // build for Node
     outDir: 'dist',

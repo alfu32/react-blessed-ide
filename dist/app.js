@@ -93,7 +93,7 @@ class INode {
    */
   async init(rootDir, ig, currentPath) {
     this.fullPath = currentPath;
-    const stat = await fs.promises.stat(this.fullPath);
+    let stat = await fs.promises.stat(this.fullPath);
     this.id = stat.ino;
     this.type = [
       stat.isDirectory() ? "d" : "-",
@@ -127,13 +127,17 @@ class INode {
    */
   async open(rootDir, ig) {
     this.isOpen = true;
-    this.children = await Promise.all(
+    this.children = (await Promise.all(
       this.entries.map((entry) => {
-        const inode1 = new INode();
-        inode1.fullPath = path.join(this.fullPath, entry);
-        return inode1.init(rootDir, ig, inode1.fullPath);
+        try {
+          const inode1 = new INode();
+          inode1.fullPath = path.join(this.fullPath, entry);
+          return inode1.init(rootDir, ig, inode1.fullPath);
+        } catch (err) {
+          return Promise.resolve(null);
+        }
       })
-    );
+    )).filter((k) => k !== null);
     this.children.sort(compareInodes);
     return this;
   }
@@ -157,14 +161,18 @@ class INode {
     if (this.type.indexOf("d") > -1) {
       const entries = await fs.promises.readdir(this.fullPath);
       this.entries = entries;
-      let children = await Promise.all(
+      let children = (await Promise.all(
         entries.map((entry) => {
-          const inode1 = new INode();
-          inode1.fullPath = path.join(this.fullPath, entry);
-          inode1.init(rootDir, ig, this.fullPath);
-          return inode1.refresh(rootDir, ig);
+          try {
+            const inode1 = new INode();
+            inode1.fullPath = path.join(this.fullPath, entry);
+            inode1.init(rootDir, ig, this.fullPath);
+            return inode1.refresh(rootDir, ig);
+          } catch (e) {
+            return Promise.resolve(null);
+          }
         })
-      );
+      )).filter((k) => k !== null);
       children = children.filter((x) => x !== null).sort(compareInodes);
       this.children = children;
     }
@@ -360,7 +368,7 @@ const namedTokenizers = {
     Identifier: { style: { fg: "green" }, pattern: /[A-Za-z_]\w*/mig },
     String: { style: { fg: "yellow" }, pattern: /"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig },
     Operator: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>]/mig },
-    punctuation: { style: { fg: "cyan" }, pattern: /[()\[\]{}.,;:?]/mig },
+    punctuation: { style: { fg: "cyan" }, pattern: /[()\[\]{}.,;:?\^]/mig },
     Whitespace: { style: { fg: "white" }, pattern: /\s+/mig },
     Others: { style: { fg: "white" }, pattern: /.*?/mig }
   } },
@@ -370,22 +378,21 @@ const namedTokenizers = {
     Comment: { style: { fg: "#779977" }, pattern: /\/\/.*$/mig },
     // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
     String: { style: { fg: "yellow" }, pattern: /"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig },
-    Operator: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>]/mig },
-    Punctuation: { style: { fg: "cyan" }, pattern: /[()\[\]{}.,;:?]/mig },
-    Whitespace: { style: { fg: "white" }, pattern: /\s+/mig },
+    Operator: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>%]/mig },
+    Punctuation: { style: { fg: "red" }, pattern: /[\\()\[\]{}.,;:?^$]/mig },
+    Whitespace: { style: { fg: "white" }, pattern: /\s+/smig },
     Identifier: { style: { fg: "green" }, pattern: /[A-Za-z_]\w*/mig },
-    Others: { style: { fg: "white" }, pattern: /.*?/mig }
+    Others: { style: { fg: "white" }, pattern: /[^]/smig }
   } },
   jsx: { name: "jsx", flags: "mg", definitions: {
     ReactToken: { style: { fg: "#FFDD00" }, pattern: /\buse[A-Z][a-z]*\b/mig },
     Keyword: { style: { fg: "magenta" }, pattern: /\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\b/mig },
-    JsxTag: { style: { fg: "#FFDD00" }, pattern: /\<(\/){0,1}[a-zA-Z-]*\>/mig },
+    JsxTag: { style: { fg: "#FFDD00" }, pattern: /<(\/)?[a-zA-Z-]*>/mig },
     Comment: { style: { fg: "#779977" }, pattern: /\/\/.*$/mig },
     // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
     Number: { style: { fg: "red" }, pattern: /\d+(?:\.\d+)?/mig },
-    String: { style: { fg: "yellow" }, pattern: /"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig },
+    Punctuation: { style: { fg: "red" }, pattern: /[\\()\[\]{}.,;:?^$]/mig },
     Operator: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>]/mig },
-    Punctuation: { style: { fg: "cyan" }, pattern: /[()\[\]{}.,;:?]/mig },
     Whitespace: { style: { fg: "white" }, pattern: /\s+/mig },
     Identifier: { style: { fg: "green" }, pattern: /[A-Za-z_]\w*/mig },
     Others: { style: { fg: "white" }, pattern: /.*?/mig }
@@ -412,6 +419,7 @@ function getNamedTokenizer(name) {
   return getTokenizer(tokenizerDef);
 }
 function getTokenizer(tokenizerDef) {
+  tokenizerDef["Any"] = { style: { fg: "#eeeeee" }, pattern: /(\b|^).+?(\b|$)/smig };
   const tokenRegex = new RegExp(
     Object.entries(tokenizerDef.definitions).map(([name, definition]) => `(?<${name}>${definition.pattern.source})`).join("|"),
     tokenizerDef.flags || "g"
@@ -575,7 +583,7 @@ class SimpleTextEditor {
       default:
         if (ch && ch.length > 0) {
           if (key.name && key.name.length === 1) {
-            this.insert(key.name);
+            this.insert(key.sequence);
           } else {
             this.insert(ch);
           }
@@ -1029,6 +1037,27 @@ function ListComponent({
     ));
     return barElements;
   };
+  const renderStatus = () => {
+    if (!editor2) {
+      return;
+    }
+    const { viewportX: vx, viewportY: vy, viewportHeight: vh, viewportWidth: vw } = editor2;
+    const t = JSON.stringify(editor2.cursorCoords()).replace(/"/gi, "");
+    return /* @__PURE__ */ jsxRuntime_js.jsx(
+      "box",
+      {
+        mouse: true,
+        keys: true,
+        top: 0,
+        left: vw - 10,
+        width: t.length,
+        height: 1,
+        style: { inverse: true },
+        content: t
+      },
+      `editor-status-${Date.now()}`
+    );
+  };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(
     "box",
     {
@@ -1049,7 +1078,8 @@ function ListComponent({
         renderCursor(),
         renderScrollbar(),
         children || [],
-        renderHighlight()
+        renderHighlight(),
+        renderStatus()
       ]
     }
   );

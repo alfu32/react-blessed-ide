@@ -123,7 +123,7 @@ export class INode{
             return Promise.resolve(null)
           }
         })
-    )).filter(k => k === null)
+    )).filter(k => k !== null)
     this.children.sort(compareInodes)
     return this
   }
@@ -164,7 +164,7 @@ export class INode{
             return Promise.resolve(null)
           }
         })
-      )).filter( k => k===null)
+      )).filter( k => k!==null)
       children=children.filter(x => x!== null)
         .sort(compareInodes)
       this.children=children
