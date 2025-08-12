@@ -159,7 +159,7 @@ export function CodeBufferEditorComponent({
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
     const {xi,yi} = boxRef.current.lpos;
     const {x,y} = screenEvent;
-    editor.setCursor(x-xi-padLength-1-1+editor.viewportX,y-yi-1+editor.viewportY)
+    editor.setCursor(x-xi-padLength-1-1-1+editor.viewportX,y-yi-1+editor.viewportY)
     setEditor(editor.copy())
   };
 

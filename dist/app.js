@@ -1772,7 +1772,7 @@ function CodeBufferEditorComponent({
     const padLength = Math.ceil(Math.log10(editor2.viewportHeight + editor2.viewportY)) + 1;
     const { xi, yi } = boxRef.current.lpos;
     const { x, y } = screenEvent;
-    editor2.setCursor(x - xi - padLength - 1 - 1 + editor2.viewportX, y - yi - 1 + editor2.viewportY);
+    editor2.setCursor(x - xi - padLength - 1 - 1 - 1 + editor2.viewportX, y - yi - 1 + editor2.viewportY);
     setEditor2(editor2.copy());
   };
   const mouseAction = (event) => {
