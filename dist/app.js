@@ -356,55 +356,55 @@ class TokenizerToken {
 }
 const namedTokenizers = {
   any: { name: "any", definitions: {
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
+    Number: { style: { fg: "red" }, pattern: /\d+(?:\.\d+)?/mig },
+    Identifier: { style: { fg: "green" }, pattern: /[A-Za-z_]\w*/mig },
+    String: { style: { fg: "yellow" }, pattern: /"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig },
+    Operator: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>]/mig },
+    punctuation: { style: { fg: "cyan" }, pattern: /[()\[\]{}.,;:?]/mig },
+    Whitespace: { style: { fg: "white" }, pattern: /\s+/mig },
+    Others: { style: { fg: "white" }, pattern: /.*?/mig }
   } },
   js: { name: "js", flags: "mg", definitions: {
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    Keyword: { style: { fg: "magenta" }, pattern: /\b(as|from|default|this|const|constructor|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\b/mig },
+    Number: { style: { fg: "red" }, pattern: /\d+(?:\.\d+)?/mig },
+    Comment: { style: { fg: "#779977" }, pattern: /\/\/.*$/mig },
     // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
+    String: { style: { fg: "yellow" }, pattern: /"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig },
+    Operator: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>]/mig },
+    Punctuation: { style: { fg: "cyan" }, pattern: /[()\[\]{}.,;:?]/mig },
+    Whitespace: { style: { fg: "white" }, pattern: /\s+/mig },
+    Identifier: { style: { fg: "green" }, pattern: /[A-Za-z_]\w*/mig },
+    Others: { style: { fg: "white" }, pattern: /.*?/mig }
   } },
   jsx: { name: "jsx", flags: "mg", definitions: {
-    ReactToken: { style: { fg: "#FFDD00" }, pattern: "\\buse[A-Z][a-z]*\\b" },
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\\b" },
-    JsxTag: { style: { fg: "#FFDD00" }, pattern: "\\<(\\/){0,1}[a-zA-Z-]*\\>" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    ReactToken: { style: { fg: "#FFDD00" }, pattern: /\buse[A-Z][a-z]*\b/mig },
+    Keyword: { style: { fg: "magenta" }, pattern: /\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\b/mig },
+    JsxTag: { style: { fg: "#FFDD00" }, pattern: /\<(\/){0,1}[a-zA-Z-]*\>/mig },
+    Comment: { style: { fg: "#779977" }, pattern: /\/\/.*$/mig },
     // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
+    Number: { style: { fg: "red" }, pattern: /\d+(?:\.\d+)?/mig },
+    String: { style: { fg: "yellow" }, pattern: /"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig },
+    Operator: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>]/mig },
+    Punctuation: { style: { fg: "cyan" }, pattern: /[()\[\]{}.,;:?]/mig },
+    Whitespace: { style: { fg: "white" }, pattern: /\s+/mig },
+    Identifier: { style: { fg: "green" }, pattern: /[A-Za-z_]\w*/mig },
+    Others: { style: { fg: "white" }, pattern: /.*?/mig }
   } },
   c: { name: "c", flags: "mg", definitions: {
-    Keyword: { style: { fg: "magenta" }, pattern: "\\b(int|const|char|long|if|else|for|while|return|switch|case|break|continue)\\b" },
-    Number: { style: { fg: "red" }, pattern: "\\d+(?:\\.\\d+)?" },
-    Comment: { style: { fg: "#779977" }, pattern: "//.*$" },
+    Keyword: { style: { fg: "magenta" }, pattern: /\b(int|const|char|long|if|else|for|while|return|switch|case|break|continue)\b/mig },
+    Number: { style: { fg: "red" }, pattern: /\d+(?:\.\d+)?/mig },
+    Comment: { style: { fg: "#779977" }, pattern: /\/\/.*$/mig },
     // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
-    String: { style: { fg: "yellow" }, pattern: `"(?:\\\\.|[^"])*"|'(?:\\\\.|[^'])*'` },
-    Operator: { style: { fg: "cyan" }, pattern: "==|!=|<=|>=|[+\\-*/=<>]" },
-    Punctuation: { style: { fg: "cyan" }, pattern: "[()\\[\\]{}.,;:?]" },
-    Whitespace: { style: { fg: "white" }, pattern: "\\s+" },
-    Identifier: { style: { fg: "green" }, pattern: "[A-Za-z_]\\w*" },
-    Others: { style: { fg: "white" }, pattern: ".*?" }
+    String: { style: { fg: "yellow" }, pattern: /"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig },
+    Operator: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>]/mig },
+    Punctuation: { style: { fg: "cyan" }, pattern: /==|!=|<=|>=|[+\-*/=<>]/mig },
+    Whitespace: { style: { fg: "white" }, pattern: /\s+/mig },
+    Identifier: { style: { fg: "green" }, pattern: /[A-Za-z_]\w*/mig },
+    Others: { style: { fg: "white" }, pattern: /.*?/mig }
   } },
   words: { name: "c", flags: "mg", definitions: {
-    Whitespace: { style: { fg: "red" }, pattern: "\\s+" },
-    Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
+    Whitespace: { style: { fg: "red" }, pattern: /\s+/mig },
+    Word: { style: { fg: "green" }, pattern: /\b.+?\b/mig }
   } }
 };
 function getNamedTokenizer(name) {
@@ -413,7 +413,7 @@ function getNamedTokenizer(name) {
 }
 function getTokenizer(tokenizerDef) {
   const tokenRegex = new RegExp(
-    Object.entries(tokenizerDef.definitions).map(([name, definition]) => `(?<${name}>${definition.pattern})`).join("|"),
+    Object.entries(tokenizerDef.definitions).map(([name, definition]) => `(?<${name}>${definition.pattern.source})`).join("|"),
     tokenizerDef.flags || "g"
   );
   return function tokenizer(code, lineNumber) {
@@ -823,8 +823,8 @@ function ListComponent({
       name: "words",
       flags: "mg",
       definitions: {
-        Whitespace: { style: { fg: "red" }, pattern: "\\s+" },
-        Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
+        Whitespace: { style: { fg: "red" }, pattern: /\s+/gi },
+        Word: { style: { fg: "green" }, pattern: /\b.+?\b/gi }
       }
     });
     const evt = editor2.getEvent(boxRef.current.lpos, screenEvent, tokenizer);
@@ -845,9 +845,10 @@ function ListComponent({
         break;
       case "mousedown":
         {
+          const newEvent = getEvent(screenEvent);
           setTimeout(() => {
-            editor2.setHighlight(null);
             editor2.setCursor(screenEvent.x - boxRef.current.lpos.xi + editor2.viewportX, screenEvent.y - boxRef.current.lpos.yi + editor2.viewportY);
+            editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
             setEditor2(editor2.copy());
           }, 1);
         }
@@ -859,6 +860,7 @@ function ListComponent({
           setTimeout(() => {
             editor2.setHighlight(null);
             editor2.setCursor(screenEvent.x - boxRef.current.lpos.xi + editor2.viewportX, screenEvent.y - boxRef.current.lpos.yi + editor2.viewportY);
+            editor2.setHighlight(newEvent.cursorScreen.x + editor2.viewportX, newEvent.cursorScreen.y + editor2.viewportY);
             onLineClick(newEvent);
             onTokenClick(newEvent);
             setEditor2(editor2.copy());
@@ -896,18 +898,46 @@ function ListComponent({
     const { viewportY: vy, viewportHeight: vh } = editor2;
     return editor2.renderToLines().filter((l, y) => {
       return y >= vy && y <= vy + vh;
-    }).map((line, index, arr) => {
-      return /* @__PURE__ */ jsxRuntime_js.jsx(
-        "box",
-        {
-          top: index,
-          left: 0,
-          height: 1,
-          width: line.length || 1,
-          content: line
-        },
-        `commit-editor-line-${index}`
-      );
+    }).flatMap((line, index, arr) => {
+      const renderables = [
+        /* @__PURE__ */ jsxRuntime_js.jsx(
+          "box",
+          {
+            top: index,
+            left: 0,
+            height: 1,
+            width: line.length || 1,
+            content: line
+          },
+          `listc-line-${index}-${Date.now}`
+        )
+      ];
+      const tokenizer = getTokenizer(tokenizerDef || {
+        name: "words",
+        flags: "mg",
+        definitions: {
+          Whitespace: { style: { fg: "red" }, pattern: /\s+/mig },
+          Word: { style: { fg: "green" }, pattern: /\b.+?\b/mig }
+        }
+      });
+      const tokens = tokenizer(line, index);
+      tokens.forEach((token, j) => {
+        renderables.push(
+          /* @__PURE__ */ jsxRuntime_js.jsx(
+            "box",
+            {
+              top: index,
+              left: token.start,
+              height: 1,
+              width: token.text.length || 1,
+              content: token.text,
+              style: token.style
+            },
+            `listc-line-${index}-token-${j}-${Date.now}`
+          )
+        );
+      });
+      return renderables;
     });
   };
   const renderCursor = () => {
@@ -941,8 +971,8 @@ function ListComponent({
       name: "words",
       flags: "mg",
       definitions: {
-        Whitespace: { style: { fg: "red" }, pattern: "\\s+" },
-        Word: { style: { fg: "green" }, pattern: "\\b.+?\\b" }
+        Whitespace: { style: { fg: "red" }, pattern: /\s+/mig },
+        Word: { style: { fg: "green" }, pattern: /\b.+?\b/mig }
       }
     });
     const tokenUnderCursor = editor2.tokenUnderCursor(x, y, tokenizer);
@@ -953,7 +983,7 @@ function ListComponent({
         left: tokenUnderCursor.start,
         width: tokenUnderCursor.text.length,
         height: 1,
-        style: { ...tokenUnderCursor.style, underline: true },
+        style: { ...tokenUnderCursor.style, inverse: true },
         content: tokenUnderCursor.text
       },
       `editor-highlight-${Date.now()}`
@@ -1028,18 +1058,19 @@ const listingTokenizerDefinition = {
   name: "listing",
   flags: "mg",
   definitions: {
-    "Whitespace": { style: {}, pattern: "\\s+" },
-    "OpenButton": { style: { bg: "yellow" }, pattern: "\\[\\+]" },
-    "CloseButton": { style: { bg: "yellow" }, pattern: "\\[-]" },
-    "AddDirButton": { style: { bg: "cyan" }, pattern: "\\[\\+D]" },
-    "AddFileButton": { style: { bg: "magenta" }, pattern: "\\[\\+F]" },
-    "RenameButton": { style: { bg: "blue" }, pattern: "\\[r]" },
-    "DeleteButton": { style: { bg: "red" }, pattern: "\\[x]" },
-    "NodeName": { style: { bg: "green" }, pattern: "[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+" },
-    "Word": { style: { bg: "green" }, pattern: "\\s.+?\\s" }
+    "Whitespace": { style: { fg: "white" }, pattern: /\s+/mgi },
+    "Folder": { style: { fg: "white" }, pattern: new RegExp("(?<=\\[[-+]])\\S+", "mgi") },
+    "OpenButton": { style: { fg: "yellow" }, pattern: /\[\+]/mgi },
+    "CloseButton": { style: { fg: "yellow" }, pattern: /\[-]/mgi },
+    "AddDirButton": { style: { fg: "cyan" }, pattern: /\[\+D]/mgi },
+    "AddFileButton": { style: { fg: "magenta" }, pattern: /\[\+F]/mgi },
+    "RenameButton": { style: { fg: "blue" }, pattern: /\[r]/mgi },
+    "DeleteButton": { style: { fg: "red" }, pattern: /\[x]/mgi },
+    "NodeName": { style: { fg: "green" }, pattern: /[a-zA-Z0-9_={}\[\]%*()m,.:;!?@~-]+/mgi },
+    "Word": { style: { fg: "green" }, pattern: /\s.+?\s/mgi }
   }
 };
-function FileTree2({
+function FileTree({
   children,
   rootDir,
   onDirSelect,
@@ -1210,7 +1241,7 @@ function FolderPickerDialog({
 }) {
   const [selected, setSelected] = React.useState(null);
   return /* @__PURE__ */ jsxRuntime_js.jsxs(
-    FileTree2,
+    FileTree,
     {
       top: "center",
       left: "center",
@@ -1912,25 +1943,6 @@ function SimpleTextEditorComponent({ initialText, onChange, ...boxProps }) {
   };
   const mouseAction = (event) => {
     const { x, y } = event;
-    switch (event.action) {
-      case "mousemove":
-        break;
-      case "mousedown":
-        break;
-      case "mouseup":
-        break;
-      case "wheelup":
-        editor2.moveCursorUp().slideViewportToCursor();
-        setEditor2(editor2.copy());
-        break;
-      case "wheeldown":
-        editor2.moveCursorDown().slideViewportToCursor();
-        setEditor2(editor2.copy());
-        break;
-      default:
-        throw new Error(safeStringify(event));
-    }
-    setMouseCoords({ x, y });
   };
   const renderLines = () => {
     if (!editor2) {
@@ -2503,7 +2515,7 @@ function App(props) {
               colSpan: 1,
               label: "Project",
               children: /* @__PURE__ */ jsxRuntime_js.jsx(
-                FileTree2,
+                FileTree,
                 {
                   top: 0,
                   bottom: 0,

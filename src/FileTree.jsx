@@ -1,24 +1,24 @@
-// src/FileTree2.js
+// src/FileTree.js
 import React, {Component, useEffect, useRef, useState} from 'react';
 import { ListElement as list, TextElement as text, BoxElement as box } from 'react-blessed';
 import { Workspace,INode } from './Workspace';
 import {insertAt, safeStringify} from "./util";
 import {ListComponent} from "./ListComponent";
 import ModalDialog from "./ModalDialog";
-
 const listingTokenizerDefinition={
     name:'listing',
     flags:'mg',
     definitions:{
-        "Whitespace":     {style: {},pattern:'\\s+'},
-        "OpenButton":     {style: {bg:'yellow'},pattern:'\\[\\+]'},
-        "CloseButton":    {style: {bg:'yellow'},pattern:'\\[-]'},
-        "AddDirButton":   {style: {bg:'cyan'},pattern:'\\[\\+D]'},
-        "AddFileButton":  {style: {bg:'magenta'},pattern:'\\[\\+F]'},
-        "RenameButton":   {style: {bg:'blue'},pattern:'\\[r]'},
-        "DeleteButton":   {style: {bg:'red'},pattern:'\\[x]'},
-        "NodeName":       {style: {bg:'green'},pattern:'[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+'},
-        "Word":           {style: {bg:'green'},pattern:'\\s.+?\\s'},
+        "Whitespace":     {style: {fg:'white'},pattern:/\s+/mgi},
+        "Folder":         {style: {fg:'white'},pattern:/(?<=\[[-+]])\S+/mgi},
+        "OpenButton":     {style: {fg:'yellow'},pattern:/\[\+]/mgi},
+        "CloseButton":    {style: {fg:'yellow'},pattern:/\[-]/mgi},
+        "AddDirButton":   {style: {fg:'cyan'},pattern:/\[\+D]/mgi},
+        "AddFileButton":  {style: {fg:'magenta'},pattern:/\[\+F]/mgi},
+        "RenameButton":   {style: {fg:'blue'},pattern:/\[r]/mgi},
+        "DeleteButton":   {style: {fg:'red'},pattern:/\[x]/mgi},
+        "NodeName":       {style: {fg:'green'},pattern:/[a-zA-Z0-9_={}\[\]%*()m,.:;!?@~-]+/mgi},
+        "Word":           {style: {fg:'green'},pattern:/\s.+?\s/mgi},
     }
 }
 /**
@@ -29,7 +29,7 @@ const listingTokenizerDefinition={
  * @returns {JSX.Element}
  * @constructor
  */
-export default function FileTree2({
+export default function FileTree({
     children,
     rootDir,
     onDirSelect,

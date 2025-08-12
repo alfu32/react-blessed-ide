@@ -78,15 +78,15 @@ function test_regex(){
         name:'listing',
         flags:'mg',
         definitions:{
-            "Whitespace":     {style: {fg:'white'},pattern:'\\s+'},
-            "OpenButton":     {style: {fg:'yellow'},pattern:'\\[\\+]'},
-            "CloseButton":    {style: {fg:'yellow'},pattern:'\\[-]'},
-            "AddDirButton":   {style: {fg:'cyan'},pattern:'\\[\\+D]'},
-            "AddFileButton":  {style: {fg:'magenta'},pattern:'\\[\\+F]'},
-            "RenameButton":   {style: {fg:'blue'},pattern:'\\[r]'},
-            "DeleteButton":   {style: {fg:'red'},pattern:'\\[x]'},
-            "NodeName":       {style: {fg:'green'},pattern:'[a-zA-Z0-9_=\\{\\}\\[\\]%*()=m,.:;!?@~\\\\-]+'},
-            "Word":           {style: {fg:'green'},pattern:'\\s.+?\\s'},
+            "Whitespace":     {style: {fg:'white'},pattern:/\s+/mgi},
+            "OpenButton":     {style: {fg:'yellow'},pattern:/\[\+]/mgi},
+            "CloseButton":    {style: {fg:'yellow'},pattern:/\[-]/mgi},
+            "AddDirButton":   {style: {fg:'cyan'},pattern:/\[\+D]/mgi},
+            "AddFileButton":  {style: {fg:'magenta'},pattern:/\[\+F]/mgi},
+            "RenameButton":   {style: {fg:'blue'},pattern:/\[r]/mgi},
+            "DeleteButton":   {style: {fg:'red'},pattern:/\[x]/mgi},
+            "NodeName":       {style: {fg:'green'},pattern:/[a-zA-Z0-9_={}\[\]%*()m,.:;!?@~-]+/mgi},
+            "Word":           {style: {fg:'green'},pattern:/\s.+?\s/mgi},
         }
     }
     const tokenizer = getTokenizer(tkDef)

@@ -1,7 +1,6 @@
 // App.js
 import React, {Component, useState,useEffect} from 'react';
 import {Workspace,INode} from './Workspace';
-// import FileTree from './FileTree';
 import ModalDialog from './ModalDialog.jsx';
 import { BoxElement as box, TextElement as text,ListElement as list,ButtonElement as button } from 'react-blessed';
 import { Grid,GridItem } from 'react-blessed-contrib-17'
@@ -11,7 +10,7 @@ import {CodeBufferEditorComponent} from './CodeBufferEditor.jsx'
 import {GitComponent} from "./GitComponent";
 import { ErrorBoundary } from 'react-error-boundary'
 import {ErrorFallback} from './ErrorFallback';
-import FileTree2 from "./FileTree2";
+import FileTree from "./FileTree";
 
 
 export function App(props){// Some Coment 
@@ -88,7 +87,7 @@ export function App(props){// Some Coment
                        row={3} col={0} rowSpan={5} colSpan={1}
                        label={'Project'}>
 
-                      <FileTree2
+                      <FileTree
                           top={0}
                           bottom={0}
                           rootDir={rootDir}
@@ -111,7 +110,7 @@ export function App(props){// Some Coment
                                   setPickFolder(true)
                               }}
                               content={'workspace'}/>
-                      </FileTree2>
+                      </FileTree>
                   </box>
                   </Grid>
               </Tab>

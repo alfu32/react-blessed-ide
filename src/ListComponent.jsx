@@ -95,22 +95,6 @@ export function ListComponent({
             }, 80)
         }
     }
-    const getEvent0 = (screenEvent) => {
-        if(!editor){
-            return;
-        }
-        const tokenizer=getTokenizer(tokenizerDef||{
-            name:'words',
-            flags:'mg',
-            definitions:{
-                Whitespace:       {style: {fg:'red'},pattern:'\\s+'},
-                Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
-            }
-        })
-        const evt = editor.getEvent(boxRef.current.lpos,screenEvent,tokenizer);
-
-        return evt
-    }
     const getEvent = (screenEvent) => {
         if(!editor){
             return;
@@ -119,8 +103,8 @@ export function ListComponent({
             name:'words',
             flags:'mg',
             definitions:{
-                Whitespace:       {style: {fg:'red'},pattern:'\\s+'},
-                Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
+                Whitespace:       {style: {fg:'red'},pattern:/\s+/gi},
+                Word:             {style: {fg:'green'},pattern:/\b.+?\b/gi},
             }
         })
         const evt = editor.getEvent(boxRef.current.lpos,screenEvent,tokenizer);
@@ -142,9 +126,10 @@ export function ListComponent({
                 }
                 break;
             case 'mousedown': {
+                    const newEvent = getEvent(screenEvent)
                     setTimeout(() => {
-                        editor.setHighlight(null)
                         editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+                        editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
                         setEditor(editor.copy())
                     }, 1)
                 }
@@ -156,6 +141,7 @@ export function ListComponent({
                     setTimeout(()=>{
                         editor.setHighlight(null)
                         editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+                        editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
                         onLineClick(newEvent);
                         onTokenClick(newEvent);
                         setEditor(editor.copy())
@@ -194,16 +180,32 @@ export function ListComponent({
             .filter((l,y) => {
                 return (y >=vy && y <= (vy + vh));
             })
-            .map((line,index,arr)=>{
-                const clickLine=(event)=>{
-                }
-                return (
+            .flatMap((line,index,arr)=>{
+                const renderables = [
                     <box
+                        key={`listc-line-${index}-${Date.now}`}
                         top={index} left={0} height={1} width={line.length||1}
-                        key={`commit-editor-line-${index}`}
                         content={line}
                     />
-                )
+                ]
+                const tokenizer=getTokenizer(tokenizerDef||{
+                    name:'words',
+                    flags:'mg',
+                    definitions:{
+                        Whitespace:       {style: {fg:'red'},pattern:/\s+/mig},
+                        Word:             {style: {fg:'green'},pattern:/\b.+?\b/mig},
+                    }
+                })
+                const tokens = tokenizer(line,index)
+                tokens.forEach((token,j)=>{
+                    renderables.push(
+                        <box
+                            key={`listc-line-${index}-token-${j}-${Date.now}`}
+                            top={index} left={token.start} height={1} width={token.text.length||1}
+                            content={token.text} style={token.style}
+                        />)
+                })
+                return renderables
             })
     }
     const renderCursor = () => {
@@ -233,8 +235,8 @@ export function ListComponent({
             name:'words',
             flags:'mg',
             definitions:{
-                Whitespace:       {style: {fg:'red'},pattern:'\\s+'},
-                Word:             {style: {fg:'green'},pattern:'\\b.+?\\b'},
+                Whitespace:       {style: {fg:'red'},pattern:/\s+/mig},
+                Word:             {style: {fg:'green'},pattern:/\b.+?\b/mig},
             }
         })
         const tokenUnderCursor=editor.tokenUnderCursor(x,y,tokenizer)
@@ -243,7 +245,7 @@ export function ListComponent({
             top={y-vy}
             left={tokenUnderCursor.start}
             width={tokenUnderCursor.text.length} height={1}
-            style={{...tokenUnderCursor.style,underline:true}}
+            style={{...tokenUnderCursor.style,inverse:true}}
             content={tokenUnderCursor.text}
         />)
     }

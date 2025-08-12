@@ -20,7 +20,7 @@ Repository: https://github.com/alfu32/react-blessed-ide
 │  [+] .idea                      ││                                                  │
 │    App.jsx                      ││                                                  │
 │    Counter.jsx                  ││                                                  │
-│    FileTree.jsx                 ││                                                  │
+│    FileTree1.jsx                 ││                                                  │
 │    FolderPickerDialog.jsx       ││                                                  │
 │    GitPanel.jsx                 ││                                                  │
 │    ModalDialog.jsx              ││                                                  │
@@ -143,7 +143,7 @@ node dist/app.js
 ```
 .
 ├── components
-│   ├── FileTree.js      # Collapsible file tree component
+│   ├── FileTree1.js      # Collapsible file tree component
 │   ├── GitPanel.js      # Git status list component
 │   └── ModalDialog.js   # Reusable modal dialog component
 ├── services
@@ -159,7 +159,7 @@ node dist/app.js
 
 ## Component API
 
-### `<FileTree root={INode} onFileSelect(path) onDirSelect(path,isOpen) />`
+### `<FileTree1 root={INode} onFileSelect(path) onDirSelect(path,isOpen) />`
 
 * **root**: an `INode` tree:
 
@@ -195,7 +195,7 @@ node dist/app.js
 * **Key Bindings**: Extend `screen.key([...], handler)` in `index.js`.
 * **Syntax Highlighting**: Integrate a parser + colorization in the editor pane.
 * **Save & Edit**: Swap read-only `<Box>` for a `<textbox>` to enable editing.
-* **Additional Panels**: Plug in terminals, search, or outline views by copying the FileTree/GitPanel pattern.
+* **Additional Panels**: Plug in terminals, search, or outline views by copying the FileTree1/GitPanel pattern.
 
 ---
 

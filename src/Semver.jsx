@@ -8,7 +8,7 @@ import {
 } from 'react-blessed';
 import {Semver} from "./Semver.js";
 
-
+// comment 
 export function SemverControl({initial,onChange,...boxProps}){
     const [semver, setSemver] = useState(Semver.from(initial));
     useEffect(()=>{

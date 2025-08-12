@@ -1,7 +1,7 @@
 // components/ModalDialog.js
 import React, { useEffect, useRef,useState } from 'react';
 import { BoxElement as box, TextElement as text, ButtonElement as button } from 'react-blessed';
-import FileTree2 from "./FileTree2";
+import FileTree from "./FileTree";
 import {Workspace} from "./Workspace";
 
 export default function FolderPickerDialog({
@@ -13,7 +13,7 @@ export default function FolderPickerDialog({
     const [selected, setSelected] = React.useState(null);
 
     return (
-        <FileTree2
+        <FileTree
             top="center"
             left="center"
             border={{ type: 'line' }}
@@ -71,6 +71,6 @@ export default function FolderPickerDialog({
                   }}
                     content={'cancel'}
             />
-        </FileTree2>
+        </FileTree>
     )
 }

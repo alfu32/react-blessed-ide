@@ -1,4 +1,4 @@
-// components/FileTree.jsx
+// components/FileTree1.jsx
 import React, { Component } from 'react';
 import { ListElement as list, TextElement as text, BoxElement as box } from 'react-blessed';
 import { Workspace,INode } from '../src/Workspace';
@@ -13,7 +13,7 @@ import {ListComponent} from "../src/ListComponent";
  * @returns {JSX.Element}
  * @constructor
  */
-export default function FileTree({children,workspace,treeData, onDirSelect, onFileSelect,label,...boxProps}){
+export default function FileTree1({children,workspace,treeData, onDirSelect, onFileSelect,label,...boxProps}){
     const [selected, setSelected] = React.useState(null);
     // let treeData = workspace.flatten()
     let lines = (treeData||[]).map((v,i,a) => {

@@ -73,15 +73,15 @@ export function SimpleTextEditorComponent({initialText, onChange,...boxProps}) {
     const mouseAction=(event) =>{
         const {x,y} = event
 
-        switch(event.action){
-            case 'mousemove':break;
-            case 'mousedown':break;
-            case 'mouseup':break;
-            case 'wheelup':editor.moveCursorUp().slideViewportToCursor();setEditor(editor.copy());break;
-            case 'wheeldown':editor.moveCursorDown().slideViewportToCursor();setEditor(editor.copy());break;
-            default: throw new Error(safeStringify(event)); break;
-        }
-        setMouseCoords({x,y});
+        // switch(event.action){
+        //     case 'mousemove':break;
+        //     case 'mousedown':break;
+        //     case 'mouseup':break;
+        //     case 'wheelup':editor.moveCursorUp().slideViewportToCursor();setEditor(editor.copy());break;
+        //     case 'wheeldown':editor.moveCursorDown().slideViewportToCursor();setEditor(editor.copy());break;
+        //     default: throw new Error(safeStringify(event)); break;
+        // }
+        // setMouseCoords({x,y});
     }
     const renderLines = () => {
         if(!editor){
