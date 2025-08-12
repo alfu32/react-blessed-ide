@@ -11,7 +11,7 @@ import {GitComponent} from "./GitComponent";
 import { ErrorBoundary } from 'react-error-boundary'
 import {ErrorFallback} from './ErrorFallback';
 import FileTree from "./FileTree";
-
+// import {parsers} from "./grammars";
 
 export function App(props){// Some Coment 
   const [message, setMessage] = useState(false);
@@ -58,6 +58,10 @@ export function App(props){// Some Coment
   }
   const onCodeEditKeyPress = ({ch,key})=> {
     setCurrentEditorText(JSON.stringify({ch,key}))
+  }
+  const debugView=()=>{
+      const content = `Debug:\n${('parsed some text')}`
+      return <box content={content}/>
   }
   return (
       <>
@@ -116,6 +120,11 @@ export function App(props){// Some Coment
               </Tab>
               <Tab name='Git'>
                   <GitComponent rootDir={rootDir} row={0} col={1} rowSpan={1} colSpan={5}/>
+              </Tab>
+              <Tab name={'Debug'}>
+                  <box>
+                      {debugView()}
+                  </box>
               </Tab>
           </VTabs>
           {/* Center panel */}

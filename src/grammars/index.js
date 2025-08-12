@@ -1,7 +1,8 @@
-import { parse as text } from "grammar.txt.pegjs";
-import { parse as javascript } from "javascript.js.pegjs";
+import { parse as markdown } from "./markdown.md.pegjs";
+import { parse as javascript } from "./javascript.js.pegjs";
 
 export const parsers={
-    text:text,
+    text:markdown,
+    markdown:markdown,
     javascript:javascript
 }

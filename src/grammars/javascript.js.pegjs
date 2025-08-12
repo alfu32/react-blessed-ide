@@ -39,8 +39,9 @@ Comment
   = LineComment
   / BlockComment
 
+
 LineComment
-  = "//" (~[\n\r\u2028\u2029] .)* (LineTerminatorSequence)? { return tok("js.comment.line"); }
+  = "//" [^\n\r\u2028\u2029]* LineTerminatorSequence? { return tok("js.comment.line"); }
 
 BlockComment
   = "/*" (!"*/" .)* "*/"                              { return tok("js.comment.block"); }
