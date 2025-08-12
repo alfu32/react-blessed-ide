@@ -73,7 +73,7 @@ export const namedTokenizers={
         // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
         String:       {style: {fg:'yellow'},pattern:/"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/mig},
         Operator:     {style: {fg:'cyan'},pattern:/==|!=|<=|>=|[+\-*/=<>]/mig},
-            Punctuation:  {style: {fg:'cyan'},pattern:/[()\[\]{}.,;:?]/mig},
+            Punctuation:  {style: {fg:'cyan'},pattern:/[\(\)\[\]\{\}.,;:?]/mig},
         Whitespace:   {style: {fg:'white'},pattern:/\s+/mig},
         Identifier:   {style: {fg:'green'},pattern:/[A-Za-z_]\w*/mig},
             Others:       {style: {fg:'white'},pattern:/.*?/mig},

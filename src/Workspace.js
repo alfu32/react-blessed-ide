@@ -78,7 +78,7 @@ export class INode{
    */
   async init(rootDir, ig, currentPath){
     this.fullPath=currentPath
-    const stat = await fs.stat(this.fullPath);
+    let stat = await fs.stat(this.fullPath);
     this.id=stat.ino
     this.type=[
       stat.isDirectory()?'d':'-',
@@ -113,13 +113,17 @@ export class INode{
    */
   async open(rootDir,ig){
     this.isOpen=true;
-    this.children=await Promise.all(
+    this.children=(await Promise.all(
         this.entries.map(entry => {
-          const inode1 =new INode()
-          inode1.fullPath=path.join(this.fullPath, entry)
-          return inode1.init(rootDir, ig, inode1.fullPath)
+          try{
+            const inode1 = new INode()
+            inode1.fullPath = path.join(this.fullPath, entry)
+            return inode1.init(rootDir, ig, inode1.fullPath)
+          }catch(err){
+            return Promise.resolve(null)
+          }
         })
-    )
+    )).filter(k => k === null)
     this.children.sort(compareInodes)
     return this
   }
@@ -149,14 +153,18 @@ export class INode{
     if (this.type.indexOf('d')>-1) {
       const entries = await fs.readdir(this.fullPath);
       this.entries=entries
-      let children = await Promise.all(
+      let children = (await Promise.all(
         entries.map(entry => {
-          const inode1 =new INode()
-          inode1.fullPath=path.join(this.fullPath, entry)
-          inode1.init(rootDir, ig, this.fullPath)
-          return inode1.refresh(rootDir,ig)
+          try{
+            const inode1 = new INode()
+            inode1.fullPath = path.join(this.fullPath, entry)
+            inode1.init(rootDir, ig, this.fullPath)
+            return inode1.refresh(rootDir, ig)
+          }catch (e) {
+            return Promise.resolve(null)
+          }
         })
-      )
+      )).filter( k => k===null)
       children=children.filter(x => x!== null)
         .sort(compareInodes)
       this.children=children

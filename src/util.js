@@ -24,3 +24,13 @@ export function safeStringify(obj,space=undefined) {
     let last = destination.substring(index+source.length);
     return (first+source+last).substring(0,destination.length)
   }
+
+  export function debounced(fn,delay=50){
+    let to=0
+    return function(...args){
+        clearTimeout(to)
+        to=setTimeout(()=>{
+            fn(...args)
+        },delay)
+    }
+  }

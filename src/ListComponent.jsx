@@ -7,7 +7,7 @@ import {
     TextElement as text
 } from 'react-blessed';
 import {SimpleTextEditor} from "./SimpleTextEditor.js";
-import {safeStringify} from "./util";
+import {debounced, safeStringify} from "./util";
 import {getNamedTokenizer, getTokenizer} from "./tokenizer";
 import {ScreenEvent} from "react-blessed";
 import {EditorEvent} from './SimpleTextEditor'
@@ -112,62 +112,54 @@ export function ListComponent({
         // editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
         return evt
     }
+    const onmousemove=debounced((screenEvent)=>{
+        const newEvent = getEvent(screenEvent)
+        editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
+        setEditor(editor.copy())
+        onLineHover(newEvent);
+        onTokenHover(newEvent);
+    },10)
+    const onmousedown=debounced((screenEvent)=>{
+        const newEvent = getEvent(screenEvent)
+        editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+        editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
+        setEditor(editor.copy())
+    },10)
+    const onmouseup=debounced((screenEvent)=>{
+        const newEvent = getEvent(screenEvent)
+        const {x,y} = screenEvent;
+        // setLastEvent(newEvent);
+        setTimeout(()=>{
+            editor.setHighlight(null)
+            editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+            editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
+            onLineClick(newEvent);
+            onTokenClick(newEvent);
+            setEditor(editor.copy())
+        },1)
+    },10)
+    const onwheelup=debounced((screenEvent)=>{
+        const newEvent = getEvent(screenEvent)
+        editor.moveCursorUp().slideViewportToCursor();
+        editor.setHighlight(null)
+        // editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+        setEditor(editor.copy())
+    },10)
+    const onwheeldown=debounced((screenEvent)=>{
+        const newEvent = getEvent(screenEvent)
+        editor.moveCursorDown().slideViewportToCursor();
+        editor.setHighlight(null)
+        // editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
+        setEditor(editor.copy())
+    },10)
     const mouseAction=(screenEvent) =>{
 
         switch(screenEvent.action){
-            case 'mousemove': {
-                    const newEvent = getEvent(screenEvent)
-                    editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
-                    setEditor(editor.copy())
-                    setTimeout(()=>{
-                        onLineHover(newEvent);
-                        onTokenHover(newEvent);
-                    },1)
-                }
-                break;
-            case 'mousedown': {
-                    const newEvent = getEvent(screenEvent)
-                    setTimeout(() => {
-                        editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
-                        editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
-                        setEditor(editor.copy())
-                    }, 1)
-                }
-                break;
-            case 'mouseup': {
-                    const newEvent = getEvent(screenEvent)
-                    const {x,y} = screenEvent;
-                    // setLastEvent(newEvent);
-                    setTimeout(()=>{
-                        editor.setHighlight(null)
-                        editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
-                        editor.setHighlight(newEvent.cursorScreen.x + editor.viewportX, newEvent.cursorScreen.y + editor.viewportY)
-                        onLineClick(newEvent);
-                        onTokenClick(newEvent);
-                        setEditor(editor.copy())
-                    },1)
-                }
-                break;
-            case 'wheelup': {
-                    const newEvent = getEvent(screenEvent)
-                    editor.moveCursorUp().slideViewportToCursor();
-                    setTimeout(()=>{
-                        editor.setHighlight(null)
-                        // editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
-                        setEditor(editor.copy())
-                    },1)
-                }
-                break;
-            case 'wheeldown': {
-                    const newEvent = getEvent(screenEvent)
-                    editor.moveCursorDown().slideViewportToCursor();
-                    setTimeout(()=>{
-                        editor.setHighlight(null)
-                        // editor.setCursor(screenEvent.x-boxRef.current.lpos.xi+editor.viewportX,screenEvent.y-boxRef.current.lpos.yi+editor.viewportY)
-                        setEditor(editor.copy())
-                    },1)
-                }
-                break;
+            case 'mousemove': onmousemove(screenEvent);break;
+            case 'mousedown': onmousedown(screenEvent);break;
+            case 'mouseup': onmousedown(onmouseup);break;
+            case 'wheelup': onwheelup(onmouseup); break;
+            case 'wheeldown': onwheeldown(onmouseup); break;
             default: throw new Error(safeStringify(screenEvent)); break;
         }
     }
@@ -200,6 +192,7 @@ export function ListComponent({
                 tokens.forEach((token,j)=>{
                     renderables.push(
                         <box
+                            mouse keys
                             key={`listc-line-${index}-token-${j}-${Date.now}`}
                             top={index} left={token.start} height={1} width={token.text.length||1}
                             content={token.text} style={token.style}
@@ -216,6 +209,7 @@ export function ListComponent({
         const {x,y} = editor.cursorCoords()
         const {cursorIndex:ci,viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor;
         return (<box
+            mouse keys
             key={`editor-cursor-${Date.now()}`}
             top={y-vy}
             left={x-vx}
@@ -241,6 +235,7 @@ export function ListComponent({
         })
         const tokenUnderCursor=editor.tokenUnderCursor(x,y,tokenizer)
         return (<box
+            mouse keys
             key={`editor-highlight-${Date.now()}`}
             top={y-vy}
             left={tokenUnderCursor.start}
@@ -284,6 +279,23 @@ export function ListComponent({
         />))
         return barElements
     }
+
+    const renderStatus=()=>{
+        if(!editor){
+            return;
+        }
+        const {viewportX:vx,viewportY:vy,viewportHeight:vh,viewportWidth:vw} = editor
+        const t=JSON.stringify(editor.cursor).replace(/"/gi,'')
+        return (<box
+            mouse keys
+            key={`editor-status-${Date.now()}`}
+            top={0}
+            left={vw-10}
+            width={t.length} height={1}
+            style={{inverse:true}}
+            content={t}
+        />)
+    }
     return (
         <box
             ref={boxRef}
@@ -305,5 +317,6 @@ export function ListComponent({
             {renderScrollbar()}
             {children||[]}
             {renderHighlight()}
+            {renderStatus()}
         </box>)
 }

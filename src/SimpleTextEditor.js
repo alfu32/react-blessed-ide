@@ -201,7 +201,7 @@ export class SimpleTextEditor {
             default:
                 if (ch && ch.length > 0){
                     if(key.name && key.name.length === 1) {
-                        this.insert(key.name);
+                        this.insert(key.sequence)
                     } else {
                         this.insert(ch);
                     }
