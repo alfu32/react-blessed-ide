@@ -200,40 +200,42 @@ export class CodeBufferEditor {
   }
   // ── edits ───────────────────────────────────────────────────────────────
 
-  insert(text) {
-    const oldLine=this.lines[this.cursorY]
-    const before=oldLine.substring(0,this.cursorX)
-    const after=oldLine.substring(this.cursorX)
+  insert(text,cursor) {
+    cursor=cursor||{x:this.cursorX,y:this.cursorY};
+    const oldLine=this.lines[this.cursor.y]
+    const before=oldLine.substring(0,this.cursor.x)
+    const after=oldLine.substring(this.cursor.x)
     const newLine=before+text+after
-    let newLines=this.lines.slice(0,this.cursorY)
-    let oldLinesAfter=this.lines.slice(this.cursorY+1)
+    let newLines=this.lines.slice(0,this.cursor.y)
+    let oldLinesAfter=this.lines.slice(this.cursor.y+1)
     this.lines=newLines.concat(newLine.split('\n')).concat(oldLinesAfter)
-    this.cursorX++
+    this.cursor.x++
     this._ensureCursorInView();
     return this
   }
 
-  delete() {
-    const oldLine=this.lines[this.cursorY]
-    const before=oldLine.substring(0,this.cursorX-1)
-    const after=oldLine.substring(this.cursorX+1)
+  delete(cursor) {
+    const oldLine=this.lines[this.cursor.y]
+    const before=oldLine.substring(0,this.cursor.x-1)
+    const after=oldLine.substring(this.cursor.x+1)
     const newLine=before+after
-    let newLines=this.lines.slice(0,this.cursorY)
-    let oldLinesAfter=this.lines.slice(this.cursorY+1)
+    let newLines=this.lines.slice(0,this.cursor.y)
+    let oldLinesAfter=this.lines.slice(this.cursor.y+1)
     this.lines=newLines.concat(newLine.split('\n')).concat(oldLinesAfter)
     this._ensureCursorInView();
     return this
   }
 
-  backspace() {
-    if (this.cursorX>0) {
+  backspace(cursor) {
+    cursor=cursor||{x:this.cursorX,y:this.cursorY};
+    if (this.cursor.x>0) {
       this.delete()
-      this.cursorX--;
-    } else if (this.cursorY>0) {
-      const newCol=this.lines[this.cursorY-1].length
+      this.cursor.x--;
+    } else if (this.cursor.y>0) {
+      const newCol=this.lines[this.cursor.y-1].length
       this.delete()
-      this.cursorY--;
-      this.cursorX = newCol; // will clamp after reading full line next time
+      this.cursor.y--;
+      this.cursor.x = newCol; // will clamp after reading full line next time
     }
     this._ensureCursorInView();
     return this
