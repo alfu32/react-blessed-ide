@@ -1,6 +1,15 @@
 import fs from 'fs';
 import { getNamedTokenizer,TokenizerToken } from './tokenizer.js';
 
+export class CodeBufferEditorCursor{
+  start=0
+}
+export class CodeBufferEditorSelection{
+  start=0
+  end=0
+
+}
+
 export class CodeBufferEditor {
   /**
    * @param {string} filePath
@@ -20,6 +29,16 @@ export class CodeBufferEditor {
     this._tout000             = 0
     this._saved           = ''
     this.setFilePath(filePath)
+    /**
+     *
+     * @type {CodeBufferEditorCursor[]}
+     */
+    this.cursors=[]
+    /**
+     *
+     * @type {CodeBufferEditorSelection[]}
+     */
+    this.selections=[]
   }
   setFilePath(filePath){
     this.filePath        = filePath;

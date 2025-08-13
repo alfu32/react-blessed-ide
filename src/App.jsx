@@ -1,5 +1,5 @@
 // App.js
-import React, {Component, useState,useEffect} from 'react';
+import React, {Component, useState, useEffect, useRef} from 'react';
 import {Workspace,INode} from './Workspace';
 import ModalDialog from './ModalDialog.jsx';
 import { BoxElement as box, TextElement as text,ListElement as list,ButtonElement as button } from 'react-blessed';
@@ -11,9 +11,20 @@ import {GitComponent} from "./GitComponent";
 import { ErrorBoundary } from 'react-error-boundary'
 import {ErrorFallback} from './ErrorFallback';
 import FileTree from "./FileTree";
+import {ListComponent} from "./ListComponent";
 // import {parsers} from "./grammars";
-
-export function App(props){// Some Coment 
+const listingTokenizerDefinition={
+    name:'listing',
+    flags:'mg',
+    definitions:{
+        "Whitespace":     {style: {fg:'white'},pattern:/\s+/mgi},
+        "CloseButton":   {style: {fg:'red'},pattern:/\[x]/mgi},
+        "NodeName":       {style: {fg:'green'},pattern:/[a-zA-Z0-9_={}\[\]%*()m,.:;!?@~-]+/mgi},
+        "Word":           {style: {fg:'yellow'},pattern:/\s.+?\s/mgi},
+    }
+}
+export function App(props){// Some Coment
+  const openedFilesRef=useRef(null);
   const [message, setMessage] = useState(false);
   const [pickFolder, setPickFolder] = useState(false);
   const [currentEditorText, setCurrentEditorText] = useState('');
@@ -63,6 +74,56 @@ export function App(props){// Some Coment
       const content = `Debug:\n${('parsed some text')}`
       return <box content={content}/>
   }
+  const listOpenedFiles=()=>{
+      if(openedFilesRef === null) {
+          return [];
+      }
+      if(openedFilesRef.current === null) {
+          return [];
+      }
+      const lpos = openedFilesRef.current.lpos
+      return Object.keys(openedFiles).map(
+          k => {
+              return k.padEnd(lpos.width-6,' ')+'[x]'
+          }
+      )
+  }
+
+    const onTokenClick=(eventData)=>{
+        const treeData = listOpenedFiles()
+        const {lines, visibleLines, line, cursor:{x,y},cursorScreen, buffer, visibleBuffer, index,tokens,tokenUnderCursor,phrase} = eventData
+
+        let k = Object.keys(openedFiles)[y]
+        let node = openedFiles[k];
+        // throw JSON.stringify({node,y},null, ' ')
+        // if (node.type.indexOf('d')>-1) {
+        switch(phrase.filter(v => v!=='Whitespace').join(",")){
+            case "Whitespace,NodeName":
+            case "NodeName,CloseButton":
+                switch((tokenUnderCursor||{type:'undefined'}).type){
+                    case "NodeName":
+                        selectFile(node)
+                        // setCursorData({cursor:{x:0,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        break;
+                    case "CloseButton":
+                        const newOpenedFiles={...openedFiles}
+                        delete newOpenedFiles[k];
+                        setOpenedFiles(newOpenedFiles)
+                        setMessage(`Close\n${node.fullPath} selectedFile:${selectedFile} node.fullPath:${node.fullPath} `)
+                        if(selectedFile === node.fullPath){
+                            k = Object.keys(openedFiles)[y-1]
+                            node = openedFiles[k];
+                            setSelectedFile(node.fullPath)
+                        }
+
+                        // setCursorData({cursor:{x:tokenUnderCursor.start,y},cursorScreen:{x:tokenUnderCursor.start,y:cursorScreen.y},content:tokenUnderCursor.text,style:tokenUnderCursor.style})
+                        break;
+                }
+                break;
+            default:
+                throw new Error(`Unexpected phrase Structure '${phrase}'`)
+        }
+    }
   return (
       <>
       <Grid rows={8} cols={15} hideBorder>
@@ -70,21 +131,14 @@ export function App(props){// Some Coment
               <Tab name='Project'>
                   <Grid rows={8} cols={1}>
                   <box key={1} row={0} col={0} rowSpan={3} colSpan={1}
-                       label={'opened Files'}>
-                      <list
-                          items={Object.keys(openedFiles)}
+                       label={'opened Files'}  ref={openedFilesRef}>
+                      <ListComponent
+                          lines={listOpenedFiles()}
+                          defaultText={''}
                           keys mouse scroll style={{ selected: { bg: 'blue' } }}
                           scrollbar={{ ch: '=', track: { fg:'blue', bg: 'grey' } }}
-                          onSelect={(_,idx) =>{
-                              const k = Object.keys(openedFiles)[idx]
-                              const inode = openedFiles[k];
-                              selectFile(inode)
-                          }}
-                          onSelectItem={(_,idx) =>{
-                              const k = Object.keys(openedFiles)[idx]
-                              const inode = openedFiles[k];
-                              selectFile(inode)
-                          }}
+                          onTokenClick={onTokenClick}
+                          tokenizerDef={listingTokenizerDefinition}
                       />
                   </box>
                   <box key={2}

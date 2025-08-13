@@ -11,7 +11,6 @@ import {debounced, safeStringify} from "./util";
 import {getNamedTokenizer, getTokenizer} from "./tokenizer";
 import {ScreenEvent} from "react-blessed";
 import {EditorEvent} from './SimpleTextEditor'
-const defaultText="...".split(",").join("\n")
 
 
 /**
@@ -31,6 +30,7 @@ const defaultText="...".split(",").join("\n")
 export function ListComponent({
   lines,
   editable = false,
+  defaultText='...',
   onLineClick=(editorEvent)=>{},
   onTokenClick=(editorEvent)=>{},
   onLineHover=(editorEvent)=>{},
@@ -247,14 +247,18 @@ export function ListComponent({
             }
         })
         const tokenUnderCursor=editor.tokenUnderCursor(x,y,tokenizer)
-        return (<box
-            key={`editor-highlight-${Date.now()}`}
-            top={y-vy}
-            left={tokenUnderCursor.start}
-            width={tokenUnderCursor.text.length} height={1}
-            style={{...tokenUnderCursor.style,inverse:true}}
-            content={tokenUnderCursor.text}
-        />)
+        if(tokenUnderCursor) {
+            return (<box
+                key={`editor-highlight-${Date.now()}`}
+                top={y - vy}
+                left={tokenUnderCursor.start}
+                width={tokenUnderCursor.text.length} height={1}
+                style={{...tokenUnderCursor.style, inverse: true}}
+                content={tokenUnderCursor.text}
+            />)
+        } else {
+            return []
+        }
     }
     const renderScrollbar = () => {
         const barElements= [(<box
@@ -300,8 +304,8 @@ export function ListComponent({
         return (<box
             mouse keys
             key={`editor-status-${Date.now()}`}
-            top={0}
-            left={vw-10}
+            top={-1}
+            left={vw-11}
             width={t.length} height={1}
             style={{inverse:true}}
             content={t}

@@ -759,10 +759,10 @@ class SimpleTextEditor {
     return newSimpleTextBuffer;
   }
 }
-const defaultText$1 = "...".split(",").join("\n");
 function ListComponent({
   lines,
   editable = false,
+  defaultText: defaultText2 = "...",
   onLineClick = (editorEvent) => {
   },
   onTokenClick = (editorEvent) => {
@@ -782,12 +782,12 @@ function ListComponent({
   React.useEffect(() => {
     let newEditor = editor2;
     if (!newEditor) {
-      newEditor = new SimpleTextEditor(lines.join("\n") || defaultText$1);
+      newEditor = new SimpleTextEditor(lines.join("\n") || defaultText2);
     }
-    if ((lines.join("\n") || defaultText$1).substring(newEditor.cursorIndex) !== newEditor.buffer.substring(newEditor.cursorIndex)) {
+    if ((lines.join("\n") || defaultText2).substring(newEditor.cursorIndex) !== newEditor.buffer.substring(newEditor.cursorIndex)) {
       newEditor.slideViewportToCursor();
     }
-    newEditor.buffer = lines.join("\n") || defaultText$1;
+    newEditor.buffer = lines.join("\n") || defaultText2;
     newEditor.viewportHeight = size.rows - 1;
     newEditor.viewportWidth = size.cols;
     setEditor2(newEditor.copy());
@@ -984,18 +984,22 @@ function ListComponent({
       }
     });
     const tokenUnderCursor = editor2.tokenUnderCursor(x, y, tokenizer);
-    return /* @__PURE__ */ jsxRuntime_js.jsx(
-      "box",
-      {
-        top: y - vy,
-        left: tokenUnderCursor.start,
-        width: tokenUnderCursor.text.length,
-        height: 1,
-        style: { ...tokenUnderCursor.style, inverse: true },
-        content: tokenUnderCursor.text
-      },
-      `editor-highlight-${Date.now()}`
-    );
+    if (tokenUnderCursor) {
+      return /* @__PURE__ */ jsxRuntime_js.jsx(
+        "box",
+        {
+          top: y - vy,
+          left: tokenUnderCursor.start,
+          width: tokenUnderCursor.text.length,
+          height: 1,
+          style: { ...tokenUnderCursor.style, inverse: true },
+          content: tokenUnderCursor.text
+        },
+        `editor-highlight-${Date.now()}`
+      );
+    } else {
+      return [];
+    }
   };
   const renderScrollbar = () => {
     const barElements = [/* @__PURE__ */ jsxRuntime_js.jsx(
@@ -1048,8 +1052,8 @@ function ListComponent({
       {
         mouse: true,
         keys: true,
-        top: 0,
-        left: vw - 10,
+        top: -1,
+        left: vw - 11,
         width: t.length,
         height: 1,
         style: { inverse: true },
@@ -1084,7 +1088,7 @@ function ListComponent({
     }
   );
 }
-const listingTokenizerDefinition = {
+const listingTokenizerDefinition$1 = {
   name: "listing",
   flags: "mg",
   definitions: {
@@ -1246,7 +1250,7 @@ ${node.fullPath}`);
           mouse: true,
           style: { selected: { bg: "blue" } },
           onTokenClick,
-          tokenizerDef: listingTokenizerDefinition
+          tokenizerDef: listingTokenizerDefinition$1
         }
       ),
       children || [],
@@ -1386,6 +1390,8 @@ class CodeBufferEditor {
     this._tout000 = 0;
     this._saved = "";
     this.setFilePath(filePath);
+    this.cursors = [];
+    this.selections = [];
   }
   setFilePath(filePath) {
     this.filePath = filePath;
@@ -2475,7 +2481,18 @@ ${error.stack}` })
     }
   );
 }
+const listingTokenizerDefinition = {
+  name: "listing",
+  flags: "mg",
+  definitions: {
+    "Whitespace": { style: { fg: "white" }, pattern: /\s+/mgi },
+    "CloseButton": { style: { fg: "red" }, pattern: /\[x]/mgi },
+    "NodeName": { style: { fg: "green" }, pattern: /[a-zA-Z0-9_={}\[\]%*()m,.:;!?@~-]+/mgi },
+    "Word": { style: { fg: "yellow" }, pattern: /\s.+?\s/mgi }
+  }
+};
 function App(props) {
+  const openedFilesRef = React.useRef(null);
   const [message, setMessage] = React.useState(false);
   const [pickFolder, setPickFolder] = React.useState(false);
   const [currentEditorText, setCurrentEditorText] = React.useState("");
@@ -2505,6 +2522,50 @@ function App(props) {
 ${"parsed some text"}`;
     return /* @__PURE__ */ jsxRuntime_js.jsx("box", { content });
   };
+  const listOpenedFiles = () => {
+    if (openedFilesRef === null) {
+      return [];
+    }
+    if (openedFilesRef.current === null) {
+      return [];
+    }
+    const lpos = openedFilesRef.current.lpos;
+    return Object.keys(openedFiles).map(
+      (k) => {
+        return k.padEnd(lpos.width - 6, " ") + "[x]";
+      }
+    );
+  };
+  const onTokenClick = (eventData) => {
+    listOpenedFiles();
+    const { lines, visibleLines, line, cursor: { x, y }, cursorScreen, buffer, visibleBuffer, index, tokens, tokenUnderCursor, phrase } = eventData;
+    let k = Object.keys(openedFiles)[y];
+    let node = openedFiles[k];
+    switch (phrase.filter((v) => v !== "Whitespace").join(",")) {
+      case "Whitespace,NodeName":
+      case "NodeName,CloseButton":
+        switch ((tokenUnderCursor || { type: "undefined" }).type) {
+          case "NodeName":
+            selectFile(node);
+            break;
+          case "CloseButton":
+            const newOpenedFiles = { ...openedFiles };
+            delete newOpenedFiles[k];
+            setOpenedFiles(newOpenedFiles);
+            setMessage(`Close
+${node.fullPath} selectedFile:${selectedFile} node.fullPath:${node.fullPath} `);
+            if (selectedFile === node.fullPath) {
+              k = Object.keys(openedFiles)[y - 1];
+              node = openedFiles[k];
+              setSelectedFile(node.fullPath);
+            }
+            break;
+        }
+        break;
+      default:
+        throw new Error(`Unexpected phrase Structure '${phrase}'`);
+    }
+  };
   return /* @__PURE__ */ jsxRuntime_js.jsxs(jsxRuntime_js.Fragment, { children: [
     /* @__PURE__ */ jsxRuntime_js.jsxs(reactBlessedContrib17.Grid, { rows: 8, cols: 15, hideBorder: true, children: [
       /* @__PURE__ */ jsxRuntime_js.jsxs(VTabs, { row: 0, col: 0, rowSpan: 8, colSpan: 5, children: [
@@ -2517,25 +2578,19 @@ ${"parsed some text"}`;
               rowSpan: 3,
               colSpan: 1,
               label: "opened Files",
+              ref: openedFilesRef,
               children: /* @__PURE__ */ jsxRuntime_js.jsx(
-                "list",
+                ListComponent,
                 {
-                  items: Object.keys(openedFiles),
+                  lines: listOpenedFiles(),
+                  defaultText: "",
                   keys: true,
                   mouse: true,
                   scroll: true,
                   style: { selected: { bg: "blue" } },
                   scrollbar: { ch: "=", track: { fg: "blue", bg: "grey" } },
-                  onSelect: (_, idx) => {
-                    const k = Object.keys(openedFiles)[idx];
-                    const inode = openedFiles[k];
-                    selectFile(inode);
-                  },
-                  onSelectItem: (_, idx) => {
-                    const k = Object.keys(openedFiles)[idx];
-                    const inode = openedFiles[k];
-                    selectFile(inode);
-                  }
+                  onTokenClick,
+                  tokenizerDef: listingTokenizerDefinition
                 }
               )
             },
