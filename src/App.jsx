@@ -19,7 +19,7 @@ const listingTokenizerDefinition={
     definitions:{
         "Whitespace":     {style: {fg:'white'},pattern:/\s+/mgi},
         "CloseButton":   {style: {fg:'red'},pattern:/\[x]/mgi},
-        "NodeName":       {style: {fg:'green'},pattern:/[a-zA-Z0-9_={}\[\]%*()m,.:;!?@~-]+/mgi},
+        "NodeName":       {style: {fg:'green'},pattern:/[/a-zA-Z0-9_={}\[\]%*()m,.:;!?@~-]+/mgi},
         "Word":           {style: {fg:'yellow'},pattern:/\s.+?\s/mgi},
     }
 }
