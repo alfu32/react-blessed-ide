@@ -117,35 +117,12 @@ export function CodeBufferEditorComponent({
   // 3) On keypress, update editor then re-render
   const internalOnKeypress = (ch, key) => {
     onKeypress({ch,key})
-    if(filePath==null){
+    if(editor == null || filePath==null){
         return
     }
-    switch (key.name) {
-      case 'up':      editor.moveCursorUp();    break;
-      case 'down':    editor.moveCursorDown();  break;
-      case 'left':    editor.moveCursorLeft();  break;
-      case 'right':   editor.moveCursorRight(); break;
-      case 'home':    editor.cursorX=0;    break;
-      case 'end':      editor.cursorX=editor.lines[editor.cursorY].length;    break;
-      case 'pageup':    editor.moveCursorVertically(-editor.viewportHeight);    break;
-      case 'pagedown':    editor.moveCursorVertically(editor.viewportHeight);    break;
-      case 'backspace': editor.backspace().save();  onChange(); break;
-      case 'delete':    editor.delete().save();  onChange();      break;
-      case 'return':    editor.insert("\n");editor.moveCursorDown();editor.save();  onChange();      break;
-      case 'tab':    editor.insert("\t").save();  onChange();      break;
-      default:
-        if (ch && ch.length > 0){
-          if(key.sequence && key.sequence.length === 1) {
-            editor.insert(key.sequence).save();
-            onChange();
-          } else if(key.name && key.name.length === 1) {
-            editor.insert(key.name).save();
-            onChange();
-          } else {
-            editor.insert(ch).save();
-            onChange();
-          }
-        }
+    const hasChanged = editor.onKey(ch,key)
+    if(hasChanged){
+      onChange()
     }
     setEditor(editor.copy())
     // refresh();

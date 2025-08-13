@@ -138,6 +138,37 @@ export class CodeBufferEditor {
     this.cursorX=x
     this.cursorY=y
   }
+  onKey(ch,key,onChange=()=>{}){
+  let hasChanged=false
+    switch (key.name) {
+      case 'up':      this.moveCursorUp();    break;
+      case 'down':    this.moveCursorDown();  break;
+      case 'left':    this.moveCursorLeft();  break;
+      case 'right':   this.moveCursorRight(); break;
+      case 'home':    this.cursorX=0;    break;
+      case 'end':      this.cursorX=this.lines[this.cursorY].length;    break;
+      case 'pageup':    this.moveCursorVertically(-this.viewportHeight);    break;
+      case 'pagedown':    this.moveCursorVertically(this.viewportHeight);    break;
+      case 'backspace': this.backspace().save();  hasChanged=true; break;
+      case 'delete':    this.delete().save();  hasChanged=true;      break;
+      case 'return':    this.insert("\n");this.moveCursorDown();this.save();  hasChanged=true;      break;
+      case 'tab':    this.insert("\t").save();  hasChanged=true;      break;
+      default:
+        if (ch && ch.length > 0){
+          if(key.sequence && key.sequence.length === 1) {
+            this.insert(key.sequence).save();
+            hasChanged=true;
+          } else if(key.name && key.name.length === 1) {
+            this.insert(key.name).save();
+            hasChanged=true;
+          } else {
+            this.insert(ch).save();
+            hasChanged=true;
+          }
+        }
+    }
+    return hasChanged
+  }
 
   moveCursorUp() {
     if (this.cursorY > 0) { 
@@ -202,41 +233,45 @@ export class CodeBufferEditor {
 
   insert(text,cursor) {
     cursor=cursor||{x:this.cursorX,y:this.cursorY};
-    const oldLine=this.lines[this.cursor.y]
-    const before=oldLine.substring(0,this.cursor.x)
-    const after=oldLine.substring(this.cursor.x)
+    const oldLine=this.lines[cursor.y]
+    const before=oldLine.substring(0,cursor.x)
+    const after=oldLine.substring(cursor.x)
     const newLine=before+text+after
-    let newLines=this.lines.slice(0,this.cursor.y)
-    let oldLinesAfter=this.lines.slice(this.cursor.y+1)
+    let newLines=this.lines.slice(0,cursor.y)
+    let oldLinesAfter=this.lines.slice(cursor.y+1)
     this.lines=newLines.concat(newLine.split('\n')).concat(oldLinesAfter)
-    this.cursor.x++
+    cursor.x++
+    this.setCursor(cursor.x,cursor.y)
     this._ensureCursorInView();
     return this
   }
 
   delete(cursor) {
-    const oldLine=this.lines[this.cursor.y]
-    const before=oldLine.substring(0,this.cursor.x-1)
-    const after=oldLine.substring(this.cursor.x+1)
+    cursor=cursor||{x:this.cursorX,y:this.cursorY};
+    const oldLine=this.lines[cursor.y]
+    const before=oldLine.substring(0,cursor.x-1)
+    const after=oldLine.substring(cursor.x+1)
     const newLine=before+after
-    let newLines=this.lines.slice(0,this.cursor.y)
-    let oldLinesAfter=this.lines.slice(this.cursor.y+1)
+    let newLines=this.lines.slice(0,cursor.y)
+    let oldLinesAfter=this.lines.slice(cursor.y+1)
     this.lines=newLines.concat(newLine.split('\n')).concat(oldLinesAfter)
+    this.setCursor(cursor.x,cursor.y)
     this._ensureCursorInView();
     return this
   }
 
   backspace(cursor) {
     cursor=cursor||{x:this.cursorX,y:this.cursorY};
-    if (this.cursor.x>0) {
+    if (cursor.x>0) {
       this.delete()
-      this.cursor.x--;
-    } else if (this.cursor.y>0) {
-      const newCol=this.lines[this.cursor.y-1].length
+      cursor.x--;
+    } else if (cursor.y>0) {
+      const newCol=this.lines[cursor.y-1].length
       this.delete()
-      this.cursor.y--;
-      this.cursor.x = newCol; // will clamp after reading full line next time
+      cursor.y--;
+      cursor.x = newCol; // will clamp after reading full line next time
     }
+    this.setCursor(cursor.x,cursor.y)
     this._ensureCursorInView();
     return this
   }

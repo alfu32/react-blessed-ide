@@ -1479,6 +1479,68 @@ class CodeBufferEditor {
     this.cursorX = x;
     this.cursorY = y;
   }
+  onKey(ch, key, onChange = () => {
+  }) {
+    let hasChanged = false;
+    switch (key.name) {
+      case "up":
+        this.moveCursorUp();
+        break;
+      case "down":
+        this.moveCursorDown();
+        break;
+      case "left":
+        this.moveCursorLeft();
+        break;
+      case "right":
+        this.moveCursorRight();
+        break;
+      case "home":
+        this.cursorX = 0;
+        break;
+      case "end":
+        this.cursorX = this.lines[this.cursorY].length;
+        break;
+      case "pageup":
+        this.moveCursorVertically(-this.viewportHeight);
+        break;
+      case "pagedown":
+        this.moveCursorVertically(this.viewportHeight);
+        break;
+      case "backspace":
+        this.backspace().save();
+        hasChanged = true;
+        break;
+      case "delete":
+        this.delete().save();
+        hasChanged = true;
+        break;
+      case "return":
+        this.insert("\n");
+        this.moveCursorDown();
+        this.save();
+        hasChanged = true;
+        break;
+      case "tab":
+        this.insert("	").save();
+        hasChanged = true;
+        break;
+      default:
+        if (ch && ch.length > 0) {
+          if (key.sequence && key.sequence.length === 1) {
+            this.insert(key.sequence).save();
+            hasChanged = true;
+          } else if (key.name && key.name.length === 1) {
+            this.insert(key.name).save();
+            hasChanged = true;
+          } else {
+            this.insert(ch).save();
+            hasChanged = true;
+          }
+        }
+    }
+    return hasChanged;
+  }
   moveCursorUp() {
     if (this.cursorY > 0) {
       this.cursorY--;
@@ -1538,39 +1600,45 @@ class CodeBufferEditor {
     }
   }
   // ── edits ───────────────────────────────────────────────────────────────
-  insert(text) {
-    const oldLine = this.lines[this.cursorY];
-    const before = oldLine.substring(0, this.cursorX);
-    const after = oldLine.substring(this.cursorX);
+  insert(text, cursor) {
+    cursor = cursor || { x: this.cursorX, y: this.cursorY };
+    const oldLine = this.lines[cursor.y];
+    const before = oldLine.substring(0, cursor.x);
+    const after = oldLine.substring(cursor.x);
     const newLine = before + text + after;
-    let newLines = this.lines.slice(0, this.cursorY);
-    let oldLinesAfter = this.lines.slice(this.cursorY + 1);
+    let newLines = this.lines.slice(0, cursor.y);
+    let oldLinesAfter = this.lines.slice(cursor.y + 1);
     this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
-    this.cursorX++;
+    cursor.x++;
+    this.setCursor(cursor.x, cursor.y);
     this._ensureCursorInView();
     return this;
   }
-  delete() {
-    const oldLine = this.lines[this.cursorY];
-    const before = oldLine.substring(0, this.cursorX - 1);
-    const after = oldLine.substring(this.cursorX + 1);
+  delete(cursor) {
+    cursor = cursor || { x: this.cursorX, y: this.cursorY };
+    const oldLine = this.lines[cursor.y];
+    const before = oldLine.substring(0, cursor.x - 1);
+    const after = oldLine.substring(cursor.x + 1);
     const newLine = before + after;
-    let newLines = this.lines.slice(0, this.cursorY);
-    let oldLinesAfter = this.lines.slice(this.cursorY + 1);
+    let newLines = this.lines.slice(0, cursor.y);
+    let oldLinesAfter = this.lines.slice(cursor.y + 1);
     this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
+    this.setCursor(cursor.x, cursor.y);
     this._ensureCursorInView();
     return this;
   }
-  backspace() {
-    if (this.cursorX > 0) {
+  backspace(cursor) {
+    cursor = cursor || { x: this.cursorX, y: this.cursorY };
+    if (cursor.x > 0) {
       this.delete();
-      this.cursorX--;
-    } else if (this.cursorY > 0) {
-      const newCol = this.lines[this.cursorY - 1].length;
+      cursor.x--;
+    } else if (cursor.y > 0) {
+      const newCol = this.lines[cursor.y - 1].length;
       this.delete();
-      this.cursorY--;
-      this.cursorX = newCol;
+      cursor.y--;
+      cursor.x = newCol;
     }
+    this.setCursor(cursor.x, cursor.y);
     this._ensureCursorInView();
     return this;
   }
@@ -1739,65 +1807,12 @@ function CodeBufferEditorComponent({
   };
   const internalOnKeypress = (ch, key) => {
     onKeypress({ ch, key });
-    if (filePath == null) {
+    if (editor2 == null || filePath == null) {
       return;
     }
-    switch (key.name) {
-      case "up":
-        editor2.moveCursorUp();
-        break;
-      case "down":
-        editor2.moveCursorDown();
-        break;
-      case "left":
-        editor2.moveCursorLeft();
-        break;
-      case "right":
-        editor2.moveCursorRight();
-        break;
-      case "home":
-        editor2.cursorX = 0;
-        break;
-      case "end":
-        editor2.cursorX = editor2.lines[editor2.cursorY].length;
-        break;
-      case "pageup":
-        editor2.moveCursorVertically(-editor2.viewportHeight);
-        break;
-      case "pagedown":
-        editor2.moveCursorVertically(editor2.viewportHeight);
-        break;
-      case "backspace":
-        editor2.backspace().save();
-        onChange();
-        break;
-      case "delete":
-        editor2.delete().save();
-        onChange();
-        break;
-      case "return":
-        editor2.insert("\n");
-        editor2.moveCursorDown();
-        editor2.save();
-        onChange();
-        break;
-      case "tab":
-        editor2.insert("	").save();
-        onChange();
-        break;
-      default:
-        if (ch && ch.length > 0) {
-          if (key.sequence && key.sequence.length === 1) {
-            editor2.insert(key.sequence).save();
-            onChange();
-          } else if (key.name && key.name.length === 1) {
-            editor2.insert(key.name).save();
-            onChange();
-          } else {
-            editor2.insert(ch).save();
-            onChange();
-          }
-        }
+    const hasChanged = editor2.onKey(ch, key);
+    if (hasChanged) {
+      onChange();
     }
     setEditor2(editor2.copy());
   };
