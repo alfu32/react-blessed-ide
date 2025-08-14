@@ -22,7 +22,7 @@ const screen = blessed.screen({
 });
 
 // quit on Ctrl+C
-screen.key(["C-c", "C-q", 'f12'], () => process.exit(0));
+screen.key(["C-q", 'f12'], () => process.exit(0));
 screen.key(["C-s", "C-S-s", 'f8'], () => {
   // after you’ve created your screen…
   const dump = screen.screenshot();      // whole screen

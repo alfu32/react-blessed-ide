@@ -67,7 +67,7 @@ export function App(props){// Some Coment
   const onCurrentEditorChange = (a,b,c)=> {
     // setCurrentEditorText(JSON.stringify(a))
   }
-  const onCodeEditKeyPress = ({ch,key})=> {
+  const onCodeEditKeyPress = (ch,key)=> {
     setCurrentEditorText(JSON.stringify({ch,key}))
   }
   const debugView=()=>{

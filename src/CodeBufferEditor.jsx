@@ -7,6 +7,7 @@ import {safeStringify} from "./util";
 export function CodeBufferEditorComponent({
     filePath,
     onKeypress=(ch,key) =>{},
+    onEvent=(ch,key,screenEvent) =>{},
     onChange = (p) => {},
     ...boxProps
 }) {
@@ -116,7 +117,7 @@ export function CodeBufferEditorComponent({
 
   // 3) On keypress, update editor then re-render
   const internalOnKeypress = (ch, key) => {
-    onKeypress({ch,key})
+    onKeypress(ch,key)
     if(editor == null || filePath==null){
         return
     }
@@ -128,26 +129,13 @@ export function CodeBufferEditorComponent({
     // refresh();
   };
 
-  // 3) On keypress, update editor then re-render
-  const setCursorPosition = (screenEvent) => {
+  const mouseAction=(screenEvent) =>{
     if(!editor){
-      return;
+      return
     }
-    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
-    const {xi,yi} = boxRef.current.lpos;
-    const {x,y} = screenEvent;
-    editor.setCursor(x-xi-padLength-1-1-1+editor.viewportX,y-yi-1+editor.viewportY)
-    setEditor(editor.copy())
-  };
-
-  const mouseAction=(event) =>{
-    switch(event.action){
-      case 'mousemove':break;
-      case 'mousedown':break;
-      case 'mouseup':break;
-      case 'wheelup':editor.moveCursorUp();setEditor(editor.copy());break;
-      case 'wheeldown':editor.moveCursorDown();setEditor(editor.copy());break;
-      default: throw new Error(safeStringify(event)); break;
+    const mustChange = editor.onMouse(screenEvent,boxRef.current.lpos)
+    if(mustChange){
+      setEditor(editor.copy())
     }
   }
   return (
@@ -164,7 +152,6 @@ export function CodeBufferEditorComponent({
       tags={false}           // raw ANSI
       scrollable={false}
       onKeypress={internalOnKeypress}
-      onClick={setCursorPosition}
       onMouse={mouseAction}
       label={`Editing: ${filePath}`}
     >

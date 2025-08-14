@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { getNamedTokenizer,TokenizerToken } from './tokenizer.js';
+import {safeStringify} from "./util";
 
 export class CodeBufferEditorCursor{
   start=0
@@ -138,6 +139,26 @@ export class CodeBufferEditor {
     this.cursorX=x
     this.cursorY=y
   }
+  onMouse(screenEvent,viewportPosition){
+    let hasChanged=false
+    switch(screenEvent.action){
+      case 'mousemove':break;
+      case 'mousedown':
+        const padLength=Math.ceil(Math.log10(this.viewportHeight+this.viewportY))+1
+        const {xi,yi} = viewportPosition;
+        const {x,y} = screenEvent;
+        this.setCursor(x-xi-padLength-1-1-1+this.viewportX,y-yi-1+this.viewportY)
+        hasChanged=true
+        break;
+      case 'mouseup':
+
+        break;
+      case 'wheelup':this.moveCursorUp();hasChanged=true;break;
+      case 'wheeldown':this.moveCursorDown();hasChanged=true;break;
+      default: throw new Error(safeStringify(screenEvent)); break;
+    }
+    return hasChanged
+  }
   onKey(ch,key,onChange=()=>{}){
   let hasChanged=false
     switch (key.name) {
@@ -170,62 +191,70 @@ export class CodeBufferEditor {
     return hasChanged
   }
 
-  moveCursorUp() {
-    if (this.cursorY > 0) { 
-      this.cursorY--;
-      if (this.cursorX >= this.lines[this.cursorY].length) {
-        this.cursorX = this.lines[this.cursorY].length
+  moveCursorUp(cursor) {
+    cursor=cursor||{x:this.cursorX,y:this.cursorY};
+    if (cursor.y > 0) {
+      cursor.y--;
+      if (cursor.x >= this.lines[cursor.y].length) {
+        cursor.x = this.lines[cursor.y].length
       }
+      this.setCursor(cursor.x,cursor.y)
       this._ensureCursorInView();
       this.updateCursor();
     }
   }
-  moveCursorDown() {
-    if ((this.cursorY+1) < this.lines.length) {
-      if (this.cursorX >= this.lines[this.cursorY+1].length) {
-        this.cursorX = this.lines[this.cursorY+1].length
+  moveCursorDown(cursor) {
+    cursor=cursor||{x:this.cursorX,y:this.cursorY};
+    if ((cursor.y+1) < this.lines.length) {
+      if (cursor.x >= this.lines[cursor.y+1].length) {
+        cursor.x = this.lines[cursor.y+1].length
       }
-      this.cursorY++;
+      cursor.y++;
+      this.setCursor(cursor.x,cursor.y)
       this._ensureCursorInView();
       this.updateCursor();
     }
   }
-  moveCursorLeft() {
-    if (this.cursorX > 0) {
-      this.cursorX--;
+  moveCursorLeft(cursor) {
+    cursor=cursor||{x:this.cursorX,y:this.cursorY};
+    if (cursor.x > 0) {
+      cursor.x--;
+      this.setCursor(cursor.x,cursor.y)
       this._ensureCursorInView();
       this.updateCursor();
     }
   }
-  moveCursorRight() {
-    if (this.cursorX < this.lines[this.cursorY].length) {
-      this.cursorX++
+  moveCursorRight(cursor) {
+    cursor=cursor||{x:this.cursorX,y:this.cursorY};
+    if (cursor.x < this.lines[cursor.y].length) {
+      cursor.x++
     } else {
-      this.cursorX = this.lines[this.cursorY].length
+      cursor.x = this.lines[cursor.y].length
     }
+    this.setCursor(cursor.x,cursor.y)
     this._ensureCursorInView()
     this.updateCursor();
   }
 
-  moveCursorVertically(n){
+  moveCursorVertically(n,cursor){
     if(n>0){
         for(let i=0;i<n;i++){
-            this.moveCursorDown()
+            this.moveCursorDown(cursor)
         }
     }else if(n<0){
         for(let i=n;i<=0;i++){
-            this.moveCursorUp()   
+            this.moveCursorUp(cursor)
         }
     }
   }
-  moveCursorHorizontally(n){
+  moveCursorHorizontally(n,cursor){
     if(n>0){
         for(let i=0;i<n;i++){
-            this.moveCursorRight()
+            this.moveCursorRight(cursor)
         }
     }else if(n<0){
         for(let i=n;i<=0;i++){
-            this.moveCursorLeft()  
+            this.moveCursorLeft(cursor)
         }
     }
   }
@@ -249,7 +278,7 @@ export class CodeBufferEditor {
   delete(cursor) {
     cursor=cursor||{x:this.cursorX,y:this.cursorY};
     const oldLine=this.lines[cursor.y]
-    const before=oldLine.substring(0,cursor.x-1)
+    const before=oldLine.substring(0,cursor.x)
     const after=oldLine.substring(cursor.x+1)
     const newLine=before+after
     let newLines=this.lines.slice(0,cursor.y)
@@ -263,13 +292,13 @@ export class CodeBufferEditor {
   backspace(cursor) {
     cursor=cursor||{x:this.cursorX,y:this.cursorY};
     if (cursor.x>0) {
-      this.delete()
       cursor.x--;
+      this.delete(cursor)
     } else if (cursor.y>0) {
       const newCol=this.lines[cursor.y-1].length
-      this.delete()
       cursor.y--;
       cursor.x = newCol; // will clamp after reading full line next time
+      this.delete(cursor)
     }
     this.setCursor(cursor.x,cursor.y)
     this._ensureCursorInView();
