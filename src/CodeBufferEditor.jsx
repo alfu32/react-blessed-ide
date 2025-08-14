@@ -7,8 +7,7 @@ import {safeStringify} from "./util";
 export function CodeBufferEditorComponent({
     filePath,
     onKeypress=(ch,key) =>{},
-    onEvent=(ch,key,screenEvent) =>{},
-    onChange = (p) => {},
+    onChange = ({editor,ch,key,screenEvent,viewport}) => {},
     ...boxProps
 }) {
   const boxRef = useRef();
@@ -19,6 +18,7 @@ export function CodeBufferEditorComponent({
 	
   const [editor, setEditor] = useState(null);
   const [size, setSize]     = useState({ rows: 10, cols: 30 });
+  const[lastEvent,setLastEvent] = useState({editor:null,ch:null,key:null,screenEvent:null,viewport:null})
 
 
   // 1) (Re)create editor whenever filePath changes
@@ -54,7 +54,7 @@ export function CodeBufferEditorComponent({
       setEditor(editor.copy())
     }
   }, [size]);
-  const cursor = ()=>{
+  const cursors = ()=>{
     if(!editor){
         return (
           <box key={`0-1-no-file`}
@@ -66,13 +66,21 @@ export function CodeBufferEditorComponent({
     }
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
     editor.updateCursor()
-    return <box key={`cursor-${Date.now()}`}
-      left={editor.cursorX-editor.viewportX+padLength+1+ 1} top={editor.cursorY-editor.viewportY} width={1} height={1}
-      style={{...editor.cursorStyle,underline: true,bold:true,inverse:true}}
-      tags={false}
-      content={editor.cursorChar}
-    />
+    return [...editor.cursors,{x:editor.cursorX,y:editor.cursorY}]
+        .filter((cursor,y)=>{
+          return cursor.y>=editor.viewportY && cursor.y <= (editor.viewportY+editor.viewportHeight)
+        })
+        .map((cursor,id)=>{
+          return <box key={`cursor-${id}-${Date.now()}`}
+              left={cursor.x-editor.viewportX+padLength+1+ 1} top={cursor.y-editor.viewportY} width={1} height={1}
+              style={{...cursor.style,underline: true,bold:true,inverse:true}}
+              tags={false}
+              content={cursor.char}
+          />
+        })
+
   }
+
   const tokenList = ()=>{
     if(!editor){
         return (
@@ -97,21 +105,29 @@ export function CodeBufferEditorComponent({
       const line = lines[lineNumber]
       const lineNumberText = `${String(lineNumber).padStart(padLength, ' ')}`
       const lineNumberBox = (
-          <box key={`${lineNumber}-lineNumber`}
+          <box key={`${lineNumber}-lineNumber-${Date.now}`}
                left={0} top={k} width={padLength + 1} height={1}
                style={{bg: '#222222', fg: '#33aabb', inverse: editor.cursorY == lineNumber}}
                content={lineNumberText+'│'}
           />)
       return line.reduce((a, t) => {
         a.push(
-            <box key={`${t.x}-${t.y}`}
+            <box key={`${t.x}-${t.y}-${Date.now()}`}
                  left={t.x + padLength + 1 + 1} top={t.y - editor.viewportY} width={t.text.length} height={1}
                  style={t.style}
                  content={t.text}
             />
         )
         return a
-      }, [lineNumberBox])
+      }, [
+        lineNumberBox/*,
+        <box
+          key={`terminator-${lineNumber}-${Date.now()}`}
+          left={padLength + 1 + line.length} top={lineNumber - editor.viewportY} width={1} height={1}
+          style={{bg:"#113311",fg:"#555555"}}
+          content={'¬'}
+        />*/
+      ])
     })
   }
 
@@ -123,7 +139,9 @@ export function CodeBufferEditorComponent({
     }
     const hasChanged = editor.onKey(ch,key)
     if(hasChanged){
-      onChange()
+      const newLastEvent = {...lastEvent,editor,ch,key,viewport:boxRef.current.lpos}
+      onChange(newLastEvent)
+      setLastEvent(newLastEvent)
     }
     setEditor(editor.copy())
     // refresh();
@@ -135,6 +153,9 @@ export function CodeBufferEditorComponent({
     }
     const mustChange = editor.onMouse(screenEvent,boxRef.current.lpos)
     if(mustChange){
+      const newLastEvent = {...lastEvent,editor,screenEvent,viewport:boxRef.current.lpos}
+      onChange(newLastEvent)
+      setLastEvent(newLastEvent)
       setEditor(editor.copy())
     }
   }
@@ -171,7 +192,7 @@ export function CodeBufferEditorComponent({
         tags={false}
         style={{fg:'black',bg:'yellow'}}
       />
-      {cursor()}
+      {cursors()}
     </box>
   );
 }

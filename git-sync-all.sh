@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 git pull origin work
-git push origin work --tags
+git push origin work --tags
 git checkout staging
 git pull origin staging
 git merge --ff-only work

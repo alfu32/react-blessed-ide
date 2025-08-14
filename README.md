@@ -6,10 +6,11 @@ No plugins—just a simple, integrated TUI with file tree, Git status, editor pa
 
 Repository: https://github.com/alfu32/react-blessed-ide
 // scscsc
----asdfasdfasd
-1234567890-abcdefghijk- screenshots
+---asdfasdfasd--------
+
 
 ### project side panel
+
 
 ```
 ┌─────────────────────────────────┐┌──────────────────────────────────────────────────┐

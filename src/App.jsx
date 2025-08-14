@@ -12,6 +12,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 import {ErrorFallback} from './ErrorFallback';
 import FileTree from "./FileTree";
 import {ListComponent} from "./ListComponent";
+import { safeStringify } from './util.js';
 // import {parsers} from "./grammars";
 const listingTokenizerDefinition={
     name:'listing',
@@ -64,11 +65,11 @@ export function App(props){// Some Coment
   const onTextEditorCancel = (a,b,c)=> {
       setMessage(JSON.stringify({a,b,c}))
   }
-  const onCurrentEditorChange = (a,b,c)=> {
-    // setCurrentEditorText(JSON.stringify(a))
+  const onCurrentEditorChange = ({editor,ch,key,screenEvent,viewport})=> {
+    setCurrentEditorText(safeStringify({editor: {cursor:{x:editor.cursorX,y:editor.cursorY},cursors:editor.cursors},viewport,ch,key,screenEvent}))
   }
   const onCodeEditKeyPress = (ch,key)=> {
-    setCurrentEditorText(JSON.stringify({ch,key}))
+    // setCurrentEditorText(JSON.stringify({ch,key}))
   }
   const debugView=()=>{
       const content = `Debug:\n${('parsed some text')}`
