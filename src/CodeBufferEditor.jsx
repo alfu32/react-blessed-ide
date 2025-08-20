@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {CodeBufferEditor} from './CodeBufferEditor.js';
+import {CodeBufferEditor, Point} from './CodeBufferEditor.js';
 import { BoxElement as box, TextElement as text } from 'react-blessed';
 import {safeStringify} from "./util";
 
@@ -66,11 +66,13 @@ export function CodeBufferEditorComponent({
     }
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
     editor.updateCursor()
-    return [...editor.cursors,{x:editor.cursorX,y:editor.cursorY}]
+
+    return [...editor.cursors,new Point(editor.cursorX,editor.cursorY,editor.cursorChar,editor.cursorStyle)]
         .filter((cursor,y)=>{
           return cursor.y>=editor.viewportY && cursor.y <= (editor.viewportY+editor.viewportHeight)
         })
-        .map((cursor,id)=>{
+        .map((crs,id)=>{
+          const cursor = editor.getCursor({...crs})
           return <box key={`cursor-${id}-${Date.now()}`}
               left={cursor.x-editor.viewportX+padLength+1+ 1} top={cursor.y-editor.viewportY} width={1} height={1}
               style={{...cursor.style,underline: true,bold:true,inverse:true}}

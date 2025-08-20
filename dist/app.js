@@ -1441,6 +1441,9 @@ class CodeBufferEditor {
       cursorX: this.cursorX - this.viewportX
     };
   }
+  /**
+   *
+   */
   updateTokens() {
     const ps = this.filePath.split(".");
     const tokenizer = getNamedTokenizer(ps[ps.length - 1]);
@@ -1450,24 +1453,52 @@ class CodeBufferEditor {
       return r;
     }, {});
   }
+  /**
+   *
+   */
   updateCursor() {
-    const lineId = this.cursorY;
-    const tokens = this.tokens[lineId];
+    const crs = this.getCursor({ x: this.cursorX, y: this.cursorY });
+    this.cursorX = crs.x;
+    this.cursorY = crs.y;
+    this.cursorChar = crs.char;
+    this.cursorStyle = crs.style;
+  }
+  /**
+   *
+   * @param x
+   * @param y
+   * @returns {Point}
+   */
+  getCursor({ x, y }) {
+    let crs = new Point();
+    crs.x = x;
+    crs.y = y;
+    const line = this.lines[y];
+    const ps = this.filePath.split(".");
+    const lineNumber = parseInt(y);
+    const tokenizer = getNamedTokenizer(ps[ps.length - 1]);
+    let tokens = null;
+    try {
+      tokens = tokenizer(line, lineNumber);
+    } catch (err) {
+      tokens = this.tokens[y];
+    }
     let col = 0;
-    this.cursorChar = "_";
+    crs.char = "0";
     for (const tok of tokens) {
-      if (this.cursorX >= tok.start && this.cursorX < tok.end) {
-        this.cursorStyle = tok.style;
-        this.cursorChar = (this.lines[lineId] || "_")[this.cursorX] || "_";
+      if (x >= tok.start && x < tok.end) {
+        crs.style = tok.style;
+        crs.char = (this.lines[y] || "1")[x] || "2";
         break;
       }
       col += tok.text.length;
     }
-    if (this.cursorStyle == null) {
+    if (crs.style) {
       const last = tokens.slice(-1)[0];
-      this.cursorStyle = last ? last.style : {};
-      this.cursorChar = last && last.text.length ? last.text[last.text.length - 1] : "_";
+      crs.style = last ? last.style : {};
+      crs.char = last && last.text.length ? last.text[last.text.length - 1] : "3";
     }
+    return crs;
   }
   /**
   * @param {(code:string)=>TokenizerToken[]} tokenizer
@@ -1819,9 +1850,10 @@ function CodeBufferEditorComponent({
     }
     const padLength = Math.ceil(Math.log10(editor2.viewportHeight + editor2.viewportY)) + 1;
     editor2.updateCursor();
-    return [...editor2.cursors, { x: editor2.cursorX, y: editor2.cursorY }].filter((cursor, y) => {
+    return [...editor2.cursors, new Point(editor2.cursorX, editor2.cursorY, editor2.cursorChar, editor2.cursorStyle)].filter((cursor, y) => {
       return cursor.y >= editor2.viewportY && cursor.y <= editor2.viewportY + editor2.viewportHeight;
-    }).map((cursor, id) => {
+    }).map((crs, id) => {
+      const cursor = editor2.getCursor({ ...crs });
       return /* @__PURE__ */ jsxRuntime_js.jsx(
         "box",
         {
