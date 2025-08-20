@@ -2,7 +2,7 @@ import fs from 'fs';
 import { getNamedTokenizer,TokenizerToken } from './tokenizer.js';
 import {safeStringify} from "./util";
 
-export class Point{
+export class CursorPoint{
   x=-1
   y=-1
   char='-'
@@ -16,8 +16,8 @@ export class Point{
 }
 export class CodeBufferEditorSelection{
 
-  start= new Point()
-  end= new Point()
+  start= new CursorPoint()
+  end= new CursorPoint()
 
 }
 
@@ -42,7 +42,7 @@ export class CodeBufferEditor {
     this.setFilePath(filePath)
     /**
      *
-     * @type {Point[]}
+     * @type {CursorPoint[]}
      */
     this.cursors=[]
     /**
@@ -121,10 +121,10 @@ export class CodeBufferEditor {
    *
    * @param x
    * @param y
-   * @returns {Point}
+   * @returns {CursorPoint}
    */
   getCursor({x,y}){
-    let crs = new Point()
+    let crs = new CursorPoint()
     crs.x=x
     crs.y=y
 
@@ -142,11 +142,10 @@ export class CodeBufferEditor {
 
     // 3) scan tokens to find which one covers colInWindow
     let col = 0;
-    crs.char = '0'
+    crs.char = ((this.lines[y]||"x")[x])||'y'
     for (const tok of tokens) {
       if( x >= tok.start && x < tok.end) {
         crs.style = tok.style;
-        crs.char  = (this.lines[y]||"1")[x]||'2'
         break
       }
       col += tok.text.length;
@@ -156,7 +155,6 @@ export class CodeBufferEditor {
     if(crs.style){
       const last = tokens.slice(-1)[0];
       crs.style = last ? last.style : {};
-      crs.char = last && last.text.length ? last.text[last.text.length-1] : '3';
     }
     return crs
   }
@@ -193,12 +191,13 @@ export class CodeBufferEditor {
         const {xi,yi} = viewportPosition;
         const {x,y} = screenEvent;
         const cursor= {x:(x-xi - padLength - 1 - 1 - 1 + this.viewportX), y:(y-yi - 1 + this.viewportY)}
+        // this.setCursor(cursor.x,cursor.y)
+        const crs=this.getCursor(cursor)
         if(screenEvent.meta){
-          this.cursors.push(new Point(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle}))
+          this.cursors.push(crs)
         }else{
-          this.cursors=[]
+          this.cursors=[crs]
         }
-        this.setCursor(cursor.x,cursor.y)
         hasChanged=true
         break;
       case 'mouseup':
@@ -211,13 +210,13 @@ export class CodeBufferEditor {
     return hasChanged
   }
   onKey(ch,key,onChange=()=>{}){
-    const THIS = this
+  const THIS = this
   let hasChanged=false
     switch (key.name) {
-      case 'up':      this.moveCursorUp();this.cursors=this.cursors.map(crs => THIS.moveCursorUp(crs));    break;
-      case 'down':    this.moveCursorDown();this.cursors=this.cursors.map(crs => THIS.moveCursorDown(crs));  break;
-      case 'left':    this.moveCursorLeft();this.cursors=this.cursors.map(crs => THIS.moveCursorLeft(crs));  break;
-      case 'right':   this.moveCursorRight();this.cursors=this.cursors.map(crs => THIS.moveCursorRight(crs)); break;
+      case 'up':      /*this.moveCursorUp();*/this.cursors=this.cursors.map(crs => THIS.moveCursorUp(crs));    break;
+      case 'down':    /*this.moveCursorDown();*/this.cursors=this.cursors.map(crs => THIS.moveCursorDown(crs));  break;
+      case 'left':    /*this.moveCursorLeft();*/this.cursors=this.cursors.map(crs => THIS.moveCursorLeft(crs));  break;
+      case 'right':   /*this.moveCursorRight();*/this.cursors=this.cursors.map(crs => THIS.moveCursorRight(crs)); break;
       case 'home':    this.cursorX=0;    break;
       case 'end':      this.cursorX=this.lines[this.cursorY].length;    break;
       case 'pageup':    this.moveCursorVertically(-this.viewportHeight);    break;
@@ -229,13 +228,15 @@ export class CodeBufferEditor {
       default:
         if (ch && ch.length > 0 && !key.ctrl && !key.meta){
           if(key.sequence && key.sequence.length === 1) {
-            this.insert(key.sequence).save();
+            this.cursors.forEach(crs => THIS.insert(key.sequence,crs))
+            this.save();
             hasChanged=true;
           } else if(key.name && key.name.length === 1) {
-            this.insert(key.name).save();
+            this.cursors.forEach(crs => THIS.insert(key.name,crs))
+            this.save();
             hasChanged=true;
           } else {
-            this.insert(ch).save();
+            this.cursors.forEach(crs => THIS.insert(ch,crs))
             hasChanged=true;
           }
         }
@@ -245,15 +246,16 @@ export class CodeBufferEditor {
 
   /**
    *
-   * @param {Point} cursor
-   * @returns {Point}
+   * @param {CursorPoint} cursor
+   * @returns {CursorPoint}
    */
   moveCursorUp(cursor=null) {
-    cursor=cursor||new Point(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle});
+    cursor=cursor||new CursorPoint(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle});
     if (cursor.y > 0) {
       cursor.y--;
-      if (cursor.x >= this.lines[cursor.y].length) {
-        cursor.x = this.lines[cursor.y].length
+      const line = this.lines[cursor.y]
+      if (cursor.x >= line.length) {
+        cursor.x = line.length
       }
       this.setCursor(cursor.x,cursor.y)
       this._ensureCursorInView();
@@ -264,11 +266,11 @@ export class CodeBufferEditor {
 
   /**
    *
-   * @param {Point} cursor
-   * @returns {Point}
+   * @param {CursorPoint} cursor
+   * @returns {CursorPoint}
    */
   moveCursorDown(cursor=null) {
-    cursor=cursor||new Point(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle});
+    cursor=cursor||new CursorPoint(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle});
     if ((cursor.y+1) < this.lines.length) {
       if (cursor.x >= this.lines[cursor.y+1].length) {
         cursor.x = this.lines[cursor.y+1].length
@@ -283,11 +285,11 @@ export class CodeBufferEditor {
 
   /**
    *
-   * @param {Point} cursor
-   * @returns {Point}
+   * @param {CursorPoint} cursor
+   * @returns {CursorPoint}
    */
   moveCursorLeft(cursor=null) {
-    cursor=cursor||new Point(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle});
+    cursor=cursor||new CursorPoint(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle});
     if (cursor.x > 0) {
       cursor.x--;
       this.setCursor(cursor.x,cursor.y)
@@ -299,15 +301,16 @@ export class CodeBufferEditor {
 
   /**
    *
-   * @param {Point} cursor
-   * @returns {Point}
+   * @param {CursorPoint} cursor
+   * @returns {CursorPoint}
    */
   moveCursorRight(cursor=null) {
-    cursor=cursor||new Point(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle});
-    if (cursor.x < this.lines[cursor.y].length) {
+    cursor=cursor||new CursorPoint(this.cursorX,this.cursorY,this.cursorChar, {...this.cursorStyle});
+    const line = this.lines[cursor.y]
+    if (cursor.x < line.length) {
       cursor.x++
     } else {
-      cursor.x = this.lines[cursor.y].length
+      cursor.x = line.length
     }
     this.setCursor(cursor.x,cursor.y)
     this._ensureCursorInView()

@@ -1,7 +1,11 @@
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
 import peggy from 'rollup-plugin-peggy'; // or: import pegjs from 'rollup-plugin-pegjs';
-
+// parallel commenting
+// parallel commenting
+// parallel commenting
+// parallel commenting
+// buggy tokenizer ... 
 export default defineConfig({
   plugins: [
     react(),
