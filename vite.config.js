@@ -1,16 +1,8 @@
 import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
 import peggy from 'rollup-plugin-peggy'; // or: import pegjs from 'rollup-plugin-pegjs';
-// parallel commenting as 
 
-
-
-
-// parallel commenting ass 
-// parallel commenting asd dsds 
-// parallel commenting asd dsdsd 
-// buggy tokenizer ... dsdsd
-export default defineConfig({
+export default defineConfig({
   plugins: [
     react(),
     peggy(),

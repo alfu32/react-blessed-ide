@@ -248,18 +248,23 @@ export class CodeBufferEditor {
         hasChanged=true;
         break;
       case 'return':
-        this.cursors.forEach(crs => {
-          THIS.insert("\n", crs)
-          THIS.moveCursorDown(crs);
-        })
+        this.cursors
+            .toSorted((a,b) => (a.y-b.y))
+            .forEach((crs,y) => {
+              crs.y+=y
+              THIS.insert("\n", crs)
+              crs.y+=1
+              crs.x=0
+            })
         this.save();
         hasChanged=true;
       break;
       case 'tab':
-        this.cursors.forEach(crs => {
-          THIS.insert("\t", crs)
-          THIS.moveCursorDown(crs);
-        })
+        this.cursors
+            .toSorted((a,b) => (a.y-b.y))
+            .forEach((crs,y) => {
+              THIS.insert("\t", crs)
+            })
         this.save();
         hasChanged=true;
       break;
