@@ -213,18 +213,56 @@ export class CodeBufferEditor {
   const THIS = this
   let hasChanged=false
     switch (key.name) {
-      case 'up':      /*this.moveCursorUp();*/this.cursors=this.cursors.map(crs => THIS.moveCursorUp(crs));    break;
-      case 'down':    /*this.moveCursorDown();*/this.cursors=this.cursors.map(crs => THIS.moveCursorDown(crs));  break;
-      case 'left':    /*this.moveCursorLeft();*/this.cursors=this.cursors.map(crs => THIS.moveCursorLeft(crs));  break;
-      case 'right':   /*this.moveCursorRight();*/this.cursors=this.cursors.map(crs => THIS.moveCursorRight(crs)); break;
-      case 'home':    this.cursorX=0;    break;
-      case 'end':      this.cursorX=this.lines[this.cursorY].length;    break;
-      case 'pageup':    this.moveCursorVertically(-this.viewportHeight);    break;
-      case 'pagedown':    this.moveCursorVertically(this.viewportHeight);    break;
-      case 'backspace': this.backspace().save();  hasChanged=true; break;
-      case 'delete':    this.delete().save();  hasChanged=true;      break;
-      case 'return':    this.insert("\n");this.moveCursorDown();this.save();  hasChanged=true;      break;
-      case 'tab':    this.insert("\t").save();  hasChanged=true;      break;
+      case 'up':
+        this.cursors=this.cursors.map(crs => THIS.moveCursorUp(crs));
+      break;
+      case 'down':
+        this.cursors=this.cursors.map(crs => THIS.moveCursorDown(crs));
+      break;
+      case 'left':
+        this.cursors=this.cursors.map(crs => THIS.moveCursorLeft(crs));
+      break;
+      case 'right':
+        this.cursors=this.cursors.map(crs => THIS.moveCursorRight(crs));
+      break;
+      case 'home':
+        this.cursors=this.cursors.map(crs => THIS.getCursor({x:0,y:crs.y}));
+        break;
+      case 'end':
+        this.cursors=this.cursors.map(crs => THIS.getCursor({x:this.lines[crs.y].length,y:crs.y}));
+        break;
+      case 'pageup':
+        this.moveCursorVertically(-this.viewportHeight);
+      break;
+      case 'pagedown':
+        this.moveCursorVertically(this.viewportHeight);
+      break;
+      case 'backspace':
+        this.cursors.forEach(crs => THIS.backspace(crs))
+        this.save();
+        hasChanged=true;
+        break;
+      case 'delete':
+        this.cursors.forEach(crs => THIS.delete(crs))
+        this.save();
+        hasChanged=true;
+        break;
+      case 'return':
+        this.cursors.forEach(crs => {
+          THIS.insert("\n", crs)
+          THIS.moveCursorDown(crs);
+        })
+        this.save();
+        hasChanged=true;
+      break;
+      case 'tab':
+        this.cursors.forEach(crs => {
+          THIS.insert("\t", crs)
+          THIS.moveCursorDown(crs);
+        })
+        this.save();
+        hasChanged=true;
+      break;
       default:
         if (ch && ch.length > 0 && !key.ctrl && !key.meta){
           if(key.sequence && key.sequence.length === 1) {

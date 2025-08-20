@@ -1572,10 +1572,10 @@ class CodeBufferEditor {
         this.cursors = this.cursors.map((crs) => THIS.moveCursorRight(crs));
         break;
       case "home":
-        this.cursorX = 0;
+        this.cursors = this.cursors.map((crs) => THIS.getCursor({ x: 0, y: crs.y }));
         break;
       case "end":
-        this.cursorX = this.lines[this.cursorY].length;
+        this.cursors = this.cursors.map((crs) => THIS.getCursor({ x: this.lines[crs.y].length, y: crs.y }));
         break;
       case "pageup":
         this.moveCursorVertically(-this.viewportHeight);
@@ -1584,21 +1584,29 @@ class CodeBufferEditor {
         this.moveCursorVertically(this.viewportHeight);
         break;
       case "backspace":
-        this.backspace().save();
+        this.cursors.forEach((crs) => THIS.backspace(crs));
+        this.save();
         hasChanged = true;
         break;
       case "delete":
-        this.delete().save();
+        this.cursors.forEach((crs) => THIS.delete(crs));
+        this.save();
         hasChanged = true;
         break;
       case "return":
-        this.insert("\n");
-        this.moveCursorDown();
+        this.cursors.forEach((crs) => {
+          THIS.insert("\n", crs);
+          THIS.moveCursorDown(crs);
+        });
         this.save();
         hasChanged = true;
         break;
       case "tab":
-        this.insert("	").save();
+        this.cursors.forEach((crs) => {
+          THIS.insert("	", crs);
+          THIS.moveCursorDown(crs);
+        });
+        this.save();
         hasChanged = true;
         break;
       default:
