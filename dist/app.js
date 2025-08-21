@@ -2784,9 +2784,7 @@ ${node.fullPath} selectedFile:${selectedFile} node.fullPath:${node.fullPath} `);
         /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Debug", children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { children: debugView() }) }),
         /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Quit", onTabClick: () => {
           process.exit(0);
-        }, children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { onTabClick: () => {
-          process.exit(0);
-        }, children: debugView() }) })
+        }, children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { children: debugView() }) })
       ] }),
       /* @__PURE__ */ jsxRuntime_js.jsx(
         CodeBufferEditorComponent,
