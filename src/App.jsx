@@ -182,7 +182,7 @@ export function App(props){// Some Coment
                   </box>
               </Tab>
               <Tab name={'Quit'} onTabClick={()=>{process.exit(0)}}>
-                  <box onTabClick={()=>{process.exit(0)}}>
+                  <box>
                       {debugView()}
                   </box>
               </Tab>

@@ -1448,9 +1448,8 @@ class CodeBufferEditor {
    *
    */
   updateTokens() {
-    this.tokens = [];
-    this.lines.forEach((line, lineNumber) => {
-      this.updateTokensLine(lineNumber);
+    this.tokens = this.lines.map((line, lineNumber) => {
+      return this.tokenizer(line, lineNumber);
     });
   }
   /**
@@ -1700,20 +1699,33 @@ class CodeBufferEditor {
     let newLines = this.lines.slice(0, cursor.y);
     let oldLinesAfter = this.lines.slice(cursor.y + 1);
     this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
-    this.updateTokensLine(cursor.y);
+    if (newLine.indexOf("\n") > -1) {
+      this.updateTokens();
+    } else {
+      this.updateTokensLine(cursor.y);
+    }
     cursor.x++;
     this._ensureCursorInView(cursor);
     return this;
   }
   delete(cursor) {
-    const oldLine = this.lines[cursor.y];
-    const before = oldLine.substring(0, cursor.x);
-    const after = oldLine.substring(cursor.x + 1);
-    const newLine = before + after;
-    let newLines = this.lines.slice(0, cursor.y);
-    let oldLinesAfter = this.lines.slice(cursor.y + 1);
-    this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
-    this.updateTokensLine(cursor.y);
+    if (cursor.x === this.lines[cursor.y].length) {
+      let newLines = this.lines.slice(0, cursor.y);
+      let currentLine = this.lines[cursor.y];
+      const nextLine = this.lines[cursor.y + 1];
+      let restLines = this.lines.slice(cursor.y + 2);
+      this.lines = newLines.concat([currentLine + nextLine]).concat(restLines);
+      this.updateTokens();
+    } else {
+      let newLines = this.lines.slice(0, cursor.y);
+      const oldLine = this.lines[cursor.y];
+      const before = oldLine.substring(0, cursor.x);
+      const after = oldLine.substring(cursor.x + 1);
+      const newLine = before + after;
+      let oldLinesAfter = this.lines.slice(cursor.y + 1);
+      this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
+      this.updateTokensLine(cursor.y);
+    }
     this._ensureCursorInView(cursor);
     return this;
   }
@@ -2734,9 +2746,7 @@ ${node.fullPath} selectedFile:${selectedFile} node.fullPath:${node.fullPath} `);
         /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Debug", children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { children: debugView() }) }),
         /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Quit", onTabClick: () => {
           process.exit(0);
-        }, children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { onTabClick: () => {
-          process.exit(0);
-        }, children: debugView() }) })
+        }, children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { children: debugView() }) })
       ] }),
       /* @__PURE__ */ jsxRuntime_js.jsx(
         CodeBufferEditorComponent,
