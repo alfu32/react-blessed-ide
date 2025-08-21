@@ -30,7 +30,12 @@ export function VTabs({ children, ...boxProps}) {
                             tags={false}
                             mouse
                             clickable
-                            onClick={() => setActiveIndex(i)}
+                            onClick={() => {
+                                setActiveIndex(i);
+                                try{
+                                    tabs[i].props.onTabClick()
+                                }catch(err){}
+                            }}
                             style={{...tabSelectorStyle, inverse: (activeIndex == i)}}
                             content={'\n '+tab.props.name}
                         />

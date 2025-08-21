@@ -65,9 +65,8 @@ export function CodeBufferEditorComponent({
         )
     }
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
-    editor.updateCursor()
 
-    return [...editor.cursors,new CursorPoint(editor.cursorX,editor.cursorY,editor.cursorChar,editor.cursorStyle)]
+    return [...editor.cursors]
         .filter((cursor,y)=>{
           return cursor.y>=editor.viewportY && cursor.y <= (editor.viewportY+editor.viewportHeight)
         })
@@ -100,16 +99,14 @@ export function CodeBufferEditorComponent({
     }
     
     const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
-    editor.updateTokens()
     const lines = editor.renderViewport();
-    const { cursorY, cursorX } = editor.getCursorWindowCoords();
     return Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber]
       const lineNumberText = `${String(lineNumber).padStart(padLength, ' ')}`
       const lineNumberBox = (
           <box key={`${lineNumber}-lineNumber-${Date.now}`}
                left={0} top={k} width={padLength + 1} height={1}
-               style={{bg: '#222222', fg: '#33aabb', inverse: editor.cursorY == lineNumber}}
+               style={{bg: '#222222', fg: '#33aabb', inverse: editor.cursors.map(c =>c.y).indexOf(lineNumber)>-1}}
                content={lineNumberText+'│'}
           />)
       return line.reduce((a, t) => {

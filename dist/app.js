@@ -2,16 +2,15 @@
 "use strict";
 const jsxRuntime_js = require("react/jsx-runtime.js");
 require("raf/polyfill.js");
-const React = require("react");
 const blessed = require("blessed");
 const reactBlessed = require("react-blessed");
+const React = require("react");
 const ignore = require("ignore");
 const reactBlessedContrib17 = require("react-blessed-contrib-17");
 const fs = require("fs");
 const path = require("path");
 require("vite");
 const reactErrorBoundary = require("react-error-boundary");
-require("blessed/lib/widgets/message.js");
 const inodeSortBy = (node) => {
   const mapping = {
     "d": 1,
@@ -1358,7 +1357,13 @@ function VTabs({ children, ...boxProps }) {
           tags: false,
           mouse: true,
           clickable: true,
-          onClick: () => setActiveIndex(i),
+          onClick: () => {
+            setActiveIndex(i);
+            try {
+              tabs[i].props.onTabClick();
+            } catch (err) {
+            }
+          },
           style: { ...tabSelectorStyle, inverse: activeIndex == i },
           content: "\n " + tab.props.name
         },
@@ -1394,11 +1399,11 @@ class CodeBufferEditor {
     this.viewportX = 0;
     this.viewportHeight = windowSize.rows;
     this.viewportWidth = windowSize.cols;
-    this.cursorY = 0;
-    this.cursorX = 0;
-    this.cursorStyle = {};
-    this.cursorChar = "_";
     this.lines = [];
+    this.tokens = [];
+    this.tokenizer = function(line, lineNumber) {
+      return line.split(" ").flatMap((n) => [n, " "]);
+    };
     this._tout000 = 0;
     this._saved = "";
     this.setFilePath(filePath);
@@ -1406,10 +1411,11 @@ class CodeBufferEditor {
     this.selections = [];
   }
   setFilePath(filePath) {
+    const ps = this.filePath.split(".");
+    this.tokenizer = getNamedTokenizer(ps[ps.length - 1]);
     this.filePath = filePath;
     this.lines = fs.readFileSync(filePath, { encoding: "utf-8" }).split("\n");
     this.updateTokens();
-    this.updateCursor();
   }
   save() {
     clearTimeout(this._tout000);
@@ -1419,49 +1425,33 @@ class CodeBufferEditor {
     }, 1e3);
   }
   // ── private ────────────────────────────────────────────────────────────
-  _ensureCursorInView() {
-    if (this.cursorY < this.viewportY) {
-      this.viewportY = this.cursorY;
-    } else if (this.cursorY >= this.viewportY + this.viewportHeight) {
-      this.viewportY = this.cursorY - this.viewportHeight;
+  _ensureCursorInView(cursor) {
+    if (cursor.y < this.viewportY) {
+      this.viewportY = cursor.y;
+    } else if (cursor.y >= this.viewportY + this.viewportHeight) {
+      this.viewportY = cursor.y - this.viewportHeight;
     }
-    if (this.cursorX < this.viewportX) {
-      this.viewportX = this.cursorX;
-    } else if (this.cursorX >= this.viewportX + this.viewportWidth) {
-      this.viewportX = this.cursorX - this.viewportWidth;
+    if (cursor.x < this.viewportX) {
+      this.viewportX = cursor.x;
+    } else if (cursor.x >= this.viewportX + this.viewportWidth) {
+      this.viewportX = cursor.x - this.viewportWidth;
     }
   }
   /**
-   * @returns {{ rowInWindow: number, colInWindow: number }}
-   *   0-based coords of the cursor inside the viewport
+   *
+   * @param lineNumber
    */
-  getCursorWindowCoords() {
-    return {
-      cursorY: this.cursorY - this.viewportY,
-      cursorX: this.cursorX - this.viewportX
-    };
+  updateTokensLine(lineNumber) {
+    this.tokens[lineNumber] = this.tokenizer(this.lines[lineNumber], lineNumber);
   }
   /**
    *
    */
   updateTokens() {
-    const ps = this.filePath.split(".");
-    const tokenizer = getNamedTokenizer(ps[ps.length - 1]);
-    this.tokens = this.lines.reduce((r, line, lineNumber) => {
-      const tokens = tokenizer(line, lineNumber);
-      r[lineNumber] = tokens;
-      return r;
-    }, {});
-  }
-  /**
-   *
-   */
-  updateCursor() {
-    const crs = this.getCursor({ x: this.cursorX, y: this.cursorY });
-    this.cursorX = crs.x;
-    this.cursorY = crs.y;
-    this.cursorChar = crs.char;
-    this.cursorStyle = crs.style;
+    this.tokens = [];
+    this.lines.forEach((line, lineNumber) => {
+      this.updateTokensLine(lineNumber);
+    });
   }
   /**
    *
@@ -1515,13 +1505,8 @@ class CodeBufferEditor {
       {}
     );
   }
-  // ── cursor moves ───────────────────────────────────────────────────────
-  setCursor(x, y) {
-    const currentLine = this.lines[y];
-    this.cursorX = x > currentLine.length ? currentLine.length : x;
-    this.cursorY = y;
-  }
   onMouse(screenEvent, viewportPosition) {
+    const THIS = this;
     let hasChanged = false;
     switch (screenEvent.action) {
       case "mousemove":
@@ -1542,12 +1527,10 @@ class CodeBufferEditor {
       case "mouseup":
         break;
       case "wheelup":
-        this.moveCursorUp();
-        hasChanged = true;
+        this.cursors = this.cursors.map((crs2) => THIS.moveCursorUp(crs2));
         break;
       case "wheeldown":
-        this.moveCursorDown();
-        hasChanged = true;
+        this.cursors = this.cursors.map((crs2) => THIS.moveCursorDown(crs2));
         break;
       default:
         throw new Error(safeStringify(screenEvent));
@@ -1633,17 +1616,14 @@ class CodeBufferEditor {
    * @param {CursorPoint} cursor
    * @returns {CursorPoint}
    */
-  moveCursorUp(cursor = null) {
-    cursor = cursor || new CursorPoint(this.cursorX, this.cursorY, this.cursorChar, { ...this.cursorStyle });
+  moveCursorUp(cursor) {
     if (cursor.y > 0) {
       cursor.y--;
       const line = this.lines[cursor.y];
       if (cursor.x >= line.length) {
         cursor.x = line.length;
       }
-      this.setCursor(cursor.x, cursor.y);
-      this._ensureCursorInView();
-      this.updateCursor();
+      this._ensureCursorInView(cursor);
     }
     return cursor;
   }
@@ -1652,16 +1632,13 @@ class CodeBufferEditor {
    * @param {CursorPoint} cursor
    * @returns {CursorPoint}
    */
-  moveCursorDown(cursor = null) {
-    cursor = cursor || new CursorPoint(this.cursorX, this.cursorY, this.cursorChar, { ...this.cursorStyle });
+  moveCursorDown(cursor) {
     if (cursor.y + 1 < this.lines.length) {
       if (cursor.x >= this.lines[cursor.y + 1].length) {
         cursor.x = this.lines[cursor.y + 1].length;
       }
       cursor.y++;
-      this.setCursor(cursor.x, cursor.y);
-      this._ensureCursorInView();
-      this.updateCursor();
+      this._ensureCursorInView(cursor);
     }
     return cursor;
   }
@@ -1670,13 +1647,10 @@ class CodeBufferEditor {
    * @param {CursorPoint} cursor
    * @returns {CursorPoint}
    */
-  moveCursorLeft(cursor = null) {
-    cursor = cursor || new CursorPoint(this.cursorX, this.cursorY, this.cursorChar, { ...this.cursorStyle });
+  moveCursorLeft(cursor) {
     if (cursor.x > 0) {
       cursor.x--;
-      this.setCursor(cursor.x, cursor.y);
-      this._ensureCursorInView();
-      this.updateCursor();
+      this._ensureCursorInView(cursor);
     }
     return cursor;
   }
@@ -1685,17 +1659,14 @@ class CodeBufferEditor {
    * @param {CursorPoint} cursor
    * @returns {CursorPoint}
    */
-  moveCursorRight(cursor = null) {
-    cursor = cursor || new CursorPoint(this.cursorX, this.cursorY, this.cursorChar, { ...this.cursorStyle });
+  moveCursorRight(cursor) {
     const line = this.lines[cursor.y];
     if (cursor.x < line.length) {
       cursor.x++;
     } else {
       cursor.x = line.length;
     }
-    this.setCursor(cursor.x, cursor.y);
-    this._ensureCursorInView();
-    this.updateCursor();
+    this._ensureCursorInView(cursor);
     return cursor;
   }
   moveCursorVertically(n, cursor) {
@@ -1722,7 +1693,6 @@ class CodeBufferEditor {
   }
   // ── edits ───────────────────────────────────────────────────────────────
   insert(text, cursor) {
-    cursor = cursor || { x: this.cursorX, y: this.cursorY };
     const oldLine = this.lines[cursor.y];
     const before = oldLine.substring(0, cursor.x);
     const after = oldLine.substring(cursor.x);
@@ -1730,13 +1700,12 @@ class CodeBufferEditor {
     let newLines = this.lines.slice(0, cursor.y);
     let oldLinesAfter = this.lines.slice(cursor.y + 1);
     this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
+    this.updateTokensLine(cursor.y);
     cursor.x++;
-    this.setCursor(cursor.x, cursor.y);
-    this._ensureCursorInView();
+    this._ensureCursorInView(cursor);
     return this;
   }
   delete(cursor) {
-    cursor = cursor || { x: this.cursorX, y: this.cursorY };
     const oldLine = this.lines[cursor.y];
     const before = oldLine.substring(0, cursor.x);
     const after = oldLine.substring(cursor.x + 1);
@@ -1744,12 +1713,11 @@ class CodeBufferEditor {
     let newLines = this.lines.slice(0, cursor.y);
     let oldLinesAfter = this.lines.slice(cursor.y + 1);
     this.lines = newLines.concat(newLine.split("\n")).concat(oldLinesAfter);
-    this.setCursor(cursor.x, cursor.y);
-    this._ensureCursorInView();
+    this.updateTokensLine(cursor.y);
+    this._ensureCursorInView(cursor);
     return this;
   }
   backspace(cursor) {
-    cursor = cursor || { x: this.cursorX, y: this.cursorY };
     if (cursor.x > 0) {
       cursor.x--;
       this.delete(cursor);
@@ -1758,9 +1726,9 @@ class CodeBufferEditor {
       cursor.y--;
       cursor.x = newCol;
       this.delete(cursor);
+      this.updateTokensLine(cursor.y);
     }
-    this.setCursor(cursor.x, cursor.y);
-    this._ensureCursorInView();
+    this._ensureCursorInView(cursor);
     return this;
   }
   // ── clone ──────────────────────────────────────────────────────────────
@@ -1773,12 +1741,10 @@ class CodeBufferEditor {
     clone.filePath = this.filePath;
     clone.viewportY = this.viewportY;
     clone.viewportX = this.viewportX;
-    clone.cursorY = this.cursorY;
-    clone.cursorX = this.cursorX;
-    clone.cursorStyle = this.cursorStyle;
-    clone.cursorChar = this.cursorChar;
     clone.lines = this.lines;
     clone.cursors = this.cursors;
+    clone.tokens = this.tokens;
+    clone.tokenizer = this.tokenizer;
     clone.selections = this.selections;
     clone._saved = this._saved;
     return clone;
@@ -1786,18 +1752,11 @@ class CodeBufferEditor {
   getStatus() {
     const range = Object.keys(this.renderViewport());
     const json = {
-      cursor: {
-        x: this.cursorX,
-        y: this.cursorY,
-        chr: this.cursorChar,
-        ...this.cursorStyle
-      },
+      cursor: this.cursors,
       v: { x: this.viewportX, y: this.viewportY, w: this.viewportWidth, h: this.viewportHeight },
       s: this._saved,
       l: range[0] + " ... " + range[range.length - 1]
     };
-    json.cursor[`${this.cursorX}-${this.viewportX}`] = this.cursorX - this.viewportX;
-    json.cursor[`${this.cursorY}-${this.viewportY}`] = this.cursorY - this.viewportY;
     return JSON.stringify(json).replace(/"/gi, "");
   }
 }
@@ -1856,8 +1815,7 @@ function CodeBufferEditorComponent({
       );
     }
     const padLength = Math.ceil(Math.log10(editor2.viewportHeight + editor2.viewportY)) + 1;
-    editor2.updateCursor();
-    return [...editor2.cursors, new CursorPoint(editor2.cursorX, editor2.cursorY, editor2.cursorChar, editor2.cursorStyle)].filter((cursor, y) => {
+    return [...editor2.cursors].filter((cursor, y) => {
       return cursor.y >= editor2.viewportY && cursor.y <= editor2.viewportY + editor2.viewportHeight;
     }).map((crs, id) => {
       const cursor = editor2.getCursor({ ...crs });
@@ -1897,9 +1855,7 @@ function CodeBufferEditorComponent({
       );
     }
     const padLength = Math.ceil(Math.log10(editor2.viewportHeight + editor2.viewportY)) + 1;
-    editor2.updateTokens();
     const lines = editor2.renderViewport();
-    const { cursorY, cursorX } = editor2.getCursorWindowCoords();
     return Object.keys(lines).flatMap((lineNumber, k) => {
       const line = lines[lineNumber];
       const lineNumberText = `${String(lineNumber).padStart(padLength, " ")}`;
@@ -1910,7 +1866,7 @@ function CodeBufferEditorComponent({
           top: k,
           width: padLength + 1,
           height: 1,
-          style: { bg: "#222222", fg: "#33aabb", inverse: editor2.cursorY == lineNumber },
+          style: { bg: "#222222", fg: "#33aabb", inverse: editor2.cursors.map((c) => c.y).indexOf(lineNumber) > -1 },
           content: lineNumberText + "│"
         },
         `${lineNumber}-lineNumber-${Date.now}`
@@ -2649,7 +2605,7 @@ function App(props) {
     setMessage(`dir selected ${Object.keys(dir)}`);
   };
   const onCurrentEditorChange = ({ editor: editor2, ch, key, screenEvent, viewport }) => {
-    setCurrentEditorText(safeStringify({ editor: { cursor: { x: editor2.cursorX, y: editor2.cursorY }, cursors: editor2.cursors }, viewport, ch, key, screenEvent }));
+    setCurrentEditorText(safeStringify({ editor: { cursors: editor2.cursors }, viewport, ch, key, screenEvent }));
   };
   const onCodeEditKeyPress = (ch, key) => {
   };
@@ -2775,7 +2731,12 @@ ${node.fullPath} selectedFile:${selectedFile} node.fullPath:${node.fullPath} `);
           )
         ] }) }),
         /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Git", children: /* @__PURE__ */ jsxRuntime_js.jsx(GitComponent, { rootDir, row: 0, col: 1, rowSpan: 1, colSpan: 5 }) }),
-        /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Debug", children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { children: debugView() }) })
+        /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Debug", children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { children: debugView() }) }),
+        /* @__PURE__ */ jsxRuntime_js.jsx(Tab, { name: "Quit", onTabClick: () => {
+          process.exit(0);
+        }, children: /* @__PURE__ */ jsxRuntime_js.jsx("box", { onTabClick: () => {
+          process.exit(0);
+        }, children: debugView() }) })
       ] }),
       /* @__PURE__ */ jsxRuntime_js.jsx(
         CodeBufferEditorComponent,

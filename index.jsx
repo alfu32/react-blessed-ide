@@ -1,18 +1,9 @@
 #!/usr/bin/env node
-// index.js
-// ─────────────────────────────────────────────────
-// polyfill for react’s rAF/cAF needs in Node
 import 'raf/polyfill';
-
-
-
-import React from 'react';
 import blessed from 'blessed'
 import { render } from 'react-blessed';
 import {App} from './src/App';
 import fs from 'fs'
-import msg from "blessed/lib/widgets/message";
-import Message from "blessed/lib/widgets/message";
 
 const screen = blessed.screen({
   smartCSR: true,

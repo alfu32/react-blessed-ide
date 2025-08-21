@@ -66,7 +66,7 @@ export function App(props){// Some Coment
       setMessage(JSON.stringify({a,b,c}))
   }
   const onCurrentEditorChange = ({editor,ch,key,screenEvent,viewport})=> {
-    setCurrentEditorText(safeStringify({editor: {cursor:{x:editor.cursorX,y:editor.cursorY},cursors:editor.cursors},viewport,ch,key,screenEvent}))
+    setCurrentEditorText(safeStringify({editor: {cursors:editor.cursors},viewport,ch,key,screenEvent}))
   }
   const onCodeEditKeyPress = (ch,key)=> {
     // setCurrentEditorText(JSON.stringify({ch,key}))
@@ -178,6 +178,11 @@ export function App(props){// Some Coment
               </Tab>
               <Tab name={'Debug'}>
                   <box>
+                      {debugView()}
+                  </box>
+              </Tab>
+              <Tab name={'Quit'} onTabClick={()=>{process.exit(0)}}>
+                  <box onTabClick={()=>{process.exit(0)}}>
                       {debugView()}
                   </box>
               </Tab>

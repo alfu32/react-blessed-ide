@@ -140,7 +140,7 @@ export function getTokenizer(tokenizerDef) {
      */
     return function tokenizer(code,lineNumber){
         const tokens=[]
-        for (const m of code.matchAll(tokenRegex)) {
+        for (const m of (code ).matchAll(tokenRegex)) {
             const groups = m.groups;
             const type = Object.keys(groups).find(key => groups[key] !== undefined);
             const tokenDef = tokenizerDef.definitions[type]
