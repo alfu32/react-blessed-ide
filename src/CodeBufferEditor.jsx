@@ -144,13 +144,18 @@ export function CodeBufferEditorComponent({
     if(editor == null || filePath==null){
         return
     }
-    const hasChanged = editor.onKey(ch,key)
+    const [hasChanged,mustRender] = editor.onKey(ch,key)
     if(hasChanged){
       const newLastEvent = {...lastEvent,editor,ch,key,viewport:boxRef.current.lpos}
       onChange(newLastEvent)
       setLastEvent(newLastEvent)
+      setEditor(editor.copy())
+    } else if (mustRender) {
+      const newLastEvent = {...lastEvent,editor,ch,key,viewport:boxRef.current.lpos}
+      onEvent(newLastEvent)
+      setLastEvent(newLastEvent)
+      setEditor(editor.copy())
     }
-    setEditor(editor.copy())
     // refresh();
   };
 

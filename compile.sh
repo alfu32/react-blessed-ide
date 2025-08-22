@@ -5,14 +5,16 @@ export CSS_TRANSFORMER_WASM=
 GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "none")
 GIT_COMMIT=$(git rev-parse HEAD)
 GIT_BRANCH=$(git branch --show-current)
+GIT_TIME=$(date +'%Y-%m-%d %H:%M:%S')
 
 
 name="John"
 cat > version.json <<EOF
 {
-  "GIT_TAG":"$GIT_TAG",
-  "GIT_COMMIT":"$GIT_COMMIT",
-  "GIT_BRANCH":"$GIT_BRANCH"
+  "tag":"$GIT_TAG",
+  "commit":"$GIT_COMMIT",
+  "branch":"$GIT_BRANCH",
+  "time":"$GIT_TIME"
 }
 EOF
 bun vt:build

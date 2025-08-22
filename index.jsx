@@ -13,7 +13,7 @@ import version from './version.json'
 const screen = blessed.screen({
   smartCSR: true,
   autoPadding: true,
-  title: `React-Blessed IDE ${version.GIT_TAG} ${version.GIT_BRANCH}  ${version.GIT_COMMIT}`,
+  title: `React-Blessed IDE ${version.tag} ${version.branch} ${version.commit} ${version.time}`,
   dump: 'terminal-dump.log'
 });
 

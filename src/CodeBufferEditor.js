@@ -4,7 +4,7 @@ import {safeStringify} from "./util";
 
 // test test
 
-
+// some test    multiple spaces
 export class CursorPoint{
   x=-1
   y=-1
@@ -15,6 +15,11 @@ export class CursorPoint{
     this.y=y||-1
     this.char=char||'-'
     this.style=style||{}
+  }
+  lookup(tokens){
+    const lineOfTokens = tokens[this.y]
+    const tk = lineOfTokens.match(tk => tk.start<=this.x && this.x<=tk.end)
+    return tk
   }
 }
 export class CodeBufferEditorSelection{
@@ -122,33 +127,30 @@ export class CodeBufferEditor {
     y=y<0?0:(y>(this.lines.length-1)?(this.lines.length-1):y)
     const line=this.lines[y]
     x=x<0?0:(x>(line.length)?(line.length):x)
+    x=parseInt(x)
+    y=parseInt(y)
     crs.x=x
     crs.y=y
 
-    const lineNumber=parseInt(y)
-
-    let tokens=null
-    try {
-      tokens = this.tokenizer(line,lineNumber)
-    }catch(err){
-      tokens = this.tokens[y]
+    const tokens = [...this.tokens[y]]
+    if(tokens.length === 0 || x === line.length) {
+      crs.char=' '
+      crs.style={fg:"#ff0000",bg:"#ffff44"}
+      return crs
     }
 
     // 3) scan tokens to find which one covers colInWindow
-    let col = 0;
-    crs.char = this.lines[y][x]||' '
-    for (const tok of tokens) {
-      if( x >= tok.start && x < tok.end) {
-        crs.style = tok.style;
-        break
+    crs.char = this.lines[y][x]
+    const tkLookup = tokens.filter(t => ( ( x >= parseInt(t.start) ) && ( x <= parseInt(t.end) ) ) )
+    if(tkLookup.length === 0){
+      crs.style = {fg:"#ff0000",bg:"#ffff44"}
+      throw new Error(safeStringify({msg:"no token",x,y,tkLookup,tokens}))
+    }else{
+      try{
+        crs.style = tkLookup[0].style
+      }catch (e) {
+        throw new Error(safeStringify({msg:"no token style",x,y,tkLookup,tokens}))
       }
-      col += tok.text.length;
-    }
-
-    // 4) fallback to last token’s style (e.g. past EOL)
-    if(crs.style){
-      const last = tokens.slice(-1)[0];
-      crs.style = last ? last.style : {};
     }
     return crs
   }
@@ -208,30 +210,75 @@ export class CodeBufferEditor {
   onKey(ch,key,onChange=()=>{}){
   const THIS = this
   let hasChanged=false
+  let mustRender=false
     switch (key.name) {
       case 'up':
         this.cursors=this.cursors.map(crs => THIS.moveCursorUp(crs));
+        mustRender=true
       break;
       case 'down':
         this.cursors=this.cursors.map(crs => THIS.moveCursorDown(crs));
+        mustRender=true
       break;
       case 'left':
-        this.cursors=this.cursors.map(crs => THIS.moveCursorLeft(crs));
+        if(key.ctrl){
+          this.cursors=this.cursors.map(crs => {
+            const line = this.lines[crs.y]
+            if(((crs.x-1)>0) && line[crs.x-1] === ' '){
+              crs.x-=2
+              return crs
+            }
+            while(crs.x>=0) {
+              if(line[crs.x] === ' ' || crs.x === 0){
+                crs.x+=(crs.x === 0?0:1)
+                break
+              }
+              crs.x-=1
+            }
+            return crs
+          });
+        }else{
+          this.cursors=this.cursors.map(crs => THIS.moveCursorLeft(crs));
+        }
+        mustRender=true
       break;
       case 'right':
-        this.cursors=this.cursors.map(crs => THIS.moveCursorRight(crs));
+        if(key.ctrl){
+          this.cursors=this.cursors.map(crs => {
+            const line = this.lines[crs.y]
+            if(((crs.x+1)<line.length) && line[crs.x+1] === ' '){
+              crs.x+=2
+              return crs
+            }
+            while(crs.x<line.length) {
+              if(line[crs.x] === ' '){
+                crs.x-=1
+                break
+              }
+              crs.x+=1
+            }
+            return crs
+          });
+        }else{
+          this.cursors=this.cursors.map(crs => THIS.moveCursorRight(crs));
+        }
+        mustRender=true
       break;
       case 'home':
         this.cursors=this.cursors.map(crs => THIS.getCursor({x:0,y:crs.y}));
+        mustRender=true
         break;
       case 'end':
         this.cursors=this.cursors.map(crs => THIS.getCursor({x:this.lines[crs.y].length,y:crs.y}));
+        mustRender=true
         break;
       case 'pageup':
         this.scrollViewport(-this.viewportHeight);
+        mustRender=true
       break;
       case 'pagedown':
         this.scrollViewport(this.viewportHeight);
+        mustRender=true
       break;
       case 'backspace':
         this.cursors.forEach(crs => THIS.backspace(crs))
@@ -280,7 +327,7 @@ export class CodeBufferEditor {
           }
         }
     }
-    return hasChanged
+    return [hasChanged,mustRender]
   }
 
   /**

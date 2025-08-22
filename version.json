@@ -1,5 +1,6 @@
 {
-  "GIT_TAG":"2.3.0",
-  "GIT_COMMIT":"999e1ae09f25974225e3bd58b83c55401dfb7a5b",
-  "GIT_BRANCH":"work"
+  "tag":"2.3.1",
+  "commit":"40eb802dde1630568be391aaf5b8532490a3110e",
+  "branch":"work",
+  "time":"2025-08-22 18:18:10"
 }
