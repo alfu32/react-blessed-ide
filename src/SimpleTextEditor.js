@@ -1,5 +1,5 @@
-import {ScreenEvent} from 'react-blessed'
-import {getTokenizer, TokenizerToken} from './tokenizer'
+// import {ScreenEvent} from 'react-blessed'
+import {getTokenizer, TokenizerToken} from './tokenizer.js'
 /**
  *
  * @param {SimpleTextEditor} eventData
@@ -8,7 +8,7 @@ import {getTokenizer, TokenizerToken} from './tokenizer'
 export function Listener(eventData){return ()=>{}}
 
 
-class EditorEvent{
+export class EditorEvent {
     /**
      * @type {ScreenEvent}
      */

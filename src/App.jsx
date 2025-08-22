@@ -24,7 +24,8 @@ const listingTokenizerDefinition={
         "Word":           {style: {fg:'yellow'},pattern:/\s.+?\s/mgi},
     }
 }
-export function App(props){// Some Coment
+export function App(props){
+  // Some Coment
   const openedFilesRef=useRef(null);
   const [message, setMessage] = useState(false);
   const [pickFolder, setPickFolder] = useState(false);
@@ -182,7 +183,7 @@ export function App(props){// Some Coment
                   </box>
               </Tab>
               <Tab name={'Quit'} onTabClick={()=>{process.exit(0)}}>
-                  <box>
+                  <box onTabClick={()=>{process.exit(0)}}>
                       {debugView()}
                   </box>
               </Tab>
@@ -194,6 +195,7 @@ export function App(props){// Some Coment
                       filePath={selectedFile||null}
                       onKeypress={onCodeEditKeyPress}
                       onChange={onCurrentEditorChange}
+                      onEvent={onCurrentEditorChange}
           />
           <box
               row={6} col={5} rowSpan={2} colSpan={10}

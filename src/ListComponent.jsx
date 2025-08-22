@@ -6,11 +6,10 @@ import {
     TextareaElement as textarea,
     TextElement as text
 } from 'react-blessed';
-import {SimpleTextEditor} from "./SimpleTextEditor.js";
+import {SimpleTextEditor,EditorEvent} from "./SimpleTextEditor.js";
 import {debounced, safeStringify} from "./util";
 import {getNamedTokenizer, getTokenizer} from "./tokenizer";
 import {ScreenEvent} from "react-blessed";
-import {EditorEvent} from './SimpleTextEditor'
 
 
 /**

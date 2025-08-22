@@ -2,6 +2,9 @@ import fs from 'fs';
 import {getNamedTokenizer, TokenizerToken} from './tokenizer.js';
 import {safeStringify} from "./util";
 
+// test test
+
+
 export class CursorPoint{
   x=-1
   y=-1
@@ -67,6 +70,17 @@ export class CodeBufferEditor {
 
   // ── private ────────────────────────────────────────────────────────────
 
+  scrollViewport(n) {
+    let nextY=this.viewportY+n
+    let maxY = this.lines.length - 1
+    if (nextY < 0) {
+      this.viewportY=0;
+    } else if ( (nextY +this.viewportHeight)  > maxY) {
+      this.viewportY=maxY-this.viewportHeight;
+    } else {
+      this.viewportY = nextY
+    }
+  }
   _ensureCursorInView(cursor) {
     if (cursor.y < this.viewportY) {
       this.viewportY = cursor.y;
@@ -104,24 +118,25 @@ export class CodeBufferEditor {
    */
   getCursor({x,y}){
     let crs = new CursorPoint()
+    // clamp x,y
+    y=y<0?0:(y>(this.lines.length-1)?(this.lines.length-1):y)
+    const line=this.lines[y]
+    x=x<0?0:(x>(line.length)?(line.length):x)
     crs.x=x
     crs.y=y
 
-    const line=this.lines[y]
-    const ps = this.filePath.split('.')
     const lineNumber=parseInt(y)
-    const tokenizer = getNamedTokenizer(ps[ps.length-1])
 
     let tokens=null
     try {
-      tokens = tokenizer(line,lineNumber)
+      tokens = this.tokenizer(line,lineNumber)
     }catch(err){
       tokens = this.tokens[y]
     }
 
     // 3) scan tokens to find which one covers colInWindow
     let col = 0;
-    crs.char = ((this.lines[y]||"x")[x])||'y'
+    crs.char = this.lines[y][x]||' '
     for (const tok of tokens) {
       if( x >= tok.start && x < tok.end) {
         crs.style = tok.style;
@@ -158,6 +173,8 @@ export class CodeBufferEditor {
   onMouse(screenEvent,viewportPosition){
     const THIS = this
     let hasChanged=false
+    let mustRender=false
+    const clicks = Array.from(screenEvent.buf||[]).filter(v => v === 77).length
     switch(screenEvent.action){
       case 'mousemove':break;
       case 'mousedown':
@@ -177,14 +194,16 @@ export class CodeBufferEditor {
 
         break;
       case 'wheelup':
-        this.cursors=this.cursors.map(crs => THIS.moveCursorUp(crs));
+        this.scrollViewport(-clicks)
+        mustRender=true
       break;
       case 'wheeldown':
-        this.cursors=this.cursors.map(crs => THIS.moveCursorDown(crs));
+        this.scrollViewport(clicks)
+        mustRender=true
       break;
       default: throw new Error(safeStringify(screenEvent)); break;
     }
-    return hasChanged
+    return [hasChanged,mustRender]
   }
   onKey(ch,key,onChange=()=>{}){
   const THIS = this
@@ -209,10 +228,10 @@ export class CodeBufferEditor {
         this.cursors=this.cursors.map(crs => THIS.getCursor({x:this.lines[crs.y].length,y:crs.y}));
         break;
       case 'pageup':
-        this.moveCursorVertically(-this.viewportHeight);
+        this.scrollViewport(-this.viewportHeight);
       break;
       case 'pagedown':
-        this.moveCursorVertically(this.viewportHeight);
+        this.scrollViewport(this.viewportHeight);
       break;
       case 'backspace':
         this.cursors.forEach(crs => THIS.backspace(crs))

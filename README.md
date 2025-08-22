@@ -5,8 +5,14 @@ A terminal-based IDE built with React-Blessed, inspired by Sublime Text and VSCo
 No plugins—just a simple, integrated TUI with file tree, Git status, editor pane, and modal dialogs.
 
 Repository: https://github.com/alfu32/react-blessed-ide
+// scscsc
+---asdfasdfasd--------
 
 
+### project side panel
+
+
+```
 ┌─────────────────────────────────┐┌──────────────────────────────────────────────────┐
 │[*]Project     [ ]Git            ││                                                  │
 │  [-] term-blessed-react         ││                                                  │
@@ -15,7 +21,7 @@ Repository: https://github.com/alfu32/react-blessed-ide
 │  [+] .idea                      ││                                                  │
 │    App.jsx                      ││                                                  │
 │    Counter.jsx                  ││                                                  │
-│    FileTree1.jsx                 ││                                                  │
+│    FileTree1.jsx                ││                                                  │
 │    FolderPickerDialog.jsx       ││                                                  │
 │    GitPanel.jsx                 ││                                                  │
 │    ModalDialog.jsx              ││                                                  │
