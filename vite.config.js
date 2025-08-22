@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   build: {
     ssr: true,                      // build for Node
+    sourcemap:"inline",
     outDir: 'dist',
     rollupOptions: {
       input: 'index.jsx',         // our CLI entry

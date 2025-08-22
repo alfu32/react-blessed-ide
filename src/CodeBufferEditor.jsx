@@ -8,6 +8,7 @@ export function CodeBufferEditorComponent({
     filePath,
     onKeypress=(ch,key) =>{},
     onChange = ({editor,ch,key,screenEvent,viewport}) => {},
+    onEvent = ({editor,ch,key,screenEvent,viewport}) => {},
     ...boxProps
 }) {
   const boxRef = useRef();
@@ -157,10 +158,15 @@ export function CodeBufferEditorComponent({
     if(!editor){
       return
     }
-    const mustChange = editor.onMouse(screenEvent,boxRef.current.lpos)
+    const [mustChange,mustRender] = editor.onMouse(screenEvent,boxRef.current.lpos)
     if(mustChange){
       const newLastEvent = {...lastEvent,editor,screenEvent,viewport:boxRef.current.lpos}
       onChange(newLastEvent)
+      setLastEvent(newLastEvent)
+      setEditor(editor.copy())
+    } else if (mustRender) {
+      const newLastEvent = {...lastEvent,editor,screenEvent,viewport:boxRef.current.lpos}
+      onEvent(newLastEvent)
       setLastEvent(newLastEvent)
       setEditor(editor.copy())
     }

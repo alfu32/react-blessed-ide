@@ -103,6 +103,18 @@ function testCopy() {
     console.assert(ed2.cursorIndex === 2, `❌ copy should freeze cursorIndex`);
     console.log(`✔️ copy creates an independent clone`);
 }
+function testRandom(){
+
+    const aaa="that hasnt translated in any kind of action and what i think its interesting that these are large scale agreements".match(/.{20}/gi)
+    console.log(aaa.join("\n"));
+}
+
+function testBuffer(){
+    const b = Buffer.from([12,123,123,12,33,23,23,777,3,45,3,6,54,56,45,6,45,6,4,56,4,56,55,45,6,4,56,4,77,77,46,56])
+    console.log(b)
+    console.log(b.buffer)
+    console.log(Array.from(b).filter(v => v===77))
+}
 
 // Run all
 testRenderToLines();
@@ -111,6 +123,5 @@ testCursorMovement();
 testHomeEnd();
 testEditOps();
 testCopy();
-
-const aaa="that hasnt translated in any kind of action and what i think its interesting that these are large scale agreements".match(/.{20}/gi)
-console.log(aaa.join("\n"));
+testRandom();
+testBuffer();

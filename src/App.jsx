@@ -195,6 +195,7 @@ export function App(props){
                       filePath={selectedFile||null}
                       onKeypress={onCodeEditKeyPress}
                       onChange={onCurrentEditorChange}
+                      onEvent={onCurrentEditorChange}
           />
           <box
               row={6} col={5} rowSpan={2} colSpan={10}

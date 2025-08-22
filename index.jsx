@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 import 'raf/polyfill';
-import blessed from 'blessed'
+import blessed from 'neo-blessed'
 import { render } from 'react-blessed';
 import {App} from './src/App';
 import fs from 'fs'
+import "neo-blessed/lib/widgets/node";       // literal path so tree-shaker keeps it
+import "neo-blessed/lib/widgets/element";    // add others if your code reaches them
+import "neo-blessed/lib/widgets/screen";       // literal path so tree-shaker keeps it
+import "neo-blessed/lib/blessed";    // add others if your code reaches them
 
 const screen = blessed.screen({
   smartCSR: true,
