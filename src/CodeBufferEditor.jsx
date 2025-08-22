@@ -109,6 +109,12 @@ export function CodeBufferEditorComponent({
                style={{bg: '#222222', fg: '#33aabb', inverse: editor.cursors.map(c =>c.y).indexOf(lineNumber)>-1}}
                content={lineNumberText+'│'}
           />)
+      const plainLineText = (
+          <box key={`code-${lineNumber}-${Date.now()}`}
+               left={padLength + 1 + 1} top={k} width={editor.lines[lineNumber].length} height={1}
+               style={{bg: '#222222', fg: '#33aabb', inverse: editor.cursors.map(c =>c.y).indexOf(lineNumber)>-1}}
+               content={editor.lines[lineNumber]}
+          />)
       return line.reduce((a, t) => {
         a.push(
             <box key={`${t.x}-${t.y}-${Date.now()}`}
@@ -119,7 +125,8 @@ export function CodeBufferEditorComponent({
         )
         return a
       }, [
-        lineNumberBox/*,
+        lineNumberBox,
+        plainLineText/*,
         <box
           key={`terminator-${lineNumber}-${Date.now()}`}
           left={padLength + 1 + line.length} top={lineNumber - editor.viewportY} width={1} height={1}

@@ -1871,6 +1871,18 @@ function CodeBufferEditorComponent({
         },
         `${lineNumber}-lineNumber-${Date.now}`
       );
+      const plainLineText = /* @__PURE__ */ jsxRuntime_js.jsx(
+        "box",
+        {
+          left: padLength + 1 + 1,
+          top: k,
+          width: editor2.lines[lineNumber].length,
+          height: 1,
+          style: { bg: "#222222", fg: "#33aabb", inverse: editor2.cursors.map((c) => c.y).indexOf(lineNumber) > -1 },
+          content: editor2.lines[lineNumber]
+        },
+        `code-${lineNumber}-${Date.now()}`
+      );
       return line.reduce((a, t) => {
         a.push(
           /* @__PURE__ */ jsxRuntime_js.jsx(
@@ -1888,7 +1900,8 @@ function CodeBufferEditorComponent({
         );
         return a;
       }, [
-        lineNumberBox
+        lineNumberBox,
+        plainLineText
         /*,
         <box
           key={`terminator-${lineNumber}-${Date.now()}`}

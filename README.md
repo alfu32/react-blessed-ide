@@ -21,7 +21,7 @@ Repository: https://github.com/alfu32/react-blessed-ide
 │  [+] .idea                      ││                                                  │
 │    App.jsx                      ││                                                  │
 │    Counter.jsx                  ││                                                  │
-│    FileTree1.jsx                 ││                                                  │
+│    FileTree1.jsx                ││                                                  │
 │    FolderPickerDialog.jsx       ││                                                  │
 │    GitPanel.jsx                 ││                                                  │
 │    ModalDialog.jsx              ││                                                  │
