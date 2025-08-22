@@ -8,11 +8,12 @@ import "neo-blessed/lib/widgets/node";       // literal path so tree-shaker keep
 import "neo-blessed/lib/widgets/element";    // add others if your code reaches them
 import "neo-blessed/lib/widgets/screen";       // literal path so tree-shaker keeps it
 import "neo-blessed/lib/blessed";    // add others if your code reaches them
+import version from './version.json'
 
 const screen = blessed.screen({
   smartCSR: true,
   autoPadding: true,
-  title: 'React-Blessed IDE',
+  title: `React-Blessed IDE ${version.GIT_TAG} ${version.GIT_BRANCH}  ${version.GIT_COMMIT}`,
   dump: 'terminal-dump.log'
 });
 

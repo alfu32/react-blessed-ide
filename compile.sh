@@ -2,6 +2,19 @@
 
 export CSS_TRANSFORMER_WASM=
 
+GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "none")
+GIT_COMMIT=$(git rev-parse HEAD)
+GIT_BRANCH=$(git branch --show-current)
+
+
+name="John"
+cat > version.json <<EOF
+{
+  "GIT_TAG":"$GIT_TAG",
+  "GIT_COMMIT":"$GIT_COMMIT",
+  "GIT_BRANCH":"$GIT_BRANCH"
+}
+EOF
 bun vt:build
 echo '#!/home/alfu64/.bun/bin/bun' > ./dist/edy.jsx
 cat ./dist/app.js > ./dist/edy.jsx
