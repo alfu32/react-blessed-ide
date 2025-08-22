@@ -24,7 +24,8 @@ const listingTokenizerDefinition={
         "Word":           {style: {fg:'yellow'},pattern:/\s.+?\s/mgi},
     }
 }
-export function App(props){// Some Coment
+export function App(props){
+  // Some Coment
   const openedFilesRef=useRef(null);
   const [message, setMessage] = useState(false);
   const [pickFolder, setPickFolder] = useState(false);
