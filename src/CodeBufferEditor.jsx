@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {CodeBufferEditor, CursorPoint} from './CodeBufferEditor.js';
+import {CodeBufferEditor, CursorPoint, Rectangle} from './CodeBufferEditor.js';
 import { BoxElement as box, TextElement as text } from 'react-blessed';
 import {safeStringify} from "./util";
 
@@ -55,7 +55,7 @@ export function CodeBufferEditorComponent({
       setEditor(editor.copy())
     }
   }, [size]);
-  const cursors = ()=>{
+  const renderCursors = ()=>{
     if(!editor){
         return (
           <box key={`0-1-no-file`}
@@ -78,6 +78,30 @@ export function CodeBufferEditorComponent({
               style={{...cursor.style,underline: true,bold:true,inverse:true}}
               tags={false}
               content={cursor.char}
+          />
+        })
+
+  }
+  const renderSelections = () => {
+    if(!editor){
+      return []
+    }
+    const padLength=Math.ceil(Math.log10(editor.viewportHeight+editor.viewportY))+1
+    const visibleArea = Rectangle.fromEditor(editor)
+
+    return [...editor.selections]
+        .concat([editor.selectStart])
+        .filter((selection,y)=>{
+          return selection !== null && selection.isVisible(visibleArea)
+        })
+        .map((selection,id)=>{
+          const content=editor.lines[selection.start.y].substring(selection.start.x,selection.end.x+1)
+          const style = selection.start.style
+          return <box key={`selection-${id}-${Date.now()}`}
+                      left={selection.start.x-editor.viewportX+padLength+1+ 1} top={selection.start.y-editor.viewportY} width={content.length} height={1}
+                      style={{...style,underline: true,bold:true,inverse:true}}
+                      tags={false}
+                      content={content}
           />
         })
 
@@ -209,7 +233,8 @@ export function CodeBufferEditorComponent({
         tags={false}
         style={{fg:'black',bg:'yellow'}}
       />
-      {cursors()}
+      {renderCursors()}
+      {renderSelections()}
     </box>
   );
 }

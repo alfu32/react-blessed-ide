@@ -3,7 +3,34 @@ import {getNamedTokenizer, TokenizerToken} from './tokenizer.js';
 import {safeStringify} from "./util";
 
 // test test
+export class Rectangle{
+  x=-1
+  y=-1
+  w=-1
+  h=-1
 
+  /**
+   *
+   * @param {number} x
+   * @param {number} y
+   * @param {number} w
+   * @param {number} h
+   */
+  constructor(x,y,w,h){
+    this.x = x
+    this.y = y
+    this.w = w
+    this.h = h
+  }
+
+  /**
+   *
+   * @param {CodeBufferEditor} editor
+   */
+  static fromEditor(editor) {
+    return new Rectangle(editor.viewportX, editor.viewportY, editor.viewportWidth, editor.viewportHeight)
+  }
+}
 // some test    multiple spaces
 export class CursorPoint{
   x=-1
@@ -20,6 +47,16 @@ export class CursorPoint{
     const lineOfTokens = tokens[this.y]
     const tk = lineOfTokens.match(tk => tk.start<=this.x && this.x<=tk.end)
     return tk
+  }
+
+  /**
+   *
+   * @param {Rectangle} visibleArea
+   * @returns boolean
+   */
+  isVisible(visibleArea){
+    return this.x>=visibleArea.x && this.x <= (visibleArea.x + visibleArea.w) &&
+        this.y>=visibleArea.y && this.y <= (visibleArea.y+visibleArea.h)
   }
   copy(){
     const cp = new CursorPoint()
@@ -40,8 +77,19 @@ export class CodeBufferEditorSelection{
    * @param {CursorPoint} start
    */
   constructor(start) {
-    this.start=start
+    this.start=start.copy()
   }
+
+  /**
+   *
+   * @param {Rectangle} visibleArea
+   * @returns boolean
+   */
+  isVisible(visibleArea){
+    return this.start.isVisible(visibleArea) || this.end.isVisible(visibleArea)
+  }
+
+
 
   /**
    *
@@ -216,26 +264,34 @@ export class CodeBufferEditor {
           const {xi, yi} = viewportPosition;
           const {x, y} = screenEvent;
           const cursor = {x: (x - xi - padLength - 1 - 1 - 1 + this.viewportX), y: (y - yi - 1 + this.viewportY)}
-          this.selectStart = new CodeBufferEditorSelection(cursor)
+          const crs = this.getCursor(cursor)
+          this.selectStart = new CodeBufferEditorSelection(crs)
+          this.selectStart.setEnd(crs)
+          if (screenEvent.meta) {
+            this.cursors.push(crs)
+          } else {
+            this.cursors = [crs]
+          }
+          hasChanged = true
         }
         break;
-      case 'mousemove':
-        break;
-      case 'mouseup': {
+      case 'mousemove': {
           const padLength = Math.ceil(Math.log10(this.viewportHeight + this.viewportY)) + 1
           const {xi, yi} = viewportPosition;
           const {x, y} = screenEvent;
           const cursor = {x: (x - xi - padLength - 1 - 1 - 1 + this.viewportX), y: (y - yi - 1 + this.viewportY)}
           const crs = this.getCursor(cursor)
-          this.selectStart = this.selectStart ? this.selectStart.setEnd(crs) : null
-          if (screenEvent.meta) {
-            this.cursors.push(crs)
-            if(this.selectStart) {
+          if (this.selectStart) {
+            this.selectStart.setEnd(crs)
+          }
+          mustRender=true
+        }
+        break;
+      case 'mouseup': {
+          if(this.selectStart){
+            if (screenEvent.meta) {
               this.selections.push(this.selectStart.copy())
-            }
-          } else {
-            this.cursors = [crs]
-            if(this.selectStart) {
+            } else {
               this.selections=[this.selectStart.copy()]
             }
           }
