@@ -13,11 +13,11 @@ import version from './version.json'
 const screen = blessed.screen({
   smartCSR: true,
   autoPadding: true,
-  title: `React-Blessed IDE ${version.tag} ${version.branch} ${version.commit} ${version.time}`,
+  title: `EDY v${version.tag} (${version.branch}${version.commit.substring(0,8)}) t ${version.time}`,
   dump: 'terminal-dump.log'
 });
 
-// quit on Ctrl+C
+// quit on Ctrl+C // 
 screen.key(["C-q", 'f12'], () => process.exit(0));
 screen.key(["C-s", "C-S-s", 'f8'], () => {
   // after you’ve created your screen…

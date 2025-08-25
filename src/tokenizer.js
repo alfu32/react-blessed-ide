@@ -13,13 +13,14 @@ export function highlight(line) {
 export class TokenizerMatcherDef{
     style = {}
     pattern = ''
+    subtokenizer = null
 }
 export class TokenizerDef{
     name = '';
     flags='mgi'
     /**
      *
-     * @type {{[name:string]:TokenizerDef}}
+     * @type {{[name:string]:TokenizerMatcherDef}}
      */
     definitions = {}
 }
@@ -81,10 +82,20 @@ export const namedTokenizers={
         Identifier:   {style: {fg:'green'},pattern:/[A-Za-z_]\w*/mig},
         Others:       {style: {fg:'white'},pattern:/[^]/smig},
     }},
+    htmx:{name:'htmx',flags:'mg',definitions:{
+        TagDelim:   {style: {fg:'#FFDD00'},pattern:/<|<\/|\/>|>/ig},
+        AttributeName: {style: {fg:'cyan'},pattern:/[0-9a-zA-Z:@-]*/ig},
+        Equal: {style: {fg:'magenta'},pattern:/=/ig},
+        JsxValue:  {style: {fg:'green'},pattern:/\{.*?}/mig,subtokenizer:'js'},
+        AttributeValue:    {style: {fg:'yellow'},pattern:/".*?"/mig},
+        Whitespace:   {style: {fg:'white'},pattern:/\s+/mig},
+        Others:       {style: {fg:'white'},pattern:/.*?/mig},
+    }},
     jsx:{name:'jsx',flags:'mg',definitions:{
         ReactToken:   {style: {fg:'#FFDD00'},pattern:/\buse[A-Z][a-z]*\b/mig},
         Keyword:      {style: {fg:'magenta'},pattern:/\b(as|from|default|const|let|var|function|if|else|for|while|return|class|import|export|new|await|async|try|catch|throw|switch|case|break|continue)\b/mig},
-        JsxTag:       {style: {fg:'#FFDD00'},pattern:/<(\/)?[a-zA-Z-]*>/mig},
+        JsxEndTag:    {style: {fg:'yellow'},pattern:/<\/[a-zA-Z-]*>/mig},
+        JsxStartTag:  {style: {fg:'yellow'},pattern:/<[a-zA-Z-]*.*?>/mig,subtokenizer:'htmx'},
         Comment:      {style: {fg:'#779977'},pattern:/\/\/.*$/mig},
         // MComment:     {style: {fg:'#779999'},pattern:'/\\*.*\\*/'},
         Number:       {style: {fg:'red'},pattern:/\d+(?:\.\d+)?/mig},
@@ -144,7 +155,19 @@ export function getTokenizer(tokenizerDef) {
             const groups = m.groups;
             const type = Object.keys(groups).find(key => groups[key] !== undefined);
             const tokenDef = tokenizerDef.definitions[type]
-            tokens.push(TokenizerToken.fromRegexpMatch(m,tokenizerDef,tokenizerDef.name,lineNumber))
+            const gt = TokenizerToken.fromRegexpMatch(m,tokenizerDef,tokenizerDef.name,lineNumber)
+            //if(typeof(tokenDef.subtokenizer) === "string"){
+            //    const stk = getNamedTokenizer(tokenDef.subtokenizer)
+            //    stk(gt.text,lineNumber).forEach( subtoken => {
+            //        subtoken.start+=gt.start
+            //        subtoken.end+=gt.start
+            //        subtoken.x+=gt.start
+            //        subtoken.y=gt.y
+            //        tokens.push(subtoken)
+            //    })
+            //}else{
+                tokens.push(gt)
+            //}
         }
         return tokens
     }

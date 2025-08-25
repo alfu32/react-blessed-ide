@@ -331,10 +331,12 @@ export class CodeBufferEditor {
     switch (key.full) {
       case 'up':
         this.cursors=this.cursors.map(crs => THIS.moveCursorUp(crs));
+        this.selectStart = key.meta?this.selectStart:null
         mustRender=true
       break;
       case 'down':
         this.cursors=this.cursors.map(crs => THIS.moveCursorDown(crs));
+        this.selectStart = key.meta?this.selectStart:null
         mustRender=true
       break;
       case 'left':
@@ -357,6 +359,7 @@ export class CodeBufferEditor {
         }else{
           this.cursors=this.cursors.map(crs => THIS.moveCursorLeft(crs));
         }
+        this.selectStart = key.meta?this.selectStart:null
         mustRender=true
       break;
       case 'right':
@@ -379,6 +382,7 @@ export class CodeBufferEditor {
         }else{
           this.cursors=this.cursors.map(crs => THIS.moveCursorRight(crs));
         }
+        this.selectStart = key.meta?this.selectStart:null
         mustRender=true
       break;
       case 'home':
