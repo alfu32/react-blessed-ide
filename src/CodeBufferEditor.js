@@ -25,6 +25,9 @@ export class CursorPoint{
 export class CodeBufferEditorSelection{
   start= new CursorPoint()
   end= new CursorPoint()
+  constructor(start) {
+    this.start=start
+  }
 }
 
 export class CodeBufferEditor {
@@ -52,6 +55,7 @@ export class CodeBufferEditor {
      * @type {CursorPoint[]}
      */
     this.cursors=[]
+    this.selectStart=null
     /**
      *
      * @type {CodeBufferEditorSelection[]}
@@ -178,22 +182,33 @@ export class CodeBufferEditor {
     let mustRender=false
     const clicks = Array.from(screenEvent.buf||[]).filter(v => v === 77).length
     switch(screenEvent.action){
-      case 'mousemove':break;
-      case 'mousedown':
-        const padLength=Math.ceil(Math.log10(this.viewportHeight+this.viewportY))+1
-        const {xi,yi} = viewportPosition;
-        const {x,y} = screenEvent;
-        const cursor= {x:(x-xi - padLength - 1 - 1 - 1 + this.viewportX), y:(y-yi - 1 + this.viewportY)}
-        const crs=this.getCursor(cursor)
-        if(screenEvent.meta){
-          this.cursors.push(crs)
-        }else{
-          this.cursors=[crs]
+      case 'mousedown': {
+          const padLength = Math.ceil(Math.log10(this.viewportHeight + this.viewportY)) + 1
+          const {xi, yi} = viewportPosition;
+          const {x, y} = screenEvent;
+          const cursor = {x: (x - xi - padLength - 1 - 1 - 1 + this.viewportX), y: (y - yi - 1 + this.viewportY)}
+          this.selectStart = new CodeBufferEditorSelection(cursor)
         }
-        hasChanged=true
         break;
-      case 'mouseup':
-
+      case 'mousemove':break;
+      case 'mouseup': {
+          const padLength = Math.ceil(Math.log10(this.viewportHeight + this.viewportY)) + 1
+          const {xi, yi} = viewportPosition;
+          const {x, y} = screenEvent;
+          const cursor = {x: (x - xi - padLength - 1 - 1 - 1 + this.viewportX), y: (y - yi - 1 + this.viewportY)}
+          const crs = this.getCursor(cursor)
+          if (screenEvent.meta) {
+            this.cursors.push(crs)
+          } else {
+            this.cursors = [crs]
+            if(this.selectStart) {
+              this.selectStart = this.selectStart ? this.selectStart.setEnd().copy() : null
+            }
+            this.selections=
+          }
+          hasChanged = true
+          this.selectStart = null
+      }
         break;
       case 'wheelup':
         this.scrollViewport(-clicks)
@@ -487,6 +502,7 @@ export class CodeBufferEditor {
     clone.tokens=this.tokens
     clone.tokenizer=this.tokenizer
     clone.selections=this.selections
+    clone.selectStart=this.selectStart
     clone._saved=this._saved
     return clone;
   }
