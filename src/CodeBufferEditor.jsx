@@ -94,14 +94,24 @@ export function CodeBufferEditorComponent({
         .filter((selection,y)=>{
           return selection !== null && selection.isVisible(visibleArea)
         })
-        .map((selection,id)=>{
-          const content=editor.lines[selection.start.y].substring(selection.start.x,selection.end.x+1)
-          const style = selection.start.style
+        .flatMap(s => {
+          const lines=[]
+          for(let y=s.start.y;y<=s.end.y;y++){
+            lines.push({
+              x:s.start.x-editor.viewportX+padLength+1+ 1,
+              y:y-editor.viewportY,
+              style: s.start.style,
+              content:(editor.lines[y].substring(s.start.x, s.end.x + 1)),
+            })
+          }
+          return lines
+        })
+        .map((rs,id)=>{
           return <box key={`selection-${id}-${Date.now()}`}
-                      left={selection.start.x-editor.viewportX+padLength+1+ 1} top={selection.start.y-editor.viewportY} width={content.length} height={1}
-                      style={{...style,underline: true,bold:true,inverse:true}}
+                      left={rs.x} top={rs.y} width={rs.content.length} height={1}
+                      style={{...rs.style,underline: true,bold:true,inverse:true}}
                       tags={false}
-                      content={content}
+                      content={rs.content}
           />
         })
 

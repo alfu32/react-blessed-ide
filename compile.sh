@@ -30,6 +30,7 @@ echo '{
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "copy-paste": "^2.2.0",
     "ignore": "^7.0.5",
     "neo-blessed": "^0.2.0",
     "raf": "^3.4.1",

@@ -2,7 +2,7 @@
 # react-blessed-ide
 
 A terminal-based IDE built with React-Blessed, inspired by Sublime Text and VSCode.  
-No plugins—just a simple, integrated TUI with file tree, Git status, editor pane, and modal dialogs.
+No plugins just a simple, integrated TUI with file tree, Git status, editor pane, and modal dialogs.
 
 Repository: https://github.com/alfu32/react-blessed-ide
 // scscsc

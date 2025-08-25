@@ -1,6 +1,7 @@
 import fs from 'fs';
 import {getNamedTokenizer, TokenizerToken} from './tokenizer.js';
 import {safeStringify} from "./util";
+import { copy, paste } from 'copy-paste';
 
 // test test
 export class Rectangle{
@@ -96,7 +97,19 @@ export class CodeBufferEditorSelection{
    * @param {CursorPoint} val
    */
   setEnd(val){
-    this.end = val.copy()
+    // const start = this.start.copy()
+    // const end = val.copy()
+    // const min_x=Math.min(start.x,end.x)
+    // const min_y=Math.min(start.y,end.y)
+    // const max_x=Math.max(start.x,end.x)
+    // const max_y=Math.max(start.y,end.y)
+    // start.x=min_x
+    // start.y=min_y
+    // end.x=max_x
+    // end.y=max_y
+    // this.start = start
+    // this.end = end
+    this.end = val
     return this
   }
 
@@ -315,7 +328,7 @@ export class CodeBufferEditor {
   const THIS = this
   let hasChanged=false
   let mustRender=false
-    switch (key.name) {
+    switch (key.full) {
       case 'up':
         this.cursors=this.cursors.map(crs => THIS.moveCursorUp(crs));
         mustRender=true
@@ -415,8 +428,24 @@ export class CodeBufferEditor {
         this.save();
         hasChanged=true;
       break;
+      case 'C-c':{
+        copy(this.selections.flatMap(s => {
+          const lines=[]
+          for(let y=s.start.y;y<=s.end.y;y++){
+            lines.push(this.lines[y].substring(s.start.x,s.end.x+1))
+          }
+          return lines
+        }).join("\n"), (err, text) => {
+          // "some text" is in your clipboard
+        });
+      }
+      break;
+      case 'C-p':{
+        throw new Error("paste operation not implemented")
+      }
+      break;
       default:
-        if (ch && ch.length > 0 && !key.ctrl && !key.meta){
+        if (ch && ch.length > 0 /* && !key.ctrl && !key.meta*/){
           if(key.sequence && key.sequence.length === 1) {
             this.cursors.forEach(crs => THIS.insert(key.sequence,crs))
             this.save();
