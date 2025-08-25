@@ -21,12 +21,41 @@ export class CursorPoint{
     const tk = lineOfTokens.match(tk => tk.start<=this.x && this.x<=tk.end)
     return tk
   }
+  copy(){
+    const cp = new CursorPoint()
+    cp.x = this.x
+    cp.y = this.y
+    cp.char = this.char
+    cp.style = {...this.style}
+    return cp
+  }
 }
+
 export class CodeBufferEditorSelection{
   start= new CursorPoint()
   end= new CursorPoint()
+
+  /**
+   *
+   * @param {CursorPoint} start
+   */
   constructor(start) {
     this.start=start
+  }
+
+  /**
+   *
+   * @param {CursorPoint} val
+   */
+  setEnd(val){
+    this.end = val.copy()
+    return this
+  }
+
+  copy(){
+    const cp = new CodeBufferEditorSelection(this.start.copy())
+    cp.setEnd(this.end)
+    return cp
   }
 }
 
@@ -190,21 +219,25 @@ export class CodeBufferEditor {
           this.selectStart = new CodeBufferEditorSelection(cursor)
         }
         break;
-      case 'mousemove':break;
+      case 'mousemove':
+        break;
       case 'mouseup': {
           const padLength = Math.ceil(Math.log10(this.viewportHeight + this.viewportY)) + 1
           const {xi, yi} = viewportPosition;
           const {x, y} = screenEvent;
           const cursor = {x: (x - xi - padLength - 1 - 1 - 1 + this.viewportX), y: (y - yi - 1 + this.viewportY)}
           const crs = this.getCursor(cursor)
+          this.selectStart = this.selectStart ? this.selectStart.setEnd(crs) : null
           if (screenEvent.meta) {
             this.cursors.push(crs)
+            if(this.selectStart) {
+              this.selections.push(this.selectStart.copy())
+            }
           } else {
             this.cursors = [crs]
             if(this.selectStart) {
-              this.selectStart = this.selectStart ? this.selectStart.setEnd().copy() : null
+              this.selections=[this.selectStart.copy()]
             }
-            this.selections=
           }
           hasChanged = true
           this.selectStart = null
