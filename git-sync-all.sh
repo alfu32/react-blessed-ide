@@ -6,8 +6,8 @@ git checkout staging
 git pull origin staging
 git merge --ff-only work
 git push origin staging --tags
-git checkout published
-git pull origin published
+git checkout pub
+git pull origin pub
 git merge --ff-only work
-git push origin published --tags
+git push origin pub --tags
 git checkout work
