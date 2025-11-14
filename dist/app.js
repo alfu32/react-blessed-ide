@@ -3018,10 +3018,10 @@ ${node.fullPath} selectedFile:${selectedFile} node.fullPath:${node.fullPath} `);
     )
   ] });
 }
-const tag = "2.5.2";
-const commit = "decc5fdd1cf4ebadc325aeb9f97d7eb3aec8b589";
+const tag = "none";
+const commit = "5f670023f8d7dd56b7c9fadd9a9b26950b9b6a8b";
 const branch = "work";
-const time = "2025-08-26 11:10:11";
+const time = "2025-11-14 02:38:56";
 const version = {
   tag,
   commit,
